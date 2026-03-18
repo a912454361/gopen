@@ -5,13 +5,16 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
+import { Spacing } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -25,15 +28,17 @@ interface UserInfo {
 }
 
 interface OAuthBinding {
-  id: number;
+  id: string;
   platform: string;
-  platformUserId: string;
-  platformNickname?: string;
+  open_id: string;
+  nickname?: string;
+  avatar?: string;
 }
 
 export default function LoginScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
   
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -44,18 +49,29 @@ export default function LoginScreen() {
     try {
       // 检查本地存储的用户信息
       const userId = await AsyncStorage.getItem('userId');
+      const userInfoStr = await AsyncStorage.getItem('userInfo');
+      
       if (!userId) {
         setUser(null);
         setBindings([]);
         return;
       }
 
+      // 从本地存储恢复用户信息
+      if (userInfoStr) {
+        setUser(JSON.parse(userInfoStr));
+      }
+
+      // 获取绑定信息
+      /**
+       * 服务端文件：server/src/routes/oauth.ts
+       * 接口：GET /api/v1/oauth/bindings/:userId
+       */
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/oauth/bindings/${userId}`);
       const result = await response.json();
       
       if (result.success) {
-        setUser(result.data.user);
-        setBindings(result.data.bindings);
+        setBindings(result.data || []);
       }
     } catch (error) {
       console.error('Fetch user info error:', error);
@@ -77,25 +93,52 @@ export default function LoginScreen() {
       // 生成模拟的OAuth code
       const mockCode = `mock_${platform}_code_${Date.now()}`;
       
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/oauth/${platform}/callback`, {
+      /**
+       * 服务端文件：server/src/routes/oauth.ts
+       * 接口：POST /api/v1/oauth/callback
+       * Body 参数：platform: 'alipay'|'wechat'|'douyin', code: string
+       */
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/oauth/callback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: mockCode }),
+        body: JSON.stringify({ 
+          platform: platform,
+          code: mockCode 
+        }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // 保存用户ID到本地
+        // 保存用户信息到本地
         await AsyncStorage.setItem('userId', result.data.userId.toString());
+        await AsyncStorage.setItem('userInfo', JSON.stringify({
+          id: result.data.userId,
+          nickname: result.data.nickname,
+          avatar: result.data.avatar,
+          membershipLevel: result.data.memberLevel === 'super' ? 2 : result.data.memberLevel === 'member' ? 1 : 0,
+          membershipExpiry: result.data.memberExpireAt,
+        }));
         
-        Alert.alert(
-          '登录成功',
-          `欢迎${result.data.isNewUser ? '加入' : '回来'} G Open！`,
-          [{ text: '确定', onPress: fetchUserInfo }]
-        );
+        const message = Platform.OS === 'web' 
+          ? null 
+          : Alert.alert(
+              '登录成功',
+              `欢迎${result.data.isNewUser ? '加入' : '回来'} G Open！`,
+              [{ text: '确定', onPress: fetchUserInfo }]
+            );
+        
+        if (Platform.OS === 'web') {
+          window.alert(`登录成功！欢迎${result.data.isNewUser ? '加入' : '回来'} G Open！`);
+          fetchUserInfo();
+        }
       } else {
-        Alert.alert('登录失败', result.message);
+        const errorMsg = result.error || '登录失败';
+        if (Platform.OS === 'web') {
+          window.alert(errorMsg);
+        } else {
+          Alert.alert('登录失败', errorMsg);
+        }
       }
     } catch (error) {
       console.error('OAuth login error:', error);
@@ -229,6 +272,19 @@ export default function LoginScreen() {
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header with back button */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
+            <TouchableOpacity 
+              onPress={() => router.back()} 
+              style={{ padding: Spacing.sm, marginLeft: -Spacing.sm }}
+            >
+              <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+            </TouchableOpacity>
+            <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing.sm }}>
+              账号管理
+            </ThemedText>
+          </View>
+          
           <ThemedView level="root" style={styles.userInfo}>
             <View style={styles.userAvatar}>
               <FontAwesome6 name="user" size={28} color={theme.textMuted} />
@@ -261,7 +317,7 @@ export default function LoginScreen() {
                       {getPlatformName(platform)}
                     </ThemedText>
                     <ThemedText variant="caption" color={theme.textMuted} style={styles.bindingStatus}>
-                      {binding ? `已绑定：${binding.platformNickname || binding.platformUserId}` : '未绑定'}
+                      {binding ? `已绑定：${binding.nickname || binding.open_id}` : '未绑定'}
                     </ThemedText>
                   </View>
                   {isCurrentLoading ? (
@@ -305,6 +361,19 @@ export default function LoginScreen() {
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header with back button */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ padding: Spacing.sm, marginLeft: -Spacing.sm }}
+          >
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing.sm }}>
+            账号登录
+          </ThemedText>
+        </View>
+        
         <View style={styles.header}>
           <View style={styles.logo}>
             <FontAwesome6 name="gamepad" size={36} color={theme.primary} />

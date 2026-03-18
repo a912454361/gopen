@@ -16,6 +16,7 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
+import { Spacing } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -177,11 +178,18 @@ export default function WalletScreen() {
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedView level="root" style={styles.header}>
-          <ThemedText variant="h3" color={theme.textPrimary}>
+        {/* Header with back button */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ padding: Spacing.sm, marginLeft: -Spacing.sm }}
+          >
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing.sm }}>
             钱包
           </ThemedText>
-        </ThemedView>
+        </View>
 
         {/* 余额卡片 */}
         <View style={styles.balanceCard}>

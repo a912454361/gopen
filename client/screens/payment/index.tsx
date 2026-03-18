@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
@@ -34,21 +34,18 @@ interface PayOrder {
 export default function PaymentScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const router = useRouter();
+  const router = useSafeRouter();
   const { setMember, checkMembership } = useMembership();
+  
+  // 使用 useSafeSearchParams 获取参数
+  const params = useSafeSearchParams<{ amount?: number; productType?: string }>();
+  const amount = params.amount || 2900;
+  const productType = params.productType || 'membership';
 
   const [loading, setLoading] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<PayOrder | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [paying, setPaying] = useState(false);
-
-  // 从URL获取参数
-  const searchParams = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : ''
-  );
-  const amountStr = searchParams.get('amount') || '2900';
-  const productType = searchParams.get('productType') || 'membership';
-  const amount = parseInt(amountStr, 10);
 
   // 获取产品名称
   const getProductName = () => {
@@ -121,11 +118,19 @@ export default function PaymentScreen() {
         const remaining = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
         setCountdown(remaining);
       } else {
-        Alert.alert('生成失败', result.error || '无法生成支付订单');
+        if (Platform.OS === 'web') {
+          window.alert(result.error || '无法生成支付订单');
+        } else {
+          Alert.alert('生成失败', result.error || '无法生成支付订单');
+        }
       }
     } catch (error) {
       console.error('Generate order error:', error);
-      Alert.alert('网络错误', '请检查网络连接后重试');
+      if (Platform.OS === 'web') {
+        window.alert('网络错误，请检查网络连接后重试');
+      } else {
+        Alert.alert('网络错误', '请检查网络连接后重试');
+      }
     } finally {
       setLoading(false);
     }
@@ -144,9 +149,14 @@ export default function PaymentScreen() {
     
     await checkMembership();
     
-    Alert.alert('支付成功', '会员已开通，感谢您的支持！', [
-      { text: '好的', onPress: () => router.replace('/membership') },
-    ]);
+    if (Platform.OS === 'web') {
+      window.alert('支付成功！会员已开通，感谢您的支持！');
+      router.replace('/membership');
+    } else {
+      Alert.alert('支付成功', '会员已开通，感谢您的支持！', [
+        { text: '好的', onPress: () => router.replace('/membership') },
+      ]);
+    }
     setCurrentOrder(null);
   };
 
@@ -165,7 +175,11 @@ export default function PaymentScreen() {
       if (result.success) {
         handlePaySuccess();
       } else {
-        Alert.alert('支付失败', '请重试');
+        if (Platform.OS === 'web') {
+          window.alert('支付失败，请重试');
+        } else {
+          Alert.alert('支付失败', '请重试');
+        }
       }
     } catch (error) {
       console.error('Simulate pay error:', error);
@@ -176,11 +190,11 @@ export default function PaymentScreen() {
 
   const formatAmount = (fen: number) => `¥${(fen / 100).toFixed(2)}`;
 
-  // 生成二维码图片URL - 使用订单号作为内容
+  // 生成二维码图片URL
   const getQRCodeUrl = () => {
     if (!currentOrder) return null;
-    // 二维码内容：显示订单号，方便用户核对
-    const content = `G Open 支付\n订单号: ${currentOrder.order_no}\n金额: ${formatAmount(currentOrder.amount)}\n产品: ${getProductName()}`;
+    // 二维码内容包含订单信息
+    const content = `G Open Payment\nOrder: ${currentOrder.order_no}\nAmount: ${formatAmount(currentOrder.amount)}\nProduct: ${getProductName()}`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(content)}`;
   };
 

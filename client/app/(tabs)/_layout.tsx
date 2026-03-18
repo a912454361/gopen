@@ -35,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'CREATE',
+          title: '创作',
           tabBarIcon: ({ color }) => (
             <FontAwesome6 name="wand-magic-sparkles" size={20} color={color} />
           ),
@@ -44,7 +44,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="projects"
         options={{
-          title: 'PROJECTS',
+          title: '项目',
           tabBarIcon: ({ color }) => (
             <FontAwesome6 name="layer-group" size={20} color={color} />
           ),
@@ -53,7 +53,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'SETTINGS',
+          title: '设置',
           tabBarIcon: ({ color }) => (
             <FontAwesome6 name="gear" size={20} color={color} />
           ),

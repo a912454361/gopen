@@ -26,59 +26,59 @@ export default function SettingsScreen() {
   const generalMenuItems: MenuItem[] = [
     {
       icon: 'palette',
-      title: 'Theme',
-      subtitle: 'Appearance settings',
-      value: 'DARK',
+      title: '主题设置',
+      subtitle: '外观主题配置',
+      value: '暗黑',
     },
     {
       icon: 'globe',
-      title: 'Language',
-      subtitle: 'Interface language',
-      value: 'EN',
+      title: '语言',
+      subtitle: '界面语言设置',
+      value: '中文',
     },
     {
       icon: 'bell',
-      title: 'Notifications',
-      subtitle: 'Push notification settings',
+      title: '通知设置',
+      subtitle: '推送通知配置',
     },
   ];
 
   const aiMenuItems: MenuItem[] = [
     {
       icon: 'microchip',
-      title: 'AI Model',
-      subtitle: 'Select preferred model',
+      title: 'AI 模型',
+      subtitle: '选择偏好模型',
       value: 'CLAW PRO',
     },
     {
       icon: 'sliders',
-      title: 'Generation Quality',
-      subtitle: 'Adjust output quality',
-      value: 'HIGH',
+      title: '生成质量',
+      subtitle: '调整输出质量',
+      value: '高质量',
     },
     {
       icon: 'bolt',
-      title: 'Performance Mode',
-      subtitle: 'Speed vs Quality balance',
-      value: 'BALANCED',
+      title: '性能模式',
+      subtitle: '速度与质量平衡',
+      value: '均衡',
     },
   ];
 
   const accountMenuItems: MenuItem[] = [
     {
       icon: 'user-shield',
-      title: 'Privacy',
-      subtitle: 'Data and privacy settings',
+      title: '隐私设置',
+      subtitle: '数据与隐私管理',
     },
     {
       icon: 'key',
-      title: 'API Keys',
-      subtitle: 'Manage integrations',
+      title: 'API 密钥',
+      subtitle: '管理集成配置',
     },
     {
       icon: 'circle-question',
-      title: 'Help & Support',
-      subtitle: 'Get assistance',
+      title: '帮助与支持',
+      subtitle: '获取使用帮助',
     },
   ];
 
@@ -116,10 +116,10 @@ export default function SettingsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <ThemedText variant="h4" color={theme.textPrimary}>
-            Settings
+            系统设置
           </ThemedText>
           <ThemedText variant="label" color={theme.textMuted}>
-            SYSTEM CONFIGURATION
+            系统配置
           </ThemedText>
           <LinearGradient
             colors={[theme.primary, theme.accent]}
@@ -136,10 +136,10 @@ export default function SettingsScreen() {
           </View>
           <View style={styles.profileInfo}>
             <ThemedText variant="title" color={theme.textPrimary}>
-              Creator Pro
+              创作者
             </ThemedText>
             <ThemedText variant="small" color={theme.textMuted}>
-              pro@openclaw.ai
+              creator@openclaw.ai
             </ThemedText>
           </View>
           <FontAwesome6 name="chevron-right" size={12} color={theme.textMuted} />
@@ -148,7 +148,7 @@ export default function SettingsScreen() {
         {/* General Settings */}
         <View style={styles.section}>
           <ThemedText variant="label" color={theme.textMuted}>
-            GENERAL
+            常规设置
           </ThemedText>
           <View style={styles.menuList}>
             {generalMenuItems.map((item, index) =>
@@ -160,7 +160,7 @@ export default function SettingsScreen() {
         {/* AI Settings */}
         <View style={styles.section}>
           <ThemedText variant="label" color={theme.textMuted}>
-            AI CONFIGURATION
+            AI 配置
           </ThemedText>
           <View style={styles.menuList}>
             {aiMenuItems.map((item, index) =>
@@ -172,7 +172,7 @@ export default function SettingsScreen() {
         {/* Account Settings */}
         <View style={styles.section}>
           <ThemedText variant="label" color={theme.textMuted}>
-            ACCOUNT
+            账户管理
           </ThemedText>
           <View style={styles.menuList}>
             {accountMenuItems.map((item, index) =>
@@ -184,7 +184,7 @@ export default function SettingsScreen() {
         {/* Version Info */}
         <View style={styles.versionInfo}>
           <ThemedText variant="caption" color={theme.textMuted}>
-            OPENCLAW ENGINE{' '}
+            OPENCLAW 引擎{' '}
             <ThemedText variant="caption" color={theme.primary}>
               v2.4.7
             </ThemedText>

@@ -132,7 +132,7 @@ export default function ChatScreen() {
         setMessages(prev =>
           prev.map(msg =>
             msg.id === aiMessageId
-              ? { ...msg, content: 'Connection error. Please try again.' }
+              ? { ...msg, content: '连接错误，请重试' }
               : msg
           )
         );
@@ -146,7 +146,7 @@ export default function ChatScreen() {
         {
           id: aiMessageId,
           role: 'assistant',
-          content: 'Connection error. Please try again.',
+          content: '连接错误，请重试',
         },
       ]);
       setIsLoading(false);
@@ -158,10 +158,10 @@ export default function ChatScreen() {
   };
 
   const quickActions = [
-    'Create a game character',
-    'Design an anime scene',
-    'Generate a story plot',
-    'Build a game level',
+    '创建游戏角色',
+    '设计动漫场景',
+    '生成故事剧情',
+    '构建游戏关卡',
   ];
 
   return (
@@ -178,10 +178,10 @@ export default function ChatScreen() {
           {/* Header */}
           <View style={styles.header}>
             <ThemedText variant="h4" color={theme.textPrimary}>
-              AI Creation Assistant
+              AI 创作助手
             </ThemedText>
             <ThemedText variant="label" color={theme.textMuted}>
-              POWERED BY OPENCLAW ENGINE
+              由 OPENCLAW 引擎驱动
             </ThemedText>
             <LinearGradient
               colors={[theme.primary, theme.accent]}
@@ -198,10 +198,10 @@ export default function ChatScreen() {
                 <FontAwesome6 name="robot" size={32} color={theme.primary} />
               </View>
               <ThemedText variant="h3" color={theme.textPrimary}>
-                Ready to Create
+                准备开始创作
               </ThemedText>
               <ThemedText variant="body" color={theme.textMuted}>
-                Describe your game or anime project and let AI bring your vision to life.
+                描述你的游戏或动漫项目，让 AI 为你实现创意愿景
               </ThemedText>
               <View style={styles.quickActions}>
                 {quickActions.map((action, index) => (
@@ -231,7 +231,7 @@ export default function ChatScreen() {
                     variant="labelSmall"
                     color={message.role === 'user' ? theme.accent : theme.primary}
                   >
-                    {message.role === 'user' ? 'USER' : 'CLAW AI'}
+                    {message.role === 'user' ? '用户' : 'CLAW AI'}
                   </ThemedText>
                   <View
                     style={[
@@ -267,7 +267,7 @@ export default function ChatScreen() {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder="Describe your creation..."
+            placeholder="描述你的创意..."
             placeholderTextColor={theme.textMuted}
             multiline
             editable={!isLoading}

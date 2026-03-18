@@ -36,11 +36,12 @@ app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {
     const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
     const client = new LLMClient(config, customHeaders);
 
-    const systemPrompt = `You are Claw AI, an advanced assistant for creating games and anime content. 
-You help users design characters, scenes, storylines, and game mechanics.
-Be creative, detailed, and inspiring. Use a futuristic, tech-savvy tone.
-When discussing technical aspects, be precise and helpful.
-Always encourage creativity and provide actionable suggestions.`;
+    const systemPrompt = `你是 Claw AI，一个专业的游戏和动漫创作助手。
+你帮助用户设计角色、场景、剧情和游戏机制。
+你要富有创意、详细具体、充满启发性。使用未来感、科技感的语气。
+在讨论技术细节时，要精确且有帮助。
+始终鼓励创意，提供可操作的建议。
+请使用中文回复用户。`;
 
     const messages = [
       { role: 'system' as const, content: systemPrompt },
@@ -63,7 +64,7 @@ Always encourage creativity and provide actionable suggestions.`;
     res.end();
   } catch (error) {
     console.error('Chat stream error:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Failed to process message' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: '处理消息失败' })}\n\n`);
     res.end();
   }
 });
@@ -81,9 +82,10 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
     const client = new LLMClient(config, customHeaders);
 
-    const systemPrompt = `You are Claw AI, an advanced assistant for creating games and anime content. 
-You help users design characters, scenes, storylines, and game mechanics.
-Be creative, detailed, and inspiring. Use a futuristic, tech-savvy tone.`;
+    const systemPrompt = `你是 Claw AI，一个专业的游戏和动漫创作助手。
+你帮助用户设计角色、场景、剧情和游戏机制。
+你要富有创意、详细具体、充满启发性。使用未来感、科技感的语气。
+请使用中文回复用户。`;
 
     const messages = [
       { role: 'system' as const, content: systemPrompt },
@@ -98,7 +100,7 @@ Be creative, detailed, and inspiring. Use a futuristic, tech-savvy tone.`;
     res.json({ content: response.content });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to process message' });
+    res.status(500).json({ error: '处理消息失败' });
   }
 });
 

@@ -24,39 +24,39 @@ interface Project {
 const mockProjects: Project[] = [
   {
     id: '1',
-    title: 'Neon Samurai',
-    type: 'GAME CHARACTER',
+    title: '霓虹武士',
+    type: '游戏角色',
     status: 'active',
     progress: 75,
     assets: 24,
-    lastUpdated: '2h ago',
+    lastUpdated: '2小时前',
   },
   {
     id: '2',
-    title: 'Cyber Cityscape',
-    type: 'ANIME SCENE',
+    title: '赛博城市',
+    type: '动漫场景',
     status: 'active',
     progress: 45,
     assets: 12,
-    lastUpdated: '5h ago',
+    lastUpdated: '5小时前',
   },
   {
     id: '3',
-    title: 'Mecha Warrior',
-    type: 'GAME CHARACTER',
+    title: '机甲战士',
+    type: '游戏角色',
     status: 'pending',
     progress: 20,
     assets: 6,
-    lastUpdated: '1d ago',
+    lastUpdated: '1天前',
   },
   {
     id: '4',
-    title: 'Forest Spirit',
-    type: 'ANIME SCENE',
+    title: '森林精灵',
+    type: '动漫场景',
     status: 'pending',
     progress: 10,
     assets: 3,
-    lastUpdated: '2d ago',
+    lastUpdated: '2天前',
   },
 ];
 
@@ -96,7 +96,7 @@ export default function ProjectsScreen() {
             variant="tiny"
             color={project.status === 'active' ? theme.success : theme.accent}
           >
-            {project.status === 'active' ? 'ACTIVE' : 'PENDING'}
+            {project.status === 'active' ? '进行中' : '待处理'}
           </ThemedText>
         </View>
       </View>
@@ -111,7 +111,7 @@ export default function ProjectsScreen() {
         />
         </View>
         <ThemedText variant="caption" color={theme.textMuted}>
-          {project.progress}% complete
+          已完成 {project.progress}%
         </ThemedText>
       </View>
 
@@ -119,7 +119,7 @@ export default function ProjectsScreen() {
         <View style={styles.metaItem}>
           <FontAwesome6 name="cube" size={12} color={theme.textMuted} />
           <ThemedText variant="caption" color={theme.textMuted}>
-            {project.assets} assets
+            {project.assets} 资源
           </ThemedText>
         </View>
         <View style={styles.metaItem}>
@@ -138,10 +138,10 @@ export default function ProjectsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <ThemedText variant="h4" color={theme.textPrimary}>
-            Project Dashboard
+            项目仪表盘
           </ThemedText>
           <ThemedText variant="label" color={theme.textMuted}>
-            CREATION WORKSPACE
+            创作工作空间
           </ThemedText>
           <LinearGradient
             colors={[theme.primary, theme.accent]}
@@ -155,7 +155,7 @@ export default function ProjectsScreen() {
         <View style={styles.statsRow}>
           <View style={[styles.statCard, styles.statCardActive]}>
             <ThemedText variant="labelSmall" color={theme.textMuted}>
-              ACTIVE
+              进行中
             </ThemedText>
             <ThemedText variant="stat" color={theme.primary}>
               {activeProjects.length}
@@ -163,7 +163,7 @@ export default function ProjectsScreen() {
           </View>
           <View style={styles.statCard}>
             <ThemedText variant="labelSmall" color={theme.textMuted}>
-              PENDING
+              待处理
             </ThemedText>
             <ThemedText variant="stat" color={theme.textPrimary}>
               {pendingProjects.length}
@@ -171,7 +171,7 @@ export default function ProjectsScreen() {
           </View>
           <View style={styles.statCard}>
             <ThemedText variant="labelSmall" color={theme.textMuted}>
-              ASSETS
+              总资源
             </ThemedText>
             <ThemedText variant="stat" color={theme.textPrimary}>
               {mockProjects.reduce((acc, p) => acc + p.assets, 0)}
@@ -182,11 +182,11 @@ export default function ProjectsScreen() {
         {/* Active Projects */}
         <View style={styles.sectionHeader}>
           <ThemedText variant="label" color={theme.textPrimary}>
-            ACTIVE PROJECTS
+            进行中的项目
           </ThemedText>
           <TouchableOpacity>
             <ThemedText variant="captionMedium" color={theme.primary}>
-              SEE ALL
+              查看全部
             </ThemedText>
           </TouchableOpacity>
         </View>
@@ -197,7 +197,7 @@ export default function ProjectsScreen() {
         {/* Pending Projects */}
         <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
           <ThemedText variant="label" color={theme.textPrimary}>
-            PENDING PROJECTS
+            待处理项目
           </ThemedText>
         </View>
         <View style={styles.projectList}>
@@ -208,7 +208,7 @@ export default function ProjectsScreen() {
         <TouchableOpacity style={styles.createButton}>
           <FontAwesome6 name="plus" size={16} color={theme.primary} />
           <ThemedText variant="labelTitle" color={theme.primary}>
-            NEW PROJECT
+            新建项目
           </ThemedText>
         </TouchableOpacity>
       </ScrollView>

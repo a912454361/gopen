@@ -6,7 +6,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
+import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
@@ -17,11 +19,14 @@ interface MenuItem {
   subtitle?: string;
   value?: string;
   onPress?: () => void;
+  isMemberOnly?: boolean;
 }
 
 export default function SettingsScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
+  const { isMember, expireDate } = useMembership();
 
   const generalMenuItems: MenuItem[] = [
     {
@@ -47,20 +52,23 @@ export default function SettingsScreen() {
     {
       icon: 'microchip',
       title: 'AI 模型',
-      subtitle: '选择偏好模型',
-      value: 'CLAW PRO',
+      subtitle: isMember ? '选择偏好模型' : '会员专属',
+      value: isMember ? 'G open Pro' : '基础版',
+      isMemberOnly: true,
     },
     {
       icon: 'sliders',
       title: '生成质量',
-      subtitle: '调整输出质量',
-      value: '高质量',
+      subtitle: isMember ? '调整输出质量' : '会员专属',
+      value: isMember ? '高质量' : '标准',
+      isMemberOnly: true,
     },
     {
       icon: 'bolt',
       title: '性能模式',
-      subtitle: '速度与质量平衡',
-      value: '均衡',
+      subtitle: isMember ? '速度与质量平衡' : '会员专属',
+      value: isMember ? '均衡' : '基础',
+      isMemberOnly: true,
     },
   ];
 
@@ -74,6 +82,7 @@ export default function SettingsScreen() {
       icon: 'key',
       title: 'API 密钥',
       subtitle: '管理集成配置',
+      isMemberOnly: true,
     },
     {
       icon: 'circle-question',
@@ -82,33 +91,43 @@ export default function SettingsScreen() {
     },
   ];
 
-  const renderMenuItem = (item: MenuItem, index: number, total: number) => (
-    <TouchableOpacity
-      key={item.title}
-      style={[styles.menuItem, index < total - 1 && styles.menuItemBorder]}
-      onPress={item.onPress}
-    >
-      <View style={styles.menuIcon}>
-        <FontAwesome6 name={item.icon} size={16} color={theme.textPrimary} />
-      </View>
-      <View style={styles.menuContent}>
-        <ThemedText variant="smallMedium" color={theme.textPrimary}>
-          {item.title}
-        </ThemedText>
-        {item.subtitle && (
-          <ThemedText variant="caption" color={theme.textMuted}>
-            {item.subtitle}
+  const renderMenuItem = (item: MenuItem, index: number, total: number) => {
+    const isLocked = !isMember && item.isMemberOnly;
+    
+    return (
+      <TouchableOpacity
+        key={item.title}
+        style={[styles.menuItem, index < total - 1 && styles.menuItemBorder]}
+        onPress={item.onPress}
+        disabled={isLocked}
+      >
+        <View style={[styles.menuIcon, isLocked && { opacity: 0.5 }]}>
+          <FontAwesome6 name={item.icon as any} size={16} color={isLocked ? theme.textMuted : theme.textPrimary} />
+        </View>
+        <View style={styles.menuContent}>
+          <ThemedText variant="smallMedium" color={isLocked ? theme.textMuted : theme.textPrimary}>
+            {item.title}
+          </ThemedText>
+          {item.subtitle && (
+            <ThemedText variant="caption" color={theme.textMuted}>
+              {item.subtitle}
+            </ThemedText>
+          )}
+        </View>
+        {item.value && (
+          <ThemedText variant="smallMedium" color={isLocked ? theme.textMuted : theme.primary}>
+            {item.value}
           </ThemedText>
         )}
-      </View>
-      {item.value && (
-        <ThemedText variant="smallMedium" color={theme.primary}>
-          {item.value}
-        </ThemedText>
-      )}
-      <FontAwesome6 name="chevron-right" size={12} color={theme.textMuted} />
-    </TouchableOpacity>
-  );
+        {isLocked && (
+          <FontAwesome6 name="lock" size={12} color={theme.textMuted} />
+        )}
+        {!isLocked && (
+          <FontAwesome6 name="chevron-right" size={12} color={theme.textMuted} />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -116,7 +135,7 @@ export default function SettingsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <ThemedText variant="h4" color={theme.textPrimary}>
-            系统设置
+            设置
           </ThemedText>
           <ThemedText variant="label" color={theme.textMuted}>
             系统配置
@@ -132,17 +151,24 @@ export default function SettingsScreen() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <FontAwesome6 name="user" size={28} color={theme.primary} />
+            <FontAwesome6 name={isMember ? 'crown' : 'user'} size={28} color={theme.primary} />
           </View>
           <View style={styles.profileInfo}>
             <ThemedText variant="title" color={theme.textPrimary}>
-              创作者
+              {isMember ? 'G open 会员' : '免费用户'}
             </ThemedText>
             <ThemedText variant="small" color={theme.textMuted}>
-              creator@openclaw.ai
+              {isMember ? `到期：${expireDate}` : '升级解锁更多功能'}
             </ThemedText>
           </View>
-          <FontAwesome6 name="chevron-right" size={12} color={theme.textMuted} />
+          <TouchableOpacity 
+            onPress={() => router.push('/membership')}
+            style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.primary, borderRadius: 6 }}
+          >
+            <ThemedText variant="captionMedium" color={theme.backgroundRoot}>
+              {isMember ? '续费' : '开通'}
+            </ThemedText>
+          </TouchableOpacity>
         </View>
 
         {/* General Settings */}
@@ -184,9 +210,9 @@ export default function SettingsScreen() {
         {/* Version Info */}
         <View style={styles.versionInfo}>
           <ThemedText variant="caption" color={theme.textMuted}>
-            OPENCLAW 引擎{' '}
+            G open{' '}
             <ThemedText variant="caption" color={theme.primary}>
-              v2.4.7
+              v1.0.0
             </ThemedText>
           </ThemedText>
         </View>

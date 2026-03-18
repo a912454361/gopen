@@ -51,6 +51,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="membership"
+        options={{
+          title: '会员',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="crown" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: '设置',

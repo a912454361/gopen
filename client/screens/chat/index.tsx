@@ -7,12 +7,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 // @ts-ignore - react-native-sse lacks proper type definitions
 import RNSSE from 'react-native-sse';
 import { useTheme } from '@/hooks/useTheme';
+import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
@@ -26,6 +29,8 @@ interface Message {
 export default function ChatScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { isMember, dailyChatCount, maxFreeChatsPerDay, incrementChatCount, canChat } = useMembership();
+  const router = useSafeRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -66,6 +71,20 @@ export default function ChatScreen() {
 
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
+
+    // Check if user can chat (member or has free chats left)
+    const allowed = await incrementChatCount();
+    if (!allowed) {
+      Alert.alert(
+        '对话次数已用完',
+        `免费用户每日限${maxFreeChatsPerDay}次对话，升级会员享受无限对话`,
+        [
+          { text: '稍后再说', style: 'cancel' },
+          { text: '升级会员', onPress: () => router.push('/membership') },
+        ]
+      );
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -164,6 +183,8 @@ export default function ChatScreen() {
     '构建游戏关卡',
   ];
 
+  const remainingChats = isMember ? '无限' : maxFreeChatsPerDay - dailyChatCount;
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
       <KeyboardAvoidingView
@@ -178,11 +199,21 @@ export default function ChatScreen() {
           {/* Header */}
           <View style={styles.header}>
             <ThemedText variant="h4" color={theme.textPrimary}>
-              AI 创作助手
+              G open AI 创作助手
             </ThemedText>
-            <ThemedText variant="label" color={theme.textMuted}>
-              由 OPENCLAW 引擎驱动
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ThemedText variant="label" color={theme.textMuted}>
+                由 OPENCLAW 引擎驱动
+              </ThemedText>
+              {isMember && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <FontAwesome6 name="crown" size={10} color={theme.primary} />
+                  <ThemedText variant="tiny" color={theme.primary}>
+                    会员
+                  </ThemedText>
+                </View>
+              )}
+            </View>
             <LinearGradient
               colors={[theme.primary, theme.accent]}
               start={{ x: 0, y: 0 }}
@@ -190,6 +221,20 @@ export default function ChatScreen() {
               style={styles.neonLine}
             />
           </View>
+
+          {/* Usage indicator for free users */}
+          {!isMember && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                今日剩余对话：{remainingChats} 次
+              </ThemedText>
+              <TouchableOpacity onPress={() => router.push('/membership')}>
+                <ThemedText variant="captionMedium" color={theme.primary}>
+                  升级会员
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Messages or Empty State */}
           {messages.length === 0 ? (
@@ -231,7 +276,7 @@ export default function ChatScreen() {
                     variant="labelSmall"
                     color={message.role === 'user' ? theme.accent : theme.primary}
                   >
-                    {message.role === 'user' ? '用户' : 'CLAW AI'}
+                    {message.role === 'user' ? '用户' : 'G open AI'}
                   </ThemedText>
                   <View
                     style={[
@@ -248,7 +293,7 @@ export default function ChatScreen() {
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
                 <View style={[styles.messageWrapper, styles.aiMessageWrapper]}>
                   <ThemedText variant="labelSmall" color={theme.primary}>
-                    CLAW AI
+                    G open AI
                   </ThemedText>
                   <View style={[styles.messageBubble, styles.aiMessage, styles.typingIndicator]}>
                     <Animated.View style={[styles.typingDot, { opacity: typingAnim }]} />

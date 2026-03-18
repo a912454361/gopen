@@ -5,16 +5,19 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Image,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
-import { Spacing } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
@@ -51,14 +54,15 @@ interface DeductRecord {
 }
 
 export default function PaymentScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { level } = useMembership();
+  const { level, setMember } = useMembership();
+  const params = useSafeSearchParams<{ amount?: number; productType?: string }>();
 
   const [activeTab, setActiveTab] = useState<TabType>('qrcode');
   const [payType, setPayType] = useState<PayType>('alipay');
-  const [amount, setAmount] = useState('2900'); // 29元
+  const [amount, setAmount] = useState(params.amount?.toString() || '2900'); // 默认29元
   const [loading, setLoading] = useState(false);
   
   // 二维码状态
@@ -76,6 +80,16 @@ export default function PaymentScreen() {
   // 模拟用户ID（实际应从登录态获取）
   const userId = 'demo_user_001';
 
+  // 产品类型
+  const productType = params.productType || 'membership';
+
+  // 获取产品名称
+  const getProductName = () => {
+    if (productType === 'super_member') return '超级会员订阅';
+    if (productType === 'membership') return '普通会员订阅';
+    return '会员订阅';
+  };
+
   // 倒计时
   useEffect(() => {
     if (countdown > 0 && currentOrder) {
@@ -85,7 +99,11 @@ export default function PaymentScreen() {
       return () => clearTimeout(timer);
     } else if (countdown === 0 && currentOrder) {
       // 超时，重新生成
-      Alert.alert('订单超时', '二维码已过期，请重新生成');
+      if (Platform.OS === 'web') {
+        alert('订单超时，二维码已过期，请重新生成');
+      } else {
+        Alert.alert('订单超时', '二维码已过期，请重新生成');
+      }
       setCurrentOrder(null);
     }
   }, [countdown, currentOrder]);
@@ -106,9 +124,24 @@ export default function PaymentScreen() {
           
           if (result.success && result.data.status === 'paid') {
             clearInterval(interval);
-            Alert.alert('支付成功', '会员已开通，感谢您的支持！', [
-              { text: '好的', onPress: () => router.push('/membership') },
-            ]);
+            // 更新会员状态
+            const expireDate = new Date();
+            expireDate.setMonth(expireDate.getMonth() + 1); // 一个月后过期
+            
+            if (productType === 'super_member') {
+              setMember('super', expireDate.toISOString(), 'monthly');
+            } else if (productType === 'membership') {
+              setMember('member', expireDate.toISOString(), 'monthly');
+            }
+            
+            if (Platform.OS === 'web') {
+              alert('支付成功！会员已开通，感谢您的支持！');
+              router.push('/membership');
+            } else {
+              Alert.alert('支付成功', '会员已开通，感谢您的支持！', [
+                { text: '好的', onPress: () => router.push('/membership') },
+              ]);
+            }
             setCurrentOrder(null);
           }
         } catch (error) {
@@ -118,7 +151,7 @@ export default function PaymentScreen() {
       
       return () => clearInterval(interval);
     }
-  }, [currentOrder, countdown, router]);
+  }, [currentOrder, countdown, router, productType, setMember]);
 
   // 加载授权和记录
   useEffect(() => {
@@ -177,7 +210,7 @@ export default function PaymentScreen() {
           userId,
           amount: parseInt(amount, 10),
           payType,
-          productType: 'membership',
+          productType: productType as 'membership' | 'super_member',
         }),
       });
       
@@ -190,11 +223,19 @@ export default function PaymentScreen() {
         const remaining = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
         setCountdown(remaining);
       } else {
-        Alert.alert('生成失败', result.error || '无法生成支付二维码');
+        if (Platform.OS === 'web') {
+          alert(result.error || '无法生成支付二维码');
+        } else {
+          Alert.alert('生成失败', result.error || '无法生成支付二维码');
+        }
       }
     } catch (error) {
       console.error('Generate QR code error:', error);
-      Alert.alert('生成失败', '网络错误，请重试');
+      if (Platform.OS === 'web') {
+        alert('网络错误，请重试');
+      } else {
+        Alert.alert('生成失败', '网络错误，请重试');
+      }
     } finally {
       setLoading(false);
     }
@@ -216,7 +257,21 @@ export default function PaymentScreen() {
       const result = await response.json();
       
       if (result.success) {
-        Alert.alert('模拟支付成功', '会员已开通');
+        // 更新会员状态
+        const expireDate = new Date();
+        expireDate.setMonth(expireDate.getMonth() + 1); // 一个月后过期
+        
+        if (productType === 'super_member') {
+          setMember('super', expireDate.toISOString(), 'monthly');
+        } else if (productType === 'membership') {
+          setMember('member', expireDate.toISOString(), 'monthly');
+        }
+        
+        if (Platform.OS === 'web') {
+          alert('模拟支付成功，会员已开通');
+        } else {
+          Alert.alert('模拟支付成功', '会员已开通');
+        }
         setCurrentOrder(null);
         router.push('/membership');
       }
@@ -248,15 +303,28 @@ export default function PaymentScreen() {
       const result = await response.json();
       
       if (result.success) {
-        Alert.alert('授权成功', '代扣授权已开通', [
-          { text: '好的', onPress: loadAuths },
-        ]);
+        if (Platform.OS === 'web') {
+          alert('代扣授权已开通');
+          loadAuths();
+        } else {
+          Alert.alert('授权成功', '代扣授权已开通', [
+            { text: '好的', onPress: loadAuths },
+          ]);
+        }
       } else {
-        Alert.alert('授权失败', result.error || '无法生成授权二维码');
+        if (Platform.OS === 'web') {
+          alert(result.error || '无法生成授权二维码');
+        } else {
+          Alert.alert('授权失败', result.error || '无法生成授权二维码');
+        }
       }
     } catch (error) {
       console.error('Generate auth QR code error:', error);
-      Alert.alert('授权失败', '网络错误，请重试');
+      if (Platform.OS === 'web') {
+        alert('网络错误，请重试');
+      } else {
+        Alert.alert('授权失败', '网络错误，请重试');
+      }
     } finally {
       setLoading(false);
     }
@@ -264,32 +332,41 @@ export default function PaymentScreen() {
 
   // 取消授权
   const handleCancelAuth = async (authId: string) => {
-    Alert.alert('取消授权', '确定要取消代扣授权吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '确定',
-        onPress: async () => {
-          try {
-            /**
-             * 服务端文件：server/src/routes/pay.ts
-             * 接口：POST /api/v1/pay/auth/cancel/:authId
-             */
-            const response = await fetch(
-              `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/pay/auth/cancel/${authId}`,
-              { method: 'POST' }
-            );
-            const result = await response.json();
-            
-            if (result.success) {
-              Alert.alert('取消成功', '代扣授权已取消');
-              loadAuths();
-            }
-          } catch (error) {
-            console.error('Cancel auth error:', error);
+    const doCancel = async () => {
+      try {
+        /**
+         * 服务端文件：server/src/routes/pay.ts
+         * 接口：POST /api/v1/pay/auth/cancel/:authId
+         */
+        const response = await fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/pay/auth/cancel/${authId}`,
+          { method: 'POST' }
+        );
+        const result = await response.json();
+        
+        if (result.success) {
+          if (Platform.OS === 'web') {
+            alert('代扣授权已取消');
+          } else {
+            Alert.alert('取消成功', '代扣授权已取消');
           }
-        },
-      },
-    ]);
+          loadAuths();
+        }
+      } catch (error) {
+        console.error('Cancel auth error:', error);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('确定要取消代扣授权吗？')) {
+        doCancel();
+      }
+    } else {
+      Alert.alert('取消授权', '确定要取消代扣授权吗？', [
+        { text: '取消', style: 'cancel' },
+        { text: '确定', onPress: doCancel },
+      ]);
+    }
   };
 
   // 执行扣费
@@ -309,14 +386,26 @@ export default function PaymentScreen() {
       const result = await response.json();
       
       if (result.success) {
-        Alert.alert('扣费成功', `已扣费 ¥${(result.data.amount / 100).toFixed(2)}`);
+        if (Platform.OS === 'web') {
+          alert(`扣费成功，已扣费 ¥${(result.data.amount / 100).toFixed(2)}`);
+        } else {
+          Alert.alert('扣费成功', `已扣费 ¥${(result.data.amount / 100).toFixed(2)}`);
+        }
         loadRecords();
       } else {
-        Alert.alert('扣费失败', result.data?.errorMessage || '未知错误');
+        if (Platform.OS === 'web') {
+          alert(result.data?.errorMessage || '未知错误');
+        } else {
+          Alert.alert('扣费失败', result.data?.errorMessage || '未知错误');
+        }
       }
     } catch (error) {
       console.error('Deduct error:', error);
-      Alert.alert('扣费失败', '网络错误');
+      if (Platform.OS === 'web') {
+        alert('网络错误');
+      } else {
+        Alert.alert('扣费失败', '网络错误');
+      }
     }
   };
 
@@ -334,10 +423,18 @@ export default function PaymentScreen() {
       const result = await response.json();
       
       if (result.success) {
-        Alert.alert('重试成功', '扣费成功');
+        if (Platform.OS === 'web') {
+          alert('扣费成功');
+        } else {
+          Alert.alert('重试成功', '扣费成功');
+        }
         loadRecords();
       } else {
-        Alert.alert('重试失败', result.message || '请稍后再试');
+        if (Platform.OS === 'web') {
+          alert(result.message || '请稍后再试');
+        } else {
+          Alert.alert('重试失败', result.message || '请稍后再试');
+        }
       }
     } catch (error) {
       console.error('Retry error:', error);
@@ -345,6 +442,14 @@ export default function PaymentScreen() {
   };
 
   const formatAmount = (fen: number) => `¥${(fen / 100).toFixed(2)}`;
+
+  // 生成二维码图片URL
+  const getQRCodeUrl = () => {
+    if (!currentOrder) return null;
+    // 使用第三方API生成二维码图片
+    const qrContent = `G_OPEN_PAY:${currentOrder.order_no}:${currentOrder.amount}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrContent)}`;
+  };
 
   const renderQRCodeTab = () => (
     <View style={styles.section}>
@@ -355,6 +460,11 @@ export default function PaymentScreen() {
             style={[styles.tab, payType === 'alipay' && styles.tabActive]}
             onPress={() => setPayType('alipay')}
           >
+            <FontAwesome6
+              name="wallet"
+              size={14}
+              color={payType === 'alipay' ? theme.backgroundRoot : theme.textMuted}
+            />
             <ThemedText
               variant="small"
               color={payType === 'alipay' ? theme.backgroundRoot : theme.textMuted}
@@ -366,6 +476,11 @@ export default function PaymentScreen() {
             style={[styles.tab, payType === 'wechat' && styles.tabActive]}
             onPress={() => setPayType('wechat')}
           >
+            <FontAwesome6
+              name="message"
+              size={14}
+              color={payType === 'wechat' ? theme.backgroundRoot : theme.textMuted}
+            />
             <ThemedText
               variant="small"
               color={payType === 'wechat' ? theme.backgroundRoot : theme.textMuted}
@@ -386,6 +501,9 @@ export default function PaymentScreen() {
           placeholder="输入金额（分）"
           placeholderTextColor={theme.textMuted}
         />
+        <ThemedText variant="caption" color={theme.textMuted}>
+          = ¥{(parseInt(amount) / 100).toFixed(2)}
+        </ThemedText>
       </View>
 
       <TouchableOpacity
@@ -401,8 +519,13 @@ export default function PaymentScreen() {
 
       {currentOrder && (
         <View style={styles.qrCard}>
+          {/* 二维码图片 */}
           <View style={styles.qrContainer}>
-            <FontAwesome6 name="qrcode" size={120} color={theme.textMuted} />
+            <Image
+              source={{ uri: getQRCodeUrl() || '' }}
+              style={{ width: 200, height: 200 }}
+              resizeMode="contain"
+            />
           </View>
           
           <ThemedText variant="h2" color={theme.primary}>
@@ -410,7 +533,7 @@ export default function PaymentScreen() {
           </ThemedText>
           
           <ThemedText variant="small" color={theme.textSecondary}>
-            普通会员订阅
+            {getProductName()}
           </ThemedText>
           
           <ThemedText variant="caption" color={theme.textMuted}>
@@ -431,6 +554,7 @@ export default function PaymentScreen() {
             </ThemedText>
           </View>
           
+          {/* 模拟支付按钮（测试环境） */}
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.accent, marginTop: Spacing.md }]}
             onPress={handleSimulatePay}
@@ -640,6 +764,9 @@ export default function PaymentScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: Spacing.md }}>
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
           <ThemedText variant="h3" color={theme.textPrimary}>
             支付中心
           </ThemedText>

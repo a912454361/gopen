@@ -4,6 +4,8 @@ import {
   View,
   TouchableOpacity,
   Alert,
+  Modal,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -13,8 +15,9 @@ import { useTheme } from '@/hooks/useTheme';
 import { useMembership, type MemberLevel } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
-import { Spacing } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 
 interface TierPlan {
   level: MemberLevel;
@@ -93,45 +96,48 @@ const tierPlans: TierPlan[] = [
 const ALIPAY_ACCOUNT = '18321337942';
 
 export default function MembershipScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { level, isMember, isSuperMember, expireDate, setMember } = useMembership();
 
   const [selectedTier, setSelectedTier] = useState<MemberLevel>('member');
+  const [showPayModal, setShowPayModal] = useState(false);
 
   const selectedPlan = tierPlans.find(t => t.level === selectedTier);
 
   const handleCopyAccount = async () => {
     await Clipboard.setStringAsync(ALIPAY_ACCOUNT);
-    Alert.alert('复制成功', `支付宝账号 ${ALIPAY_ACCOUNT} 已复制到剪贴板`);
+    if (Platform.OS === 'web') {
+      window.alert(`复制成功！支付宝账号 ${ALIPAY_ACCOUNT} 已复制到剪贴板`);
+    } else {
+      Alert.alert('复制成功', `支付宝账号 ${ALIPAY_ACCOUNT} 已复制到剪贴板`);
+    }
   };
 
   const handleSubscribe = () => {
     if (selectedTier === 'free') {
-      Alert.alert('提示', '您当前已是免费用户');
+      if (Platform.OS === 'web') {
+        alert('您当前已是免费用户');
+      } else {
+        Alert.alert('提示', '您当前已是免费用户');
+      }
       return;
     }
+    // 显示支付方式选择弹窗
+    setShowPayModal(true);
+  };
 
-    Alert.alert(
-      '开通会员',
-      `选择支付方式`,
-      [
-        { text: '取消', style: 'cancel' },
-        { 
-          text: '二维码支付', 
-          onPress: () => {
-            // 根据选择的会员等级设置金额
-            const amount = selectedTier === 'member' ? 2900 : 9900; // 29元或99元
-            router.push('/payment');
-          }
-        },
-        { 
-          text: '转账支付', 
-          onPress: handleCopyAccount 
-        },
-      ]
-    );
+  const handleQRCodePay = () => {
+    setShowPayModal(false);
+    // 跳转到支付页面
+    const amount = selectedTier === 'member' ? 2900 : 9900; // 29元或99元
+    router.push('/payment', { amount });
+  };
+
+  const handleTransferPay = () => {
+    setShowPayModal(false);
+    handleCopyAccount();
   };
 
   const getLevelColor = (lvl: MemberLevel) => {
@@ -365,6 +371,130 @@ export default function MembershipScreen() {
           </ThemedText>
         </View>
       </ScrollView>
+
+      {/* 支付方式选择弹窗 */}
+      <Modal
+        visible={showPayModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPayModal(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => setShowPayModal(false)}
+        >
+          <View
+            style={{
+              width: '85%',
+              maxWidth: 360,
+              borderRadius: BorderRadius.lg,
+              overflow: 'hidden',
+              backgroundColor: theme.backgroundDefault,
+            }}
+          >
+            {/* Header */}
+            <LinearGradient
+              colors={selectedPlan?.color as [string, string] || [theme.primary, theme.accent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}
+            >
+              <FontAwesome6 name="crown" size={32} color={theme.backgroundRoot} />
+              <ThemedText variant="h3" color={theme.backgroundRoot} style={{ marginTop: Spacing.sm }}>
+                开通 {selectedPlan?.name}
+              </ThemedText>
+              <ThemedText variant="title" color={theme.backgroundRoot} style={{ marginTop: Spacing.xs }}>
+                {selectedPlan?.price}{selectedPlan?.priceNote}
+              </ThemedText>
+            </LinearGradient>
+
+            {/* Options */}
+            <View style={{ padding: Spacing.xl, gap: Spacing.md }}>
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: theme.backgroundTertiary,
+                  padding: Spacing.lg,
+                  borderRadius: BorderRadius.md,
+                  gap: Spacing.md,
+                }}
+                onPress={handleQRCodePay}
+              >
+                <View style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: BorderRadius.md,
+                  backgroundColor: theme.primary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name="qrcode" size={20} color={theme.backgroundRoot} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    扫码支付
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    支付宝/微信扫码付款
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: theme.backgroundTertiary,
+                  padding: Spacing.lg,
+                  borderRadius: BorderRadius.md,
+                  gap: Spacing.md,
+                }}
+                onPress={handleTransferPay}
+              >
+                <View style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: BorderRadius.md,
+                  backgroundColor: '#1677FF',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name="wallet" size={20} color={theme.backgroundRoot} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    转账支付
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    手动转账后联系客服开通
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Cancel Button */}
+            <View style={{ paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl }}>
+              <TouchableOpacity
+                style={{
+                  paddingVertical: Spacing.md,
+                  alignItems: 'center',
+                  backgroundColor: theme.backgroundTertiary,
+                  borderRadius: BorderRadius.md,
+                }}
+                onPress={() => setShowPayModal(false)}
+              >
+                <ThemedText variant="small" color={theme.textMuted}>
+                  取消
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Screen>
   );
 }

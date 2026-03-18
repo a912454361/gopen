@@ -9,77 +9,84 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@/hooks/useTheme';
-import { useMembership } from '@/contexts/MembershipContext';
+import { useMembership, type MemberLevel } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
+import { Spacing } from '@/constants/theme';
 
-interface Plan {
-  id: string;
+interface TierPlan {
+  level: MemberLevel;
   name: string;
-  duration: string;
-  price: number;
-  originalPrice?: number;
-  isPopular?: boolean;
-  discount?: string;
+  nameEn: string;
+  price: string;
+  priceNote?: string;
+  color: string[];
+  icon: string;
+  features: string[];
+  restrictions?: string[];
+  recommended?: boolean;
 }
 
-const plans: Plan[] = [
+const tierPlans: TierPlan[] = [
   {
-    id: 'first_month',
-    name: '首月特惠',
-    duration: '1个月',
-    price: 8,
-    originalPrice: 18,
-    isPopular: true,
-    discount: '新人专享',
+    level: 'free',
+    name: '免费用户',
+    nameEn: 'FREE',
+    price: '¥0',
+    icon: 'user',
+    color: ['#64748B', '#475569'],
+    features: [
+      '环境打通功能',
+      '每日10次AI对话',
+      '基础AI模型',
+      '最多3个项目',
+      '100MB存储空间',
+    ],
+    restrictions: [
+      '内容制作需升级',
+      '高级输出需升级',
+    ],
   },
   {
-    id: 'monthly',
-    name: '月度会员',
-    duration: '1个月',
-    price: 18,
+    level: 'member',
+    name: '普通会员',
+    nameEn: 'MEMBER',
+    price: '¥29',
+    priceNote: '/月',
+    icon: 'crown',
+    color: ['#00F0FF', '#BF00FF'],
+    features: [
+      '全部免费功能',
+      '环境打通功能',
+      '内容制作功能',
+      '每日100次AI对话',
+      '高级AI模型',
+      '不限项目数量',
+      '10GB存储空间',
+    ],
+    restrictions: ['高级输出需升级'],
+    recommended: true,
   },
   {
-    id: 'quarterly',
-    name: '季度会员',
-    duration: '3个月',
-    price: 35,
-    originalPrice: 54,
-    discount: '省19元',
+    level: 'super',
+    name: '超级会员',
+    nameEn: 'SUPER',
+    price: '¥99',
+    priceNote: '/月',
+    icon: 'rocket',
+    color: ['#FFD700', '#FF6B00'],
+    features: [
+      '全部普通会员功能',
+      '成品输出功能',
+      '无限AI对话',
+      '最先进AI模型',
+      '优先响应速度',
+      '100GB存储空间',
+      '专属客服支持',
+      '新功能抢先体验',
+    ],
   },
-  {
-    id: 'semi_annual',
-    name: '半年会员',
-    duration: '6个月',
-    price: 88,
-    originalPrice: 108,
-    discount: '省20元',
-  },
-  {
-    id: 'annual',
-    name: '年度会员',
-    duration: '12个月',
-    price: 188,
-    originalPrice: 216,
-    discount: '省28元',
-  },
-];
-
-const memberFeatures = [
-  '无限AI对话次数',
-  '高级AI模型优先',
-  '项目数量不限',
-  '高清资源导出',
-  '专属客服支持',
-  '新功能抢先体验',
-];
-
-const freeFeatures = [
-  '每日10次AI对话',
-  '基础AI模型',
-  '最多3个项目',
-  '标清资源导出',
 ];
 
 const ALIPAY_ACCOUNT = '18321337942';
@@ -87,11 +94,11 @@ const ALIPAY_ACCOUNT = '18321337942';
 export default function MembershipScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { isMember, expireDate, planType, setMember } = useMembership();
+  const { level, isMember, isSuperMember, expireDate, setMember } = useMembership();
 
-  const [selectedPlan, setSelectedPlan] = useState<string>('first_month');
+  const [selectedTier, setSelectedTier] = useState<MemberLevel>('member');
 
-  const selectedPlanData = plans.find(p => p.id === selectedPlan);
+  const selectedPlan = tierPlans.find(t => t.level === selectedTier);
 
   const handleCopyAccount = async () => {
     await Clipboard.setStringAsync(ALIPAY_ACCOUNT);
@@ -99,9 +106,14 @@ export default function MembershipScreen() {
   };
 
   const handleSubscribe = () => {
+    if (selectedTier === 'free') {
+      Alert.alert('提示', '您当前已是免费用户');
+      return;
+    }
+
     Alert.alert(
       '开通会员',
-      `请转账 ${selectedPlanData?.price} 元到支付宝账号：${ALIPAY_ACCOUNT}\n\n转账备注请填写：G open会员+您的手机号\n\n转账成功后，会员将在1-3分钟内激活`,
+      `请转账 ${selectedPlan?.price.replace('¥', '')} 元到支付宝账号：${ALIPAY_ACCOUNT}\n\n转账备注请填写：G open会员+您的手机号\n\n转账成功后，会员将在1-3分钟内激活`,
       [
         { text: '取消', style: 'cancel' },
         { text: '复制账号', onPress: handleCopyAccount },
@@ -109,67 +121,17 @@ export default function MembershipScreen() {
     );
   };
 
-  const renderPlanCard = (plan: Plan) => (
-    <TouchableOpacity
-      key={plan.id}
-      style={[
-        styles.planCard,
-        plan.isPopular && styles.planCardPopular,
-        selectedPlan === plan.id && styles.planCardSelected,
-      ]}
-      onPress={() => setSelectedPlan(plan.id)}
-    >
-      <View style={styles.planHeader}>
-        <View>
-          <ThemedText variant="title" color={theme.textPrimary}>
-            {plan.name}
-          </ThemedText>
-          <ThemedText variant="caption" color={theme.textMuted}>
-            {plan.duration}
-          </ThemedText>
-        </View>
-        {plan.isPopular && (
-          <View style={styles.popularBadge}>
-            <ThemedText variant="tiny" color={theme.backgroundRoot}>
-              {plan.discount || '推荐'}
-            </ThemedText>
-          </View>
-        )}
-        {plan.discount && !plan.isPopular && (
-          <View style={[styles.popularBadge, { backgroundColor: theme.accent }]}>
-            <ThemedText variant="tiny" color={theme.backgroundRoot}>
-              {plan.discount}
-            </ThemedText>
-          </View>
-        )}
-      </View>
+  const getLevelColor = (lvl: MemberLevel) => {
+    if (lvl === 'free') return theme.textMuted;
+    if (lvl === 'member') return theme.primary;
+    return '#FFD700';
+  };
 
-      <View style={styles.planPrice}>
-        <ThemedText variant="smallMedium" color={theme.primary}>
-          ¥
-        </ThemedText>
-        <ThemedText variant="stat" color={theme.primary}>
-          {plan.price}
-        </ThemedText>
-        {plan.originalPrice && (
-          <ThemedText variant="caption" color={theme.textMuted}>
-            原价¥{plan.originalPrice}
-          </ThemedText>
-        )}
-      </View>
-
-      <View style={styles.featuresList}>
-        {memberFeatures.slice(0, 3).map((feature, index) => (
-          <View key={index} style={styles.featureItem}>
-            <FontAwesome6 name="check" size={12} color={theme.success} />
-            <ThemedText variant="small" color={theme.textSecondary}>
-              {feature}
-            </ThemedText>
-          </View>
-        ))}
-      </View>
-    </TouchableOpacity>
-  );
+  const getCurrentLevelName = () => {
+    if (isSuperMember) return '超级会员';
+    if (isMember) return '普通会员';
+    return '免费用户';
+  };
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -177,10 +139,10 @@ export default function MembershipScreen() {
         {/* Header */}
         <View style={styles.header}>
           <ThemedText variant="h2" color={theme.textPrimary}>
-            G open 会员
+            会员中心
           </ThemedText>
           <ThemedText variant="label" color={theme.textMuted}>
-            解锁全部创作能力
+            三级会员 · 按需开通
           </ThemedText>
           <LinearGradient
             colors={[theme.primary, theme.accent]}
@@ -190,54 +152,174 @@ export default function MembershipScreen() {
           />
         </View>
 
-        {/* Current Plan Status */}
+        {/* Current Status */}
         <View style={[styles.currentPlan, isMember && styles.currentPlanActive]}>
           <View style={styles.planBadge}>
             <FontAwesome6
-              name={isMember ? 'crown' : 'user'}
+              name={isSuperMember ? 'rocket' : isMember ? 'crown' : 'user'}
               size={16}
-              color={isMember ? theme.primary : theme.textMuted}
+              color={getLevelColor(level)}
             />
-            <ThemedText variant="labelSmall" color={isMember ? theme.primary : theme.textMuted}>
-              {isMember ? '尊贵会员' : '免费用户'}
+            <ThemedText variant="labelSmall" color={getLevelColor(level)}>
+              {getCurrentLevelName()}
             </ThemedText>
           </View>
           <ThemedText variant="title" color={theme.textPrimary}>
             {isMember ? '会员有效期内' : '升级会员解锁更多功能'}
           </ThemedText>
           <ThemedText variant="small" color={theme.textMuted}>
-            {isMember ? `到期时间：${expireDate}` : '当前可使用基础功能'}
+            {isMember ? `到期时间：${expireDate}` : '当前可使用环境打通功能'}
           </ThemedText>
         </View>
 
-        {/* Plans */}
+        {/* Tier Plans */}
         <ThemedText variant="label" color={theme.textPrimary}>
-          选择会员方案
+          选择会员等级
         </ThemedText>
-        <View style={styles.plansGrid}>
-          {plans.map(renderPlanCard)}
+        <View style={styles.tierGrid}>
+          {tierPlans.map(tier => (
+            <TouchableOpacity
+              key={tier.level}
+              style={[
+                styles.tierCard,
+                selectedTier === tier.level && styles.tierCardSelected,
+                tier.recommended && styles.tierCardRecommended,
+              ]}
+              onPress={() => setSelectedTier(tier.level)}
+            >
+              {/* Recommended Badge */}
+              {tier.recommended && (
+                <LinearGradient
+                  colors={tier.color as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.recommendedBadge}
+                >
+                  <ThemedText variant="tiny" color={theme.backgroundRoot}>
+                    推荐
+                  </ThemedText>
+                </LinearGradient>
+              )}
+
+              {/* Tier Header */}
+              <View style={styles.tierHeader}>
+                <LinearGradient
+                  colors={tier.color as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.tierIcon}
+                >
+                  <FontAwesome6 name={tier.icon} size={20} color={theme.backgroundRoot} />
+                </LinearGradient>
+                <View>
+                  <ThemedText variant="labelSmall" color={tier.color[0]}>
+                    {tier.nameEn}
+                  </ThemedText>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    {tier.name}
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Price */}
+              <View style={styles.tierPrice}>
+                <ThemedText variant="title" color={tier.color[0]}>
+                  {tier.price}
+                </ThemedText>
+                {tier.priceNote && (
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {tier.priceNote}
+                  </ThemedText>
+                )}
+              </View>
+
+              {/* Features Preview */}
+              <View style={styles.tierFeaturesPreview}>
+                {tier.features.slice(0, 3).map((feature, idx) => (
+                  <View key={idx} style={styles.featureItem}>
+                    <FontAwesome6 name="check" size={10} color={tier.color[0]} />
+                    <ThemedText variant="caption" color={theme.textSecondary} numberOfLines={1}>
+                      {feature}
+                    </ThemedText>
+                  </View>
+                ))}
+                {tier.features.length > 3 && (
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    +{tier.features.length - 3}项权益
+                  </ThemedText>
+                )}
+              </View>
+
+              {/* Selection Indicator */}
+              {selectedTier === tier.level && (
+                <View style={styles.selectedIndicator}>
+                  <FontAwesome6 name="circle-check" size={16} color={tier.color[0]} />
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
         </View>
 
+        {/* Full Feature List */}
+        {selectedPlan && (
+          <View style={styles.featureCard}>
+            <View style={styles.featureCardHeader}>
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                {selectedPlan.name}权益详情
+              </ThemedText>
+            </View>
+            
+            <View style={styles.featureSection}>
+              <ThemedText variant="labelSmall" color={selectedPlan.color[0]}>
+                包含权益
+              </ThemedText>
+              {selectedPlan.features.map((feature, idx) => (
+                <View key={idx} style={styles.featureItem}>
+                  <FontAwesome6 name="circle-check" size={14} color={selectedPlan.color[0]} />
+                  <ThemedText variant="small" color={theme.textSecondary}>
+                    {feature}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+
+            {selectedPlan.restrictions && selectedPlan.restrictions.length > 0 && (
+              <View style={styles.featureSection}>
+                <ThemedText variant="labelSmall" color={theme.textMuted}>
+                  升级后解锁
+                </ThemedText>
+                {selectedPlan.restrictions.map((item, idx) => (
+                  <View key={idx} style={styles.featureItem}>
+                    <FontAwesome6 name="lock" size={14} color={theme.textMuted} />
+                    <ThemedText variant="small" color={theme.textMuted}>
+                      {item}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Subscribe Button */}
-        <LinearGradient
-          colors={[theme.primary, theme.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.subscribeButton}
-        >
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-            onPress={handleSubscribe}
+        {selectedTier !== 'free' && (
+          <LinearGradient
+            colors={selectedPlan?.color as [string, string] || [theme.primary, theme.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.subscribeButton}
           >
-            <FontAwesome6 name="crown" size={18} color={theme.backgroundRoot} />
-            <ThemedText
-              variant="labelTitle"
-              color={theme.backgroundRoot}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              onPress={handleSubscribe}
             >
-              {isMember ? '续费会员' : '立即开通'} ¥{selectedPlanData?.price}
-            </ThemedText>
-          </TouchableOpacity>
-        </LinearGradient>
+              <FontAwesome6 name="crown" size={18} color={theme.backgroundRoot} />
+              <ThemedText variant="labelTitle" color={theme.backgroundRoot}>
+                立即开通 {selectedPlan?.price}
+              </ThemedText>
+            </TouchableOpacity>
+          </LinearGradient>
+        )}
 
         {/* Payment Info */}
         <View style={styles.paymentInfo}>
@@ -263,37 +345,6 @@ export default function MembershipScreen() {
           </ThemedText>
         </View>
 
-        {/* Feature Comparison */}
-        <View style={[styles.paymentInfo, { marginTop: Spacing.lg }]}>
-          <ThemedText variant="smallMedium" color={theme.textPrimary}>
-            会员权益对比
-          </ThemedText>
-          <View style={{ marginTop: Spacing.md }}>
-            <ThemedText variant="captionMedium" color={theme.primary}>
-              会员权益
-            </ThemedText>
-            {memberFeatures.map((feature, index) => (
-              <View key={index} style={styles.featureItem}>
-                <FontAwesome6 name="circle-check" size={14} color={theme.success} />
-                <ThemedText variant="small" color={theme.textSecondary}>
-                  {feature}
-                </ThemedText>
-              </View>
-            ))}
-            <ThemedText variant="captionMedium" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
-              免费用户权益
-            </ThemedText>
-            {freeFeatures.map((feature, index) => (
-              <View key={index} style={styles.featureItem}>
-                <FontAwesome6 name="circle" size={14} color={theme.textMuted} />
-                <ThemedText variant="small" color={theme.textMuted}>
-                  {feature}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
-        </View>
-
         {/* Disclaimer */}
         <View style={styles.disclaimer}>
           <ThemedText variant="caption" color={theme.textMuted}>
@@ -304,5 +355,3 @@ export default function MembershipScreen() {
     </Screen>
   );
 }
-
-import { Spacing } from '@/constants/theme';

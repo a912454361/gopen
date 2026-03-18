@@ -16,19 +16,6 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xl,
       alignItems: 'center',
     },
-    headerTitle: {
-      color: theme.textPrimary,
-      fontSize: 28,
-      fontWeight: '700',
-      marginBottom: Spacing.sm,
-    },
-    headerSubtitle: {
-      color: theme.textMuted,
-      fontSize: 12,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
-      fontWeight: '600',
-    },
     neonLine: {
       height: 2,
       borderRadius: 1,
@@ -57,119 +44,82 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.sm,
       marginBottom: Spacing.md,
     },
-    planBadgeText: {
-      color: theme.primary,
-      fontSize: 14,
-      fontWeight: '700',
-      letterSpacing: 1,
-    },
-    planTitle: {
-      color: theme.textPrimary,
-      fontSize: 20,
-      fontWeight: '700',
-      marginBottom: Spacing.xs,
-    },
-    planExpiry: {
-      color: theme.textMuted,
-      fontSize: 13,
-    },
-    sectionTitle: {
-      color: theme.textPrimary,
-      fontSize: 16,
-      fontWeight: '700',
-      letterSpacing: 1,
-      marginBottom: Spacing.md,
-    },
-    plansGrid: {
+    tierGrid: {
       gap: Spacing.md,
       marginBottom: Spacing.xl,
     },
-    planCard: {
+    tierCard: {
       backgroundColor: theme.backgroundDefault,
       borderRadius: BorderRadius.sm,
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.lg,
+      position: 'relative',
+      overflow: 'hidden',
     },
-    planCardPopular: {
+    tierCardSelected: {
       borderColor: theme.primary,
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.15,
       shadowRadius: 12,
     },
-    planCardSelected: {
-      borderColor: theme.accent,
-      shadowColor: theme.accent,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
+    tierCardRecommended: {
+      borderColor: theme.primary,
     },
-    planHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: Spacing.md,
-    },
-    planName: {
-      color: theme.textPrimary,
-      fontSize: 16,
-      fontWeight: '700',
-      marginBottom: Spacing.xs,
-    },
-    planDuration: {
-      color: theme.textMuted,
-      fontSize: 12,
-    },
-    popularBadge: {
-      backgroundColor: theme.primary,
+    recommendedBadge: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.xs,
-      borderRadius: BorderRadius.xs,
+      borderBottomLeftRadius: BorderRadius.xs,
     },
-    popularBadgeText: {
-      color: theme.backgroundRoot,
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 1,
-    },
-    planPrice: {
+    tierHeader: {
       flexDirection: 'row',
-      alignItems: 'baseline',
+      alignItems: 'center',
+      gap: Spacing.md,
       marginBottom: Spacing.md,
     },
-    priceSymbol: {
-      color: theme.primary,
-      fontSize: 18,
-      fontWeight: '700',
+    tierIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: BorderRadius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
-    priceValue: {
-      color: theme.primary,
-      fontSize: 36,
-      fontWeight: '700',
+    tierPrice: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: Spacing.xs,
+      marginBottom: Spacing.md,
     },
-    priceUnit: {
-      color: theme.textMuted,
-      fontSize: 14,
-      marginLeft: Spacing.xs,
-    },
-    originalPrice: {
-      color: theme.textMuted,
-      fontSize: 14,
-      textDecorationLine: 'line-through',
-      marginLeft: Spacing.sm,
-    },
-    featuresList: {
-      gap: Spacing.sm,
+    tierFeaturesPreview: {
+      gap: Spacing.xs,
     },
     featureItem: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.sm,
     },
-    featureText: {
-      color: theme.textSecondary,
-      fontSize: 13,
+    selectedIndicator: {
+      position: 'absolute',
+      top: Spacing.md,
+      right: Spacing.md,
+    },
+    featureCard: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      marginBottom: Spacing.xl,
+    },
+    featureCardHeader: {
+      marginBottom: Spacing.md,
+    },
+    featureSection: {
+      marginBottom: Spacing.md,
     },
     subscribeButton: {
       flexDirection: 'row',
@@ -178,13 +128,6 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.sm,
       padding: Spacing.lg,
       borderRadius: BorderRadius.sm,
-      marginTop: Spacing.lg,
-    },
-    subscribeButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      letterSpacing: 2,
-      textTransform: 'uppercase',
     },
     paymentInfo: {
       backgroundColor: theme.backgroundDefault,
@@ -192,29 +135,13 @@ export const createStyles = (theme: Theme) => {
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.lg,
-      marginTop: Spacing.xl,
-    },
-    paymentTitle: {
-      color: theme.textPrimary,
-      fontSize: 14,
-      fontWeight: '700',
-      marginBottom: Spacing.md,
+      marginTop: Spacing.lg,
     },
     paymentRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.md,
       marginBottom: Spacing.sm,
-    },
-    paymentLabel: {
-      color: theme.textMuted,
-      fontSize: 13,
-      width: 80,
-    },
-    paymentValue: {
-      color: theme.primary,
-      fontSize: 15,
-      fontWeight: '600',
     },
     copyButton: {
       paddingHorizontal: Spacing.md,
@@ -223,20 +150,9 @@ export const createStyles = (theme: Theme) => {
       borderRadius: BorderRadius.xs,
       marginLeft: 'auto',
     },
-    copyButtonText: {
-      color: theme.primary,
-      fontSize: 12,
-      fontWeight: '600',
-    },
     disclaimer: {
       marginTop: Spacing.xl,
       paddingHorizontal: Spacing.md,
-    },
-    disclaimerText: {
-      color: theme.textMuted,
-      fontSize: 11,
-      textAlign: 'center',
-      lineHeight: 18,
     },
   });
 };

@@ -11,6 +11,8 @@ export default function RootLayout() {
         headerShown: false
       }}>
         <Stack.Screen name="(tabs)" options={{ title: "" }} />
+        <Stack.Screen name="workflow" options={{ title: "创作工作台" }} />
+        <Stack.Screen name="storage" options={{ title: "云端存储" }} />
       </Stack>
     </MembershipProvider>
   );

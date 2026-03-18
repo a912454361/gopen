@@ -2,6 +2,7 @@ import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
 import payRouter from "./routes/pay.js";
+import paymentRouter from "./routes/payment.js";
 import oauthRouter from "./routes/oauth.js";
 import riskRouter from "./routes/risk-control.js";
 import billRouter from "./routes/bill.js";
@@ -30,6 +31,7 @@ app.get('/api/v1/health', (req, res) => {
 
 // API Routes
 app.use('/api/v1/pay', payRouter);
+app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/oauth', oauthRouter);
 app.use('/api/v1/risk', riskRouter);
 app.use('/api/v1/bill', billRouter);

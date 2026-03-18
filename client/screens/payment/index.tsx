@@ -6,10 +6,11 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  TextInput,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
@@ -17,46 +18,51 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
-type PayMethod = 'alipay' | 'wechat' | 'douyin';
+type PayMethod = 'alipay' | 'wechat';
+
+interface PaymentAccount {
+  name: string;
+  account?: string;
+  qrcodeUrl: string;
+  realName: string;
+}
 
 interface PayOrder {
   orderId: string;
   orderNo: string;
   amount: number;
-  qrCodeUrl: string;
-  qrCodeData: string;
+  payType: PayMethod;
+  productType: string;
   expiredAt: string;
+  paymentAccount: PaymentAccount;
 }
 
 const PAY_METHODS = [
   { 
-    id: 'alipay', 
+    id: 'alipay' as PayMethod, 
     name: '支付宝', 
     icon: 'wallet', 
     color: '#1677FF', 
     bgColor: '#1677FF15',
-    description: '使用支付宝扫码支付'
   },
   { 
-    id: 'wechat', 
+    id: 'wechat' as PayMethod, 
     name: '微信支付', 
     icon: 'message', 
     color: '#07C160', 
     bgColor: '#07C16015',
-    description: '使用微信扫码支付'
-  },
-  { 
-    id: 'douyin', 
-    name: '抖音支付', 
-    icon: 'play', 
-    color: '#161823', 
-    bgColor: '#16182315',
-    description: '使用抖音扫码支付'
   },
 ];
+
+// 测试用收款二维码（实际使用时替换为真实收款码URL）
+const TEST_QRCODES = {
+  alipay: 'https://qr.alipay.com/fkx19668fnwkfuxvdtexrdb', // 示例支付宝收款码
+  wechat: 'wxp://f2f0d3a5c2e1b4f8a9d7c6e5f4a3b2c1d0', // 示例微信收款码
+};
 
 export default function PaymentScreen() {
   const { theme } = useTheme();
@@ -64,7 +70,6 @@ export default function PaymentScreen() {
   const router = useSafeRouter();
   const { setMember, checkMembership } = useMembership();
   
-  // 使用 useSafeSearchParams 获取参数
   const params = useSafeSearchParams<{ amount?: string; productType?: string }>();
   const amount = parseInt(params.amount || '2900', 10);
   const productType = params.productType || 'membership';
@@ -73,8 +78,9 @@ export default function PaymentScreen() {
   const [loading, setLoading] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<PayOrder | null>(null);
   const [countdown, setCountdown] = useState(0);
-  const [paying, setPaying] = useState(false);
-  const [polling, setPolling] = useState(false);
+  const [transactionId, setTransactionId] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [orderStatus, setOrderStatus] = useState<string | null>(null);
 
   // 获取产品名称
   const getProductName = () => {
@@ -83,21 +89,22 @@ export default function PaymentScreen() {
     return '会员订阅';
   };
 
-  // 生成订单
-  const generateOrder = useCallback(async () => {
+  // 创建订单
+  const createOrder = useCallback(async () => {
     setLoading(true);
     try {
+      const userId = await AsyncStorage.getItem('userId') || 'guest_user';
+      
       /**
-       * 服务端文件：server/src/routes/pay.ts
-       * 接口：POST /api/v1/pay/qrcode
-       * Body 参数：userId: string, amount: number, payType: 'alipay'|'wechat'|'douyin', productType: 'membership'|'super_member'
+       * 服务端文件：server/src/routes/payment.ts
+       * 接口：POST /api/v1/payment/create
        */
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/pay/qrcode`, {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: 'demo_user_001',
-          amount: amount,
+          userId,
+          amount,
           payType: payMethod,
           productType: productType as 'membership' | 'super_member',
         }),
@@ -106,40 +113,34 @@ export default function PaymentScreen() {
       const result = await response.json();
       
       if (result.success) {
-        setCurrentOrder({
-          orderId: result.data.orderId,
-          orderNo: result.data.orderNo,
-          amount: result.data.amount,
-          qrCodeUrl: result.data.qrCodeUrl,
-          qrCodeData: result.data.qrCodeData,
-          expiredAt: result.data.expiredAt,
-        });
-        const expiresAt = new Date(result.data.expiredAt);
-        const remaining = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
-        setCountdown(remaining > 0 ? remaining : 900); // 默认15分钟
+        setCurrentOrder(result.data);
+        // 设置倒计时（30分钟）
+        setCountdown(30 * 60);
+        setOrderStatus('pending');
       } else {
+        const errorMsg = result.error || '创建订单失败';
         if (Platform.OS === 'web') {
-          window.alert(result.error || '无法生成支付订单');
+          window.alert(errorMsg);
         } else {
-          Alert.alert('生成失败', result.error || '无法生成支付订单');
+          Alert.alert('错误', errorMsg);
         }
       }
     } catch (error) {
-      console.error('Generate order error:', error);
+      console.error('Create order error:', error);
       if (Platform.OS === 'web') {
-        window.alert('网络错误，请检查网络连接后重试');
+        window.alert('网络错误，请检查网络连接');
       } else {
-        Alert.alert('网络错误', '请检查网络连接后重试');
+        Alert.alert('错误', '网络错误，请检查网络连接');
       }
     } finally {
       setLoading(false);
     }
   }, [amount, payMethod, productType]);
 
-  // 页面加载时自动生成订单
+  // 切换支付方式时重新创建订单
   useEffect(() => {
-    generateOrder();
-  }, [payMethod]); // 切换支付方式时重新生成
+    createOrder();
+  }, [payMethod]);
 
   // 倒计时
   useEffect(() => {
@@ -151,119 +152,88 @@ export default function PaymentScreen() {
     }
   }, [countdown]);
 
-  // 支付成功处理
-  const handlePaySuccess = useCallback(async () => {
-    const expireDate = new Date();
-    expireDate.setMonth(expireDate.getMonth() + 1);
-    
-    if (productType === 'super_member') {
-      await setMember('super', expireDate.toISOString(), 'monthly');
-    } else if (productType === 'membership') {
-      await setMember('member', expireDate.toISOString(), 'monthly');
-    }
-    
-    await checkMembership();
-    
-    if (Platform.OS === 'web') {
-      window.alert('支付成功！会员已开通，感谢您的支持！');
-      router.replace('/membership');
-    } else {
-      Alert.alert('支付成功', '会员已开通，感谢您的支持！', [
-        { text: '好的', onPress: () => router.replace('/membership') },
-      ]);
-    }
-    setCurrentOrder(null);
-    setPolling(false);
-  }, [productType, setMember, checkMembership, router]);
-
-  // 轮询支付状态
-  useEffect(() => {
-    if (!currentOrder || !polling) return;
-    
-    const pollInterval = setInterval(async () => {
-      try {
-        /**
-         * 服务端文件：server/src/routes/pay.ts
-         * 接口：GET /api/v1/pay/status/:orderNo
-         */
-        const response = await fetch(
-          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/pay/status/${currentOrder.orderNo}`
-        );
-        const result = await response.json();
-        
-        if (result.success && result.data.status === 'paid') {
-          clearInterval(pollInterval);
-          handlePaySuccess();
-        }
-      } catch (error) {
-        console.error('Poll status error:', error);
-      }
-    }, 3000);
-    
-    return () => clearInterval(pollInterval);
-  }, [currentOrder, polling, handlePaySuccess]);
-
-  // 二维码过期处理
-  useEffect(() => {
-    if (countdown === 0 && currentOrder) {
-      setCurrentOrder(null);
-      setPolling(false);
-      setTimeout(() => {
-        if (Platform.OS === 'web') {
-          window.alert('支付码已过期，正在重新生成...');
-        }
-        generateOrder();
-      }, 500);
-    }
-  }, [countdown, currentOrder, generateOrder]);
-
-  // 模拟支付成功（测试用）
-  const handleSimulatePay = async () => {
+  // 用户确认支付
+  const handleConfirmPayment = async () => {
     if (!currentOrder) return;
     
-    setPaying(true);
+    if (!transactionId.trim()) {
+      if (Platform.OS === 'web') {
+        window.alert('请输入转账流水号或备注信息');
+      } else {
+        Alert.alert('提示', '请输入转账流水号或备注信息');
+      }
+      return;
+    }
+    
+    setConfirming(true);
     try {
+      const userId = await AsyncStorage.getItem('userId') || 'guest_user';
+      
       /**
-       * 服务端文件：server/src/routes/pay.ts
-       * 接口：POST /api/v1/pay/simulate/:orderNo
+       * 服务端文件：server/src/routes/payment.ts
+       * 接口：POST /api/v1/payment/confirm
        */
-      const response = await fetch(
-        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/pay/simulate/${currentOrder.orderNo}`,
-        { method: 'POST' }
-      );
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNo: currentOrder.orderNo,
+          userId,
+          transactionId: transactionId.trim(),
+          remark: '用户确认支付',
+        }),
+      });
+      
       const result = await response.json();
       
       if (result.success) {
-        handlePaySuccess();
-      } else {
+        setOrderStatus('confirming');
         if (Platform.OS === 'web') {
-          window.alert('支付失败，请重试');
+          window.alert('已提交支付确认！请等待管理员审核，审核通过后将自动激活会员。');
         } else {
-          Alert.alert('支付失败', '请重试');
+          Alert.alert('提交成功', '请等待管理员审核，审核通过后将自动激活会员。');
+        }
+      } else {
+        const errorMsg = result.error || '确认失败';
+        if (Platform.OS === 'web') {
+          window.alert(errorMsg);
+        } else {
+          Alert.alert('错误', errorMsg);
         }
       }
     } catch (error) {
-      console.error('Simulate pay error:', error);
+      console.error('Confirm payment error:', error);
     } finally {
-      setPaying(false);
+      setConfirming(false);
     }
   };
 
-  // 开始轮询
-  const handleStartPolling = () => {
-    setPolling(true);
+  // 复制到剪贴板（Web端）
+  const copyToClipboard = (text: string) => {
+    if (Platform.OS === 'web' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      window.alert('已复制到剪贴板');
+    }
   };
 
   const formatAmount = (fen: number) => `¥${(fen / 100).toFixed(2)}`;
 
-  // 生成二维码内容
-  const getQRCodeValue = () => {
-    if (!currentOrder) return '';
-    // 二维码内容包含订单信息，用户扫码后可识别
-    return currentOrder.qrCodeUrl;
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const currentPayMethod = PAY_METHODS.find(p => p.id === payMethod);
+
+  // 获取收款二维码URL
+  const getQRCodeUrl = () => {
+    if (currentOrder?.paymentAccount?.qrcodeUrl) {
+      return currentOrder.paymentAccount.qrcodeUrl;
+    }
+    // 如果没有配置，使用测试二维码
+    return TEST_QRCODES[payMethod];
+  };
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -339,8 +309,9 @@ export default function PaymentScreen() {
                   backgroundColor: payMethod === method.id ? method.bgColor : theme.backgroundTertiary,
                 }}
                 onPress={() => {
-                  setPayMethod(method.id as PayMethod);
-                  setPolling(false);
+                  setPayMethod(method.id);
+                  setOrderStatus(null);
+                  setTransactionId('');
                 }}
               >
                 <FontAwesome6 name={method.icon as any} size={24} color={method.color} />
@@ -356,38 +327,56 @@ export default function PaymentScreen() {
           </View>
         </View>
 
-        {/* 二维码区域 */}
-        <View style={[styles.qrCard, { alignItems: 'center' }]}>
-          {loading ? (
-            <View style={{ height: 280, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator size="large" color={currentPayMethod?.color || theme.primary} />
-              <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
-                正在生成支付码...
-              </ThemedText>
-            </View>
-          ) : currentOrder ? (
-            <>
-              {/* 二维码 */}
+        {/* 收款二维码区域 */}
+        {loading ? (
+          <View style={[styles.qrCard, { alignItems: 'center', justifyContent: 'center', minHeight: 300 }]}>
+            <ActivityIndicator size="large" color={currentPayMethod?.color || theme.primary} />
+            <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+              正在生成订单...
+            </ThemedText>
+          </View>
+        ) : currentOrder ? (
+          <View style={[styles.qrCard, { alignItems: 'center' }]}>
+            {/* 状态提示 */}
+            {orderStatus === 'confirming' && (
               <View style={{
-                padding: Spacing.lg,
-                backgroundColor: '#FFFFFF',
-                borderRadius: BorderRadius.lg,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: Spacing.sm,
+                padding: Spacing.md,
+                backgroundColor: '#FEF3C7',
+                borderRadius: BorderRadius.md,
                 marginBottom: Spacing.lg,
-                shadowColor: currentPayMethod?.color,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 8,
+                width: '100%',
               }}>
-                <QRCode
-                  value={getQRCodeValue()}
-                  size={200}
-                  color={currentPayMethod?.id === 'wechat' ? '#07C160' : '#000000'}
-                  backgroundColor="#FFFFFF"
-                />
+                <FontAwesome6 name="clock" size={16} color="#D97706" />
+                <ThemedText variant="small" color="#D97706">
+                  已提交确认，等待审核中...
+                </ThemedText>
               </View>
-              
-              {/* 支付方式提示 */}
+            )}
+
+            {/* 收款二维码 */}
+            <View style={{
+              padding: Spacing.lg,
+              backgroundColor: '#FFFFFF',
+              borderRadius: BorderRadius.lg,
+              marginBottom: Spacing.lg,
+              shadowColor: currentPayMethod?.color,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 8,
+            }}>
+              <Image
+                source={{ uri: getQRCodeUrl() }}
+                style={{ width: 200, height: 200 }}
+                resizeMode="contain"
+              />
+            </View>
+            
+            {/* 收款账户信息 */}
+            <View style={{ alignItems: 'center', marginBottom: Spacing.lg }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <FontAwesome6 
                   name={currentPayMethod?.icon as any} 
@@ -395,139 +384,140 @@ export default function PaymentScreen() {
                   color={currentPayMethod?.color} 
                 />
                 <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                  {currentPayMethod?.description}
+                  {currentOrder.paymentAccount?.name || `${currentPayMethod?.name}收款`}
                 </ThemedText>
               </View>
               
-              {/* 倒计时 */}
-              <View style={styles.statusContainer}>
-                <FontAwesome6
-                  name="clock"
-                  size={14}
-                  color={countdown > 60 ? theme.textMuted : theme.error}
-                />
-                <ThemedText
-                  variant="small"
-                  color={countdown > 60 ? theme.textMuted : theme.error}
+              {currentOrder.paymentAccount?.realName && (
+                <TouchableOpacity 
+                  onPress={() => copyToClipboard(currentOrder.paymentAccount.realName)}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}
                 >
-                  支付码有效期 {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
-                </ThemedText>
-              </View>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    收款人：{currentOrder.paymentAccount.realName}
+                  </ThemedText>
+                  <FontAwesome6 name="copy" size={12} color={theme.textMuted} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              )}
               
-              {/* 订单号 */}
-              <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: Spacing.sm }}>
+              {currentOrder.paymentAccount?.account && (
+                <TouchableOpacity 
+                  onPress={() => copyToClipboard(currentOrder.paymentAccount.account)}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}
+                >
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    账号：{currentOrder.paymentAccount.account}
+                  </ThemedText>
+                  <FontAwesome6 name="copy" size={12} color={theme.textMuted} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* 支付金额 */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: Spacing.sm,
+              padding: Spacing.md,
+              backgroundColor: theme.backgroundTertiary,
+              borderRadius: BorderRadius.md,
+              marginBottom: Spacing.md,
+            }}>
+              <ThemedText variant="small" color={theme.textMuted}>
+                支付金额：
+              </ThemedText>
+              <ThemedText variant="h3" color={currentPayMethod?.color}>
+                {formatAmount(currentOrder.amount)}
+              </ThemedText>
+            </View>
+
+            {/* 订单信息 */}
+            <View style={{ alignItems: 'center', marginBottom: Spacing.md }}>
+              <ThemedText variant="caption" color={theme.textMuted}>
                 订单号：{currentOrder.orderNo}
               </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 4 }}>
+                <FontAwesome6 name="clock" size={12} color={countdown > 300 ? theme.textMuted : theme.error} />
+                <ThemedText variant="caption" color={countdown > 300 ? theme.textMuted : theme.error}>
+                  剩余支付时间 {formatCountdown(countdown)}
+                </ThemedText>
+              </View>
+            </View>
 
-              {/* 状态提示 */}
-              {polling ? (
-                <View style={{ 
-                  flexDirection: 'row', 
-                  alignItems: 'center', 
-                  gap: Spacing.sm, 
-                  marginTop: Spacing.md,
-                  padding: Spacing.sm,
-                  backgroundColor: theme.success + '15',
-                  borderRadius: BorderRadius.sm,
-                }}>
-                  <ActivityIndicator size="small" color={theme.success} />
-                  <ThemedText variant="caption" color={theme.success}>
-                    等待支付中...
-                  </ThemedText>
-                </View>
-              ) : (
+            {/* 支付确认区域 */}
+            {orderStatus !== 'confirming' && (
+              <View style={{ width: '100%', marginTop: Spacing.md }}>
+                <ThemedText variant="small" color={theme.textPrimary} style={{ marginBottom: Spacing.sm }}>
+                  转账后请填写流水号/备注：
+                </ThemedText>
+                <TextInput
+                  style={{
+                    width: '100%',
+                    padding: Spacing.md,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    borderRadius: BorderRadius.md,
+                    backgroundColor: theme.backgroundTertiary,
+                    color: theme.textPrimary,
+                    fontSize: 14,
+                  }}
+                  placeholder="请输入转账流水号或备注信息"
+                  placeholderTextColor={theme.textMuted}
+                  value={transactionId}
+                  onChangeText={setTransactionId}
+                />
+                
                 <TouchableOpacity
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: Spacing.sm,
-                    marginTop: Spacing.md,
-                    padding: Spacing.md,
-                    backgroundColor: theme.primary + '15',
-                    borderRadius: BorderRadius.sm,
+                    padding: Spacing.lg,
+                    borderRadius: BorderRadius.lg,
+                    backgroundColor: currentPayMethod?.color,
+                    marginTop: Spacing.lg,
                   }}
-                  onPress={handleStartPolling}
+                  onPress={handleConfirmPayment}
+                  disabled={confirming}
                 >
-                  <FontAwesome6 name="rotate" size={14} color={theme.primary} />
-                  <ThemedText variant="smallMedium" color={theme.primary}>
-                    我已扫码，开始检测支付状态
-                  </ThemedText>
+                  {confirming ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <FontAwesome6 name="check-circle" size={18} color="#fff" />
+                      <ThemedText variant="label" color="#fff">
+                        我已完成支付，提交确认
+                      </ThemedText>
+                    </>
+                  )}
                 </TouchableOpacity>
-              )}
-
-              {/* 刷新按钮 */}
-              <TouchableOpacity
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: Spacing.xs,
-                  marginTop: Spacing.md,
-                  padding: Spacing.sm,
-                }}
-                onPress={() => {
-                  setPolling(false);
-                  generateOrder();
-                }}
-              >
-                <FontAwesome6 name="rotate" size={14} color={theme.textMuted} />
-                <ThemedText variant="caption" color={theme.textMuted}>
-                  刷新支付码
-                </ThemedText>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={{ height: 280, justifyContent: 'center', alignItems: 'center' }}>
-              <FontAwesome6 name="qrcode" size={64} color={theme.textMuted} />
-              <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
-                点击下方按钮生成支付码
-              </ThemedText>
-              <TouchableOpacity
-                style={{
-                  marginTop: Spacing.lg,
-                  padding: Spacing.md,
-                  backgroundColor: theme.primary,
-                  borderRadius: BorderRadius.md,
-                }}
-                onPress={generateOrder}
-              >
-                <ThemedText variant="smallMedium" color={theme.backgroundRoot}>
-                  生成支付码
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* 模拟支付按钮（测试环境） */}
-        {currentOrder && (
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: Spacing.sm,
-              padding: Spacing.lg,
-              borderRadius: BorderRadius.lg,
-              backgroundColor: theme.success,
-              marginTop: Spacing.lg,
-            }}
-            onPress={handleSimulatePay}
-            disabled={paying}
-          >
-            {paying ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <FontAwesome6 name="circle-check" size={18} color="#fff" />
-                <ThemedText variant="label" color="#fff">
-                  模拟支付成功（测试）
-                </ThemedText>
-              </>
+              </View>
             )}
-          </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.qrCard, { alignItems: 'center', justifyContent: 'center', minHeight: 300 }]}>
+            <FontAwesome6 name="qrcode" size={64} color={theme.textMuted} />
+            <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+              点击下方按钮生成订单
+            </ThemedText>
+            <TouchableOpacity
+              style={{
+                marginTop: Spacing.lg,
+                padding: Spacing.md,
+                backgroundColor: theme.primary,
+                borderRadius: BorderRadius.md,
+              }}
+              onPress={createOrder}
+            >
+              <ThemedText variant="smallMedium" color={theme.backgroundRoot}>
+                生成支付订单
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* 温馨提示 */}
+        {/* 支付说明 */}
         <View style={{
           backgroundColor: theme.backgroundTertiary,
           borderRadius: BorderRadius.md,
@@ -537,17 +527,38 @@ export default function PaymentScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
             <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
             <ThemedText variant="smallMedium" color={theme.textPrimary}>
-              温馨提示
+              支付说明
             </ThemedText>
           </View>
           <ThemedText variant="caption" color={theme.textMuted}>
-            1. 支持支付宝、微信、抖音扫码支付{'\n'}
-            2. 请在支付码有效期内完成支付{'\n'}
-            3. 扫码后点击「开始检测支付状态」按钮{'\n'}
-            4. 支付成功后会员权益将自动激活{'\n'}
+            1. 选择支付方式后，扫描上方二维码完成转账{'\n'}
+            2. 转账金额必须与订单金额一致{'\n'}
+            3. 转账完成后，请填写流水号/备注并点击确认{'\n'}
+            4. 管理员审核通过后，会员将自动激活{'\n'}
             5. 如有问题请联系客服处理
           </ThemedText>
         </View>
+
+        {/* 管理员入口 */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: Spacing.sm,
+            padding: Spacing.md,
+            marginTop: Spacing.lg,
+          }}
+          onPress={() => {
+            const adminKey = 'gopen_admin_2024';
+            router.push(`/payment-admin?key=${adminKey}`);
+          }}
+        >
+          <FontAwesome6 name="user-shield" size={14} color={theme.textMuted} />
+          <ThemedText variant="caption" color={theme.textMuted}>
+            管理员审核入口
+          </ThemedText>
+        </TouchableOpacity>
       </ScrollView>
     </Screen>
   );

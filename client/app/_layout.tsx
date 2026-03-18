@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="models" options={{ title: "模型市场" }} />
         <Stack.Screen name="download" options={{ title: "下载应用" }} />
         <Stack.Screen name="membership" options={{ title: "会员中心" }} />
+        <Stack.Screen name="payment-admin" options={{ title: "支付审核" }} />
       </Stack>
     </MembershipProvider>
   );

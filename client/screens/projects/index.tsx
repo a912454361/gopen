@@ -3,10 +3,13 @@ import {
   ScrollView,
   View,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
@@ -69,10 +72,31 @@ const mockProjects: Project[] = [
 export default function ProjectsScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
 
   const activeProjects = mockProjects.filter(p => p.status === 'active');
   const pendingProjects = mockProjects.filter(p => p.status === 'pending');
   const totalAssets = mockProjects.reduce((acc, p) => acc + p.assets, 0);
+
+  const handleProjectPress = (project: Project) => {
+    router.push('/workflow', { projectId: project.id, title: project.title });
+  };
+
+  const handleCreateProject = () => {
+    if (Platform.OS === 'web') {
+      window.alert('新建项目功能即将上线');
+    } else {
+      Alert.alert('提示', '新建项目功能即将上线');
+    }
+  };
+
+  const handleViewAll = () => {
+    if (Platform.OS === 'web') {
+      window.alert('查看全部项目功能即将上线');
+    } else {
+      Alert.alert('提示', '查看全部项目功能即将上线');
+    }
+  };
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -129,7 +153,7 @@ export default function ProjectsScreen() {
           <ThemedText variant="label" color={theme.textPrimary}>
             进行中的项目
           </ThemedText>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleViewAll}>
             <ThemedText variant="captionMedium" color={theme.primary}>
               查看全部
             </ThemedText>
@@ -142,6 +166,7 @@ export default function ProjectsScreen() {
               key={project.id}
               style={[styles.projectCard, styles.projectCardActive]}
               activeOpacity={0.7}
+              onPress={() => handleProjectPress(project)}
             >
               {/* Project Header */}
               <View style={styles.projectHeader}>
@@ -215,6 +240,7 @@ export default function ProjectsScreen() {
               key={project.id}
               style={styles.projectCard}
               activeOpacity={0.7}
+              onPress={() => handleProjectPress(project)}
             >
               {/* Project Header */}
               <View style={styles.projectHeader}>
@@ -271,7 +297,7 @@ export default function ProjectsScreen() {
         </View>
 
         {/* Create New Button */}
-        <TouchableOpacity style={styles.createButton} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.createButton} activeOpacity={0.8} onPress={handleCreateProject}>
           <LinearGradient
             colors={[theme.primary, theme.accent]}
             start={{ x: 0, y: 0 }}

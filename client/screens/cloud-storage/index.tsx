@@ -4,23 +4,26 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
-import { Spacing } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
+type CloudPlatform = 'baidu' | 'aliyun' | 'google' | 'onedrive' | 'dropbox' | 'icloud';
+
 interface CloudStorageInfo {
   id: number;
-  platform: 'baidu' | 'aliyun';
+  platform: CloudPlatform;
   accessToken: string;
   refreshToken: string;
   expiresAt: string;
@@ -33,6 +36,87 @@ interface SyncStatus {
   lastSyncAt?: string;
 }
 
+interface CloudPlatformConfig {
+  id: CloudPlatform;
+  name: string;
+  nameEn: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  description: string;
+  features: string[];
+  supported: boolean;
+}
+
+const CLOUD_PLATFORMS: CloudPlatformConfig[] = [
+  {
+    id: 'baidu',
+    name: '百度网盘',
+    nameEn: 'Baidu Netdisk',
+    icon: 'cloud',
+    color: '#2932E1',
+    bgColor: '#2932E115',
+    description: '国内主流云存储服务',
+    features: ['大文件传输', '离线下载', '多端同步'],
+    supported: true,
+  },
+  {
+    id: 'aliyun',
+    name: '阿里云盘',
+    nameEn: 'Aliyun Drive',
+    icon: 'cloud',
+    color: '#FF6A00',
+    bgColor: '#FF6A0015',
+    description: '阿里旗下云存储服务',
+    features: ['极速上传', '智能分类', '空间不限速'],
+    supported: true,
+  },
+  {
+    id: 'google',
+    name: 'Google Drive',
+    nameEn: 'Google Drive',
+    icon: 'google-drive',
+    color: '#4285F4',
+    bgColor: '#4285F415',
+    description: 'Google云端存储服务',
+    features: ['15GB免费空间', '实时协作', '智能搜索'],
+    supported: true,
+  },
+  {
+    id: 'onedrive',
+    name: 'OneDrive',
+    nameEn: 'Microsoft OneDrive',
+    icon: 'microsoft',
+    color: '#0078D4',
+    bgColor: '#0078D415',
+    description: '微软云存储服务',
+    features: ['Office集成', '个人保管库', '版本历史'],
+    supported: true,
+  },
+  {
+    id: 'dropbox',
+    name: 'Dropbox',
+    nameEn: 'Dropbox',
+    icon: 'dropbox',
+    color: '#0061FF',
+    bgColor: '#0061FF15',
+    description: '全球知名云存储服务',
+    features: ['智能同步', '文件恢复', '团队协作'],
+    supported: true,
+  },
+  {
+    id: 'icloud',
+    name: 'iCloud',
+    nameEn: 'Apple iCloud',
+    icon: 'apple',
+    color: '#555555',
+    bgColor: '#55555515',
+    description: '苹果云服务（仅iOS/macOS）',
+    features: ['无缝同步', '端到端加密', '设备备份'],
+    supported: Platform.OS === 'ios',
+  },
+];
+
 export default function CloudStorageScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -41,8 +125,14 @@ export default function CloudStorageScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [syncingPlatform, setSyncingPlatform] = useState<string | null>(null);
-  const [baiduStorage, setBaiduStorage] = useState<CloudStorageInfo | null>(null);
-  const [aliyunStorage, setAliyunStorage] = useState<CloudStorageInfo | null>(null);
+  const [storageMap, setStorageMap] = useState<Record<CloudPlatform, CloudStorageInfo | null>>({
+    baidu: null,
+    aliyun: null,
+    google: null,
+    onedrive: null,
+    dropbox: null,
+    icloud: null,
+  });
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
 
   const fetchStorageInfo = useCallback(async () => {
@@ -59,8 +149,11 @@ export default function CloudStorageScreen() {
       const result = await response.json();
 
       if (result.success) {
-        setBaiduStorage(result.data.baidu);
-        setAliyunStorage(result.data.aliyun);
+        setStorageMap(prev => ({
+          ...prev,
+          baidu: result.data.baidu || null,
+          aliyun: result.data.aliyun || null,
+        }));
         setSyncStatus(result.data.syncStatus);
       }
     } catch (error) {
@@ -74,11 +167,18 @@ export default function CloudStorageScreen() {
     fetchStorageInfo();
   }, [fetchStorageInfo]);
 
-  const handleConnect = async (platform: 'baidu' | 'aliyun') => {
+  const handleConnect = async (platform: CloudPlatform) => {
+    if (!CLOUD_PLATFORMS.find(p => p.id === platform)?.supported) {
+      if (Platform.OS === 'web') {
+        window.alert('该平台暂不支持当前设备');
+      } else {
+        Alert.alert('提示', '该平台暂不支持当前设备');
+      }
+      return;
+    }
+
     setConnectingPlatform(platform);
     try {
-      // 在真实应用中，这里会打开OAuth授权流程
-      // 模拟授权流程
       const mockCode = `mock_${platform}_code_${Date.now()}`;
 
       const userId = await AsyncStorage.getItem('userId');
@@ -102,7 +202,8 @@ export default function CloudStorageScreen() {
       const result = await response.json();
 
       if (result.success) {
-        Alert.alert('授权成功', `${platform === 'baidu' ? '百度网盘' : '阿里云盘'}已成功绑定`);
+        const platformConfig = CLOUD_PLATFORMS.find(p => p.id === platform);
+        Alert.alert('授权成功', `${platformConfig?.name}已成功绑定`);
         fetchStorageInfo();
       } else {
         Alert.alert('授权失败', result.message);
@@ -115,10 +216,11 @@ export default function CloudStorageScreen() {
     }
   };
 
-  const handleDisconnect = async (platform: 'baidu' | 'aliyun') => {
+  const handleDisconnect = async (platform: CloudPlatform) => {
+    const platformConfig = CLOUD_PLATFORMS.find(p => p.id === platform);
     Alert.alert(
       '确认解绑',
-      `确定要解绑${platform === 'baidu' ? '百度网盘' : '阿里云盘'}吗？`,
+      `确定要解绑${platformConfig?.name}吗？`,
       [
         { text: '取消', style: 'cancel' },
         {
@@ -126,7 +228,7 @@ export default function CloudStorageScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const storageInfo = platform === 'baidu' ? baiduStorage : aliyunStorage;
+              const storageInfo = storageMap[platform];
               if (!storageInfo) return;
 
               const response = await fetch(
@@ -144,11 +246,7 @@ export default function CloudStorageScreen() {
 
               if (result.success) {
                 Alert.alert('解绑成功');
-                if (platform === 'baidu') {
-                  setBaiduStorage(null);
-                } else {
-                  setAliyunStorage(null);
-                }
+                setStorageMap(prev => ({ ...prev, [platform]: null }));
               } else {
                 Alert.alert('解绑失败', result.message);
               }
@@ -162,7 +260,7 @@ export default function CloudStorageScreen() {
     );
   };
 
-  const handleSync = async (platform: 'baidu' | 'aliyun') => {
+  const handleSync = async (platform: CloudPlatform) => {
     setSyncingPlatform(platform);
     try {
       const userId = await AsyncStorage.getItem('userId');
@@ -193,65 +291,85 @@ export default function CloudStorageScreen() {
     }
   };
 
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const renderStorageCard = (platform: 'baidu' | 'aliyun') => {
-    const storageInfo = platform === 'baidu' ? baiduStorage : aliyunStorage;
+  const renderStorageCard = (platformConfig: CloudPlatformConfig) => {
+    const storageInfo = storageMap[platformConfig.id];
     const isConnected = !!storageInfo;
-    const isLoadingThis = connectingPlatform === platform || syncingPlatform === platform;
+    const isLoadingThis = connectingPlatform === platformConfig.id || syncingPlatform === platformConfig.id;
 
     return (
-      <View style={styles.storageCard}>
+      <View key={platformConfig.id} style={styles.storageCard}>
         <View style={styles.storageHeader}>
           <View
             style={[
               styles.storageIcon,
-              platform === 'baidu' ? styles.baiduIcon : styles.alyunIcon,
+              { backgroundColor: platformConfig.color },
             ]}
           >
             <FontAwesome6
-              name={platform === 'baidu' ? 'cloud' : 'cloud'}
+              name={platformConfig.icon as any}
               size={24}
               color="#FFFFFF"
             />
           </View>
           <View style={styles.storageInfo}>
-            <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.storageName}>
-              {platform === 'baidu' ? '百度网盘' : '阿里云盘'}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                {platformConfig.name}
+              </ThemedText>
+              {!platformConfig.supported && (
+                <View style={{
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  backgroundColor: theme.backgroundTertiary,
+                  borderRadius: 4,
+                }}>
+                  <ThemedText variant="tiny" color={theme.textMuted}>
+                    不支持
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+            <ThemedText variant="caption" color={theme.textMuted}>
+              {platformConfig.description}
             </ThemedText>
-            <ThemedText
-              variant="caption"
-              color={isConnected ? theme.success : theme.textMuted}
-              style={[styles.storageStatus, isConnected && styles.storageConnected]}
-            >
-              {isConnected ? '已授权' : '未授权'}
-            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: 4 }}>
+              {platformConfig.features.slice(0, 2).map((feature, idx) => (
+                <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                  <FontAwesome6 name="check" size={8} color={platformConfig.color} />
+                  <ThemedText variant="tiny" color={theme.textMuted}>
+                    {feature}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
           </View>
+          {isConnected && (
+            <View style={[styles.statusBadge, { backgroundColor: platformConfig.bgColor }]}>
+              <FontAwesome6 name="circle-check" size={10} color={platformConfig.color} />
+              <ThemedText variant="tiny" color={platformConfig.color}>
+                已绑定
+              </ThemedText>
+            </View>
+          )}
         </View>
 
         <View style={styles.storageAction}>
           {isLoadingThis ? (
-            <ActivityIndicator size="small" color={theme.primary} />
+            <ActivityIndicator size="small" color={platformConfig.color} />
           ) : isConnected ? (
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.syncButton, { flex: 1 }]}
-                onPress={() => handleSync(platform)}
+                style={[styles.actionButton, styles.syncButton, { flex: 1, backgroundColor: platformConfig.color }]}
+                onPress={() => handleSync(platformConfig.id)}
               >
-                <FontAwesome6 name="rotate" size={14} color={theme.buttonPrimaryText} />
-                <ThemedText variant="small" color={theme.buttonPrimaryText} style={styles.actionButtonText}>
+                <FontAwesome6 name="rotate" size={14} color="#FFFFFF" />
+                <ThemedText variant="small" color="#FFFFFF" style={styles.actionButtonText}>
                   同步文件
                 </ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, styles.disconnectButton, { flex: 1 }]}
-                onPress={() => handleDisconnect(platform)}
+                style={[styles.actionButton, styles.disconnectButton, { flex: 1, borderColor: theme.error }]}
+                onPress={() => handleDisconnect(platformConfig.id)}
               >
                 <ThemedText variant="small" color={theme.error} style={styles.actionButtonText}>
                   解除绑定
@@ -260,12 +378,13 @@ export default function CloudStorageScreen() {
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.actionButton, styles.connectButton]}
-              onPress={() => handleConnect(platform)}
+              style={[styles.actionButton, styles.connectButton, { backgroundColor: platformConfig.supported ? platformConfig.color : theme.textMuted }]}
+              onPress={() => handleConnect(platformConfig.id)}
+              disabled={!platformConfig.supported}
             >
-              <FontAwesome6 name="link" size={14} color={theme.buttonPrimaryText} />
-              <ThemedText variant="small" color={theme.buttonPrimaryText} style={styles.actionButtonText}>
-                授权绑定
+              <FontAwesome6 name="link" size={14} color="#FFFFFF" />
+              <ThemedText variant="small" color="#FFFFFF" style={styles.actionButtonText}>
+                {platformConfig.supported ? '授权绑定' : '暂不支持'}
               </ThemedText>
             </TouchableOpacity>
           )}
@@ -284,6 +403,9 @@ export default function CloudStorageScreen() {
     );
   }
 
+  // 统计已绑定的平台数量
+  const connectedCount = Object.values(storageMap).filter(Boolean).length;
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -300,25 +422,76 @@ export default function CloudStorageScreen() {
           </ThemedText>
         </View>
 
-        <View style={styles.section}>
-          <ThemedText variant="caption" color={theme.textSecondary} style={styles.sectionTitle}>
-            绑定云存储
-          </ThemedText>
+        {/* 统计概览 */}
+        <LinearGradient
+          colors={[theme.primary, theme.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{
+            borderRadius: BorderRadius.lg,
+            padding: Spacing.lg,
+            marginBottom: Spacing.xl,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <ThemedText variant="small" color="rgba(255,255,255,0.8)">
+                已绑定云存储
+              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                <ThemedText variant="h2" color="#FFFFFF">
+                  {connectedCount}
+                </ThemedText>
+                <ThemedText variant="small" color="rgba(255,255,255,0.8)">
+                  / {CLOUD_PLATFORMS.filter(p => p.supported).length} 个平台
+                </ThemedText>
+              </View>
+            </View>
+            <View style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <FontAwesome6 name="cloud-arrow-up" size={24} color="#FFFFFF" />
+            </View>
+          </View>
+        </LinearGradient>
 
-          {renderStorageCard('baidu')}
-          {renderStorageCard('aliyun')}
+        {/* 国内云存储 */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            <FontAwesome6 name="flag" size={12} color={theme.primary} />
+            <ThemedText variant="label" color={theme.textMuted}>
+              国内云存储
+            </ThemedText>
+          </View>
+          {CLOUD_PLATFORMS.filter(p => ['baidu', 'aliyun'].includes(p.id)).map(renderStorageCard)}
+        </View>
+
+        {/* 国际云存储 */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            <FontAwesome6 name="globe" size={12} color={theme.accent} />
+            <ThemedText variant="label" color={theme.textMuted}>
+              国际云存储
+            </ThemedText>
+          </View>
+          {CLOUD_PLATFORMS.filter(p => !['baidu', 'aliyun'].includes(p.id)).map(renderStorageCard)}
         </View>
 
         {/* 同步状态 */}
-        {(baiduStorage || aliyunStorage) && syncStatus && (
+        {connectedCount > 0 && syncStatus && (
           <View style={styles.syncSection}>
             <View style={styles.syncHeader}>
-              <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.syncTitle}>
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>
                 同步状态
               </ThemedText>
               <View style={styles.syncStatus}>
                 <FontAwesome6 name="clock" size={12} color={theme.textMuted} />
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.syncStatusText}>
+                <ThemedText variant="caption" color={theme.textMuted}>
                   {syncStatus.lastSyncAt
                     ? new Date(syncStatus.lastSyncAt).toLocaleString()
                     : '从未同步'}
@@ -343,26 +516,26 @@ export default function CloudStorageScreen() {
 
             <View style={styles.syncStats}>
               <View style={styles.syncStat}>
-                <ThemedText variant="h4" color={theme.textPrimary} style={styles.syncStatValue}>
+                <ThemedText variant="h4" color={theme.textPrimary}>
                   {syncStatus.totalFiles}
                 </ThemedText>
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.syncStatLabel}>
+                <ThemedText variant="caption" color={theme.textMuted}>
                   总文件数
                 </ThemedText>
               </View>
               <View style={styles.syncStat}>
-                <ThemedText variant="h4" color={theme.success} style={styles.syncStatValue}>
+                <ThemedText variant="h4" color={theme.success}>
                   {syncStatus.syncedFiles}
                 </ThemedText>
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.syncStatLabel}>
+                <ThemedText variant="caption" color={theme.textMuted}>
                   已同步
                 </ThemedText>
               </View>
               <View style={styles.syncStat}>
-                <ThemedText variant="h4" color="#D97706" style={styles.syncStatValue}>
+                <ThemedText variant="h4" color="#D97706">
                   {syncStatus.pendingFiles}
                 </ThemedText>
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.syncStatLabel}>
+                <ThemedText variant="caption" color={theme.textMuted}>
                   待同步
                 </ThemedText>
               </View>
@@ -372,11 +545,32 @@ export default function CloudStorageScreen() {
 
         {/* 提示卡片 */}
         <View style={styles.tipCard}>
-          <ThemedText variant="small" color={theme.textPrimary} style={styles.tipTitle}>
-            使用提示
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
+            <FontAwesome6 name="lightbulb" size={16} color={theme.primary} />
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>
+              使用提示
+            </ThemedText>
+          </View>
+          <ThemedText variant="caption" color={theme.textSecondary}>
+            绑定云存储后，您的创作作品将自动同步到云端。支持多平台同时绑定，实现多重备份确保数据安全。同步文件将保存在 &quot;G Open/创作作品&quot; 目录下。
           </ThemedText>
-          <ThemedText variant="caption" color={theme.textSecondary} style={styles.tipText}>
-            绑定云存储后，您的创作作品将自动同步到云端。支持百度网盘和阿里云盘双平台备份，确保数据安全不丢失。同步文件将保存在 &quot;G Open/创作作品&quot; 目录下。
+        </View>
+
+        {/* 平台特性说明 */}
+        <View style={[styles.tipCard, { marginTop: Spacing.md }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
+            <FontAwesome6 name="circle-info" size={16} color={theme.accent} />
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>
+              平台说明
+            </ThemedText>
+          </View>
+          <ThemedText variant="caption" color={theme.textSecondary}>
+            • 百度网盘：国内用户首选，传输稳定{'\n'}
+            • 阿里云盘：不限速下载，适合大文件{'\n'}
+            • Google Drive：国际用户推荐，实时协作{'\n'}
+            • OneDrive：Office用户首选{'\n'}
+            • Dropbox：团队协作首选{'\n'}
+            • iCloud：苹果生态无缝同步（仅iOS/macOS）
           </ThemedText>
         </View>
       </ScrollView>

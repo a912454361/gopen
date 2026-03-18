@@ -69,6 +69,14 @@ export const createStyles = (theme: Theme) => {
     storageConnected: {
       color: theme.success,
     },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.xs,
+    },
     storageAction: {
       padding: Spacing.md,
       borderTopWidth: 1,

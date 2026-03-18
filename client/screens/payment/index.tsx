@@ -7,6 +7,7 @@ import {
   Platform,
   ActivityIndicator,
   TextInput,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ interface PaymentAccount {
   account?: string;
   qrcodeUrl: string;
   realName: string;
+  desc?: string;
 }
 
 interface PayOrder {
@@ -86,6 +88,7 @@ export default function PaymentScreen() {
   const [confirming, setConfirming] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(2);
+  const [paymentAccounts, setPaymentAccounts] = useState<Record<PayMethod, PaymentAccount> | null>(null);
 
   // 获取产品信息
   const getProductInfo = () => {
@@ -114,6 +117,20 @@ export default function PaymentScreen() {
   };
 
   const productInfo = getProductInfo();
+
+  // 获取收款账户信息
+  const fetchPaymentAccounts = useCallback(async () => {
+    try {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/accounts`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setPaymentAccounts(result.data);
+      }
+    } catch (error) {
+      console.error('Fetch payment accounts error:', error);
+    }
+  }, []);
 
   // 创建订单
   const createOrder = useCallback(async () => {
@@ -150,6 +167,12 @@ export default function PaymentScreen() {
     }
   }, [amount, payMethod, productType]);
 
+  // 初始化获取收款账户
+  useEffect(() => {
+    fetchPaymentAccounts();
+  }, [fetchPaymentAccounts]);
+
+  // 切换支付方式时重新创建订单
   useEffect(() => {
     createOrder();
   }, [payMethod]);
@@ -240,6 +263,7 @@ export default function PaymentScreen() {
   };
 
   const currentPayMethod = PAY_METHODS.find(p => p.id === payMethod);
+  const currentAccount = paymentAccounts?.[payMethod];
 
   // 生成二维码显示内容（如果API没有返回真实二维码）
   const getQRCodeDisplay = () => {
@@ -421,13 +445,21 @@ export default function PaymentScreen() {
                 {/* 二维码 */}
                 <View style={styles.qrCard}>
                   <View style={styles.qrImageContainer}>
-                    {/* 这里显示二维码，实际使用时替换为真实二维码 */}
-                    <View style={styles.qrPlaceholder}>
-                      <FontAwesome6 name="qrcode" size={80} color={theme.primary} />
-                      <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.sm }}>
-                        扫描二维码支付
-                      </ThemedText>
-                    </View>
+                    {/* 显示真实收款码或占位符 */}
+                    {currentAccount?.qrcodeUrl ? (
+                      <Image 
+                        source={{ uri: currentAccount.qrcodeUrl }} 
+                        style={styles.qrImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={styles.qrPlaceholder}>
+                        <FontAwesome6 name="qrcode" size={80} color={theme.primary} />
+                        <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.sm }}>
+                          扫描二维码支付
+                        </ThemedText>
+                      </View>
+                    )}
                   </View>
                   
                   {/* 金额显示 */}
@@ -460,6 +492,36 @@ export default function PaymentScreen() {
                       </ThemedText>
                     </View>
                   </View>
+                  
+                  {/* 显示真实收款账户 */}
+                  {currentAccount && (
+                    <>
+                      <View style={styles.accountRow}>
+                        <ThemedText variant="caption" color={theme.textMuted}>
+                          收款账户
+                        </ThemedText>
+                        <TouchableOpacity onPress={() => copyText(currentAccount.account || '', '收款账户')}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                            <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                              {currentAccount.account}
+                            </ThemedText>
+                            <FontAwesome6 name="copy" size={12} color={theme.textMuted} />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                      {currentAccount.realName && (
+                        <View style={styles.accountRow}>
+                          <ThemedText variant="caption" color={theme.textMuted}>
+                            收款人
+                          </ThemedText>
+                          <ThemedText variant="small" color={theme.textPrimary}>
+                            {currentAccount.realName}
+                          </ThemedText>
+                        </View>
+                      )}
+                    </>
+                  )}
+                  
                   <View style={styles.accountRow}>
                     <ThemedText variant="caption" color={theme.textMuted}>
                       订单编号

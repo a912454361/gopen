@@ -157,6 +157,10 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    qrImage: {
+      width: 200,
+      height: 200,
+    },
     amountDisplay: {
       alignItems: 'center',
       padding: Spacing.lg,

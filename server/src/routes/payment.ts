@@ -24,19 +24,23 @@ const verifyAdmin = (adminKey: string): boolean => {
 
 // ==================== 收款账户配置 ====================
 
-// 收款账户信息（实际项目中应从数据库或环境变量读取）
+// 真实收款账户信息（管理员可配置）
+// 支付宝收款码格式：https://qr.alipay.com/xxx
+// 微信收款码格式：wxp://xxx 或图片URL
 const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
-    account: process.env.ALIPAY_ACCOUNT || 'gopen@example.com', // 支付宝账号
-    qrcodeUrl: process.env.ALIPAY_QRCODE_URL || '', // 收款码图片URL
-    realName: process.env.ALIPAY_REAL_NAME || 'G Open官方', // 收款人姓名
+    account: '18321337942', // 支付宝账号（手机号）
+    qrcodeUrl: 'https://qr.alipay.com/fkx19668fnwkfuxvdtexrdb', // 支付宝收款码
+    realName: 'G Open官方', // 收款人姓名
+    desc: '请使用支付宝扫码支付',
   },
   wechat: {
     name: '微信收款',
-    account: process.env.WECHAT_ACCOUNT || '', // 微信号
-    qrcodeUrl: process.env.WECHAT_QRCODE_URL || '', // 收款码图片URL
-    realName: process.env.WECHAT_REAL_NAME || 'G Open官方', // 收款人姓名
+    account: '', // 微信号（可选）
+    qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=wxp%3A%2F%2Ff2f0d3a5c2e1b4f8a9d7c6e5f4a3b2c1d0', // 微信收款码（替换为真实收款码）
+    realName: 'G Open官方', // 收款人姓名
+    desc: '请使用微信扫码支付',
   },
 };
 
@@ -46,18 +50,21 @@ const PAYMENT_ACCOUNTS = {
  */
 router.get('/accounts', async (req: Request, res: Response) => {
   try {
-    // 返回收款账户信息（隐藏敏感信息）
+    // 返回收款账户信息
     const accounts = {
       alipay: {
         name: PAYMENT_ACCOUNTS.alipay.name,
         account: PAYMENT_ACCOUNTS.alipay.account,
         qrcodeUrl: PAYMENT_ACCOUNTS.alipay.qrcodeUrl,
         realName: PAYMENT_ACCOUNTS.alipay.realName,
+        desc: PAYMENT_ACCOUNTS.alipay.desc,
       },
       wechat: {
         name: PAYMENT_ACCOUNTS.wechat.name,
+        account: PAYMENT_ACCOUNTS.wechat.account,
         qrcodeUrl: PAYMENT_ACCOUNTS.wechat.qrcodeUrl,
         realName: PAYMENT_ACCOUNTS.wechat.realName,
+        desc: PAYMENT_ACCOUNTS.wechat.desc,
       },
     };
     
@@ -415,6 +422,55 @@ router.get('/admin/info', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get admin info error:', error);
     res.status(500).json({ error: '查询失败' });
+  }
+});
+
+// ==================== 管理员更新收款账户 ====================
+
+const updateAccountSchema = z.object({
+  payType: z.enum(['alipay', 'wechat']),
+  account: z.string().min(1),
+  qrcodeUrl: z.string().url(),
+  realName: z.string().optional(),
+  desc: z.string().optional(),
+});
+
+/**
+ * 管理员更新收款账户
+ * POST /api/v1/payment/admin/accounts
+ * Headers: x-admin-key: gopen_admin_2024
+ */
+router.post('/admin/accounts', async (req: Request, res: Response) => {
+  try {
+    const adminKey = req.headers['x-admin-key'] as string;
+    
+    // 验证管理员权限
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限，您不是管理员' });
+    }
+    
+    const body = updateAccountSchema.parse(req.body);
+    
+    // 更新收款账户
+    PAYMENT_ACCOUNTS[body.payType] = {
+      name: body.payType === 'alipay' ? '支付宝收款' : '微信收款',
+      account: body.account,
+      qrcodeUrl: body.qrcodeUrl,
+      realName: body.realName || PAYMENT_ACCOUNTS[body.payType].realName,
+      desc: body.desc || `请使用${body.payType === 'alipay' ? '支付宝' : '微信'}扫码支付`,
+    };
+    
+    res.json({
+      success: true,
+      data: PAYMENT_ACCOUNTS[body.payType],
+      message: '收款账户更新成功',
+    });
+  } catch (error) {
+    console.error('Update payment account error:', error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: '参数错误', details: error.issues });
+    }
+    res.status(500).json({ error: '更新失败' });
   }
 });
 

@@ -11,7 +11,7 @@ const client = getSupabaseClient();
 const generateQRCodeSchema = z.object({
   userId: z.string().min(1),
   amount: z.number().int().positive(), // 金额（分）
-  payType: z.enum(['alipay', 'wechat']),
+  payType: z.enum(['alipay', 'wechat', 'douyin']),
   productType: z.enum(['membership', 'super_member']),
   productDetail: z.record(z.string(), z.any()).optional(),
 });
@@ -32,12 +32,22 @@ router.post('/qrcode', async (req: Request, res: Response) => {
     const expiredAt = new Date(Date.now() + 15 * 60 * 1000);
     
     // 生成二维码URL（实际项目中应调用支付宝/微信支付API）
-    // 这里模拟生成二维码链接
-    const qrCodeUrl = `https://qr.alipay.com/${orderNo}`;
+    // 根据支付方式生成对应的二维码链接
+    let qrCodeUrl: string;
+    if (body.payType === 'alipay') {
+      qrCodeUrl = `https://qr.alipay.com/${orderNo}`;
+    } else if (body.payType === 'wechat') {
+      qrCodeUrl = `weixin://wxpay/bizpayurl?pr=${orderNo}`;
+    } else {
+      // 抖音支付
+      qrCodeUrl = `snssdk1128://pay?order=${orderNo}`;
+    }
+    
     const qrCodeData = JSON.stringify({
       orderNo,
       amount: body.amount,
       payType: body.payType,
+      productType: body.productType,
       timestamp: Date.now(),
     });
     

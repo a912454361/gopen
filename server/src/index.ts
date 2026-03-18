@@ -1,6 +1,7 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
+import payRouter from "./routes/pay.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -17,6 +18,9 @@ app.get('/api/v1/health', (req, res) => {
   console.log('Health check success');
   res.status(200).json({ status: 'ok' });
 });
+
+// Payment routes
+app.use('/api/v1/pay', payRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

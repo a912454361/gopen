@@ -8,6 +8,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership, type MemberLevel } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
@@ -94,6 +95,7 @@ const ALIPAY_ACCOUNT = '18321337942';
 export default function MembershipScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
   const { level, isMember, isSuperMember, expireDate, setMember } = useMembership();
 
   const [selectedTier, setSelectedTier] = useState<MemberLevel>('member');
@@ -113,10 +115,21 @@ export default function MembershipScreen() {
 
     Alert.alert(
       '开通会员',
-      `请转账 ${selectedPlan?.price.replace('¥', '')} 元到支付宝账号：${ALIPAY_ACCOUNT}\n\n转账备注请填写：G open会员+您的手机号\n\n转账成功后，会员将在1-3分钟内激活`,
+      `选择支付方式`,
       [
         { text: '取消', style: 'cancel' },
-        { text: '复制账号', onPress: handleCopyAccount },
+        { 
+          text: '二维码支付', 
+          onPress: () => {
+            // 根据选择的会员等级设置金额
+            const amount = selectedTier === 'member' ? 2900 : 9900; // 29元或99元
+            router.push('/payment');
+          }
+        },
+        { 
+          text: '转账支付', 
+          onPress: handleCopyAccount 
+        },
       ]
     );
   };

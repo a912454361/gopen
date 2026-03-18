@@ -180,7 +180,7 @@ export default function PaymentAdminScreen() {
             backgroundColor: theme.backgroundTertiary,
             borderRadius: BorderRadius.lg,
           }}>
-            <FontAwesome6 name="check-circle" size={48} color={theme.success} />
+            <FontAwesome6 name="circle-check" size={48} color={theme.success} />
             <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
               暂无待审核订单
             </ThemedText>

@@ -339,13 +339,15 @@ router.get('/admin/pending', async (req: Request, res: Response) => {
       return res.status(403).json({ error: '无权限' });
     }
     
+    // 简化查询，不关联用户表
     const { data: orders, error } = await client
       .from('pay_orders')
-      .select('*, users(nickname, phone)')
+      .select('*')
       .eq('status', 'confirming')
       .order('confirmed_at', { ascending: false });
     
     if (error) {
+      console.error('Query error:', error);
       return res.status(500).json({ error: '查询失败' });
     }
     

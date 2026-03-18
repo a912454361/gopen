@@ -402,7 +402,7 @@ export default function PaymentScreen() {
               
               {currentOrder.paymentAccount?.account && (
                 <TouchableOpacity 
-                  onPress={() => copyToClipboard(currentOrder.paymentAccount.account)}
+                  onPress={() => copyToClipboard(currentOrder.paymentAccount.account || '')}
                   style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}
                 >
                   <ThemedText variant="caption" color={theme.textMuted}>
@@ -485,7 +485,7 @@ export default function PaymentScreen() {
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <>
-                      <FontAwesome6 name="check-circle" size={18} color="#fff" />
+                      <FontAwesome6 name="circle-check" size={18} color="#fff" />
                       <ThemedText variant="label" color="#fff">
                         我已完成支付，提交确认
                       </ThemedText>

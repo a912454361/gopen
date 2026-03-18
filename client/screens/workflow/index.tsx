@@ -13,6 +13,7 @@ import { useMembership, type FeatureType } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
+import { Spacing } from '@/constants/theme';
 
 interface WorkflowStep {
   id: string;
@@ -122,10 +123,16 @@ export default function WorkflowScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText variant="h4" color={theme.textPrimary}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+          >
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing['2xl'] }}>
             创作工作台
           </ThemedText>
-          <ThemedText variant="label" color={theme.textMuted}>
+          <ThemedText variant="label" color={theme.textMuted} style={{ marginLeft: Spacing['2xl'] }}>
             环境打通 → 内容制作 → 成品输出
           </ThemedText>
           <LinearGradient
@@ -271,5 +278,3 @@ export default function WorkflowScreen() {
     </Screen>
   );
 }
-
-import { Spacing } from '@/constants/theme';

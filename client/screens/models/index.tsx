@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -6,14 +6,18 @@ import {
   Text,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -34,16 +38,28 @@ interface Model {
   description?: string;
 }
 
-interface GpuInstance {
-  id: string;
-  code: string;
-  name: string;
-  gpu_model: string;
-  vram_gb: number;
-  pricePerHour: string;
-  available_instances: number;
-  description?: string;
-}
+// 预置模型数据（当API无数据时使用）
+const DEFAULT_MODELS: Model[] = [
+  // 对话模型
+  { id: '1', code: 'doubao-pro-32k', name: '豆包 Pro 32K', provider: 'doubao', category: 'chat', inputPrice: '0.80', outputPrice: '2.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: false, max_tokens: 32768, description: '高质量对话，支持长文本' },
+  { id: '2', code: 'doubao-lite-4k', name: '豆包 Lite 4K', provider: 'doubao', category: 'chat', inputPrice: '0.30', outputPrice: '0.60', gpuHourPrice: null, is_free: true, member_only: false, super_member_only: false, max_tokens: 4096, description: '轻量级模型，日常对话' },
+  { id: '3', code: 'gpt-4o', name: 'GPT-4o', provider: 'openai', category: 'chat', inputPrice: '35.00', outputPrice: '105.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 128000, description: 'OpenAI旗舰模型' },
+  { id: '4', code: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', category: 'chat', inputPrice: '1.75', outputPrice: '7.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 128000, description: '高性价比GPT模型' },
+  { id: '5', code: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic', category: 'chat', inputPrice: '105.00', outputPrice: '525.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 200000, description: '最强推理能力' },
+  { id: '6', code: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic', category: 'chat', inputPrice: '21.00', outputPrice: '105.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 200000, description: '平衡性能与成本' },
+  { id: '7', code: 'llama3-70b', name: 'Llama 3 70B', provider: 'ollama', category: 'chat', inputPrice: '0.00', outputPrice: '0.00', gpuHourPrice: '15.00', is_free: true, member_only: false, super_member_only: false, max_tokens: 8192, description: '开源大模型，本地部署' },
+  { id: '8', code: 'qwen-max', name: '通义千问 Max', provider: 'doubao', category: 'chat', inputPrice: '14.00', outputPrice: '56.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 32000, description: '阿里云大模型旗舰版' },
+  // 图像模型
+  { id: '9', code: 'dall-e-3', name: 'DALL-E 3', provider: 'openai', category: 'image', inputPrice: '280.00', outputPrice: '280.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 4096, description: '高质量图像生成' },
+  { id: '10', code: 'midjourney-v6', name: 'Midjourney V6', provider: 'openai', category: 'image', inputPrice: '350.00', outputPrice: '350.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 4096, description: '艺术级图像生成' },
+  { id: '11', code: 'stable-diffusion-xl', name: 'SD XL', provider: 'ollama', category: 'image', inputPrice: '0.00', outputPrice: '0.00', gpuHourPrice: '12.00', is_free: true, member_only: false, super_member_only: false, max_tokens: 2048, description: '开源图像生成' },
+  // 视频模型
+  { id: '12', code: 'sora', name: 'Sora', provider: 'openai', category: 'video', inputPrice: '500.00', outputPrice: '500.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 8192, description: 'OpenAI视频生成' },
+  { id: '13', code: 'runway-gen3', name: 'Runway Gen-3', provider: 'openai', category: 'video', inputPrice: '280.00', outputPrice: '280.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 4096, description: '专业视频创作' },
+  // 音频模型
+  { id: '14', code: 'whisper-large', name: 'Whisper Large', provider: 'openai', category: 'audio', inputPrice: '0.42', outputPrice: '0.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 4096, description: '语音识别转写' },
+  { id: '15', code: 'tts-1', name: 'TTS-1', provider: 'openai', category: 'audio', inputPrice: '105.00', outputPrice: '0.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 2048, description: '文本转语音' },
+];
 
 const PROVIDERS = [
   { id: 'all', name: '全部' },
@@ -65,41 +81,35 @@ export default function ModelsScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
+  const { isMember, isSuperMember } = useMembership();
 
   const [isLoading, setIsLoading] = useState(true);
   const [models, setModels] = useState<Model[]>([]);
-  const [gpuInstances, setGpuInstances] = useState<GpuInstance[]>([]);
   const [selectedProvider, setSelectedProvider] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      // 获取模型列表
-      const modelsRes = await fetch(
-        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/models`
-      );
-      const modelsData = await modelsRes.json();
-      if (modelsData.success) {
-        setModels(modelsData.data || []);
-      }
-
-      // 获取GPU实例
-      const gpuRes = await fetch(
-        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/gpu/instances`
-      );
-      const gpuData = await gpuRes.json();
-      if (gpuData.success) {
-        setGpuInstances(gpuData.data || []);
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/models`);
+      const data = await res.json();
+      
+      if (data.success && data.data && data.data.length > 0) {
+        setModels(data.data);
+      } else {
+        // 使用预置数据
+        setModels(DEFAULT_MODELS);
       }
     } catch (error) {
-      console.error('Fetch data error:', error);
+      console.error('Fetch models error:', error);
+      // 网络错误时使用预置数据
+      setModels(DEFAULT_MODELS);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchData();
   }, [fetchData]);
 
@@ -117,145 +127,151 @@ export default function ModelsScreen() {
   const audioModels = filteredModels.filter((m) => m.category === 'audio');
 
   const handleSelectModel = async (model: Model) => {
-    setSelectedModel(model.id);
+    // 检查权限
+    if (model.super_member_only && !isSuperMember) {
+      showUpgradeAlert('超级会员', '该模型需要超级会员才能使用', 9900, 'super_member');
+      return;
+    }
+    if (model.member_only && !isMember) {
+      showUpgradeAlert('普通会员', '该模型需要普通会员才能使用', 2900, 'membership');
+      return;
+    }
     
-    // 保存选中的模型到本地
+    setSelectedModel(model.id);
     await AsyncStorage.setItem('selectedModel', JSON.stringify(model));
     
-    Alert.alert(
-      '模型已选择',
-      `已选择 ${model.name} 作为默认模型`,
-      [
-        { text: '确定' },
-        { text: '前往创作', onPress: () => router.navigate('/') },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      window.alert(`已选择 ${model.name} 作为默认模型`);
+    } else {
+      Alert.alert('模型已选择', `已选择 ${model.name} 作为默认模型`);
+    }
   };
 
-  const getModelIcon = (provider: string, category: string): keyof typeof FontAwesome6.glyphMap => {
-    if (provider === 'ollama') return 'server';
+  const showUpgradeAlert = (title: string, message: string, amount: number, productType: string) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${message}\n\n是否立即开通${title}？`)) {
+        router.push('/payment', { amount, productType });
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '立即开通', onPress: () => router.push('/payment', { amount, productType }) },
+        ]
+      );
+    }
+  };
+
+  const getModelIcon = (category: string): keyof typeof FontAwesome6.glyphMap => {
     if (category === 'image') return 'image';
     if (category === 'video') return 'video';
     if (category === 'audio') return 'music';
     return 'brain';
   };
 
-  const getIconBgColor = (provider: string): string => {
+  const getProviderColor = (provider: string): string => {
     const colors: Record<string, string> = {
-      openai: '#10A37F20',
-      doubao: '#3370FF20',
-      anthropic: '#D9770620',
-      ollama: '#7C3AED20',
+      openai: '#10A37F',
+      doubao: '#3370FF',
+      anthropic: '#D97706',
+      ollama: '#7C3AED',
     };
-    return colors[provider] || '#64748B20';
+    return colors[provider] || theme.primary;
   };
 
-  const renderModelCard = (model: Model) => (
-    <TouchableOpacity
-      key={model.id}
-      style={[styles.modelCard, selectedModel === model.id && styles.selectedCard]}
-      onPress={() => handleSelectModel(model)}
-    >
-      <View style={styles.modelHeader}>
-        <View style={[styles.modelIcon, { backgroundColor: getIconBgColor(model.provider) }]}>
-          <FontAwesome6
-            name={getModelIcon(model.provider, model.category)}
-            size={22}
-            color={theme.primary}
-          />
-        </View>
-        <View style={styles.modelInfo}>
-          <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.modelTitle}>
-            {model.name}
-          </ThemedText>
-          <View style={styles.modelMeta}>
-            <ThemedText variant="caption" color={theme.textMuted} style={styles.modelProvider}>
-              {model.provider.toUpperCase()}
+  const renderModelCard = (model: Model) => {
+    const isLocked = (model.super_member_only && !isSuperMember) || (model.member_only && !isMember);
+    
+    return (
+      <TouchableOpacity
+        key={model.id}
+        style={[styles.modelCard, selectedModel === model.id && styles.selectedCard]}
+        onPress={() => handleSelectModel(model)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.modelHeader}>
+          <View style={[styles.modelIcon, { backgroundColor: getProviderColor(model.provider) + '20' }]}>
+            <FontAwesome6
+              name={getModelIcon(model.category)}
+              size={22}
+              color={getProviderColor(model.provider)}
+            />
+          </View>
+          <View style={styles.modelInfo}>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>
+              {model.name}
             </ThemedText>
-            {model.is_free && (
-              <View style={[styles.modelBadge, styles.freeBadge]}>
-                <Text style={[styles.badgeText, { color: theme.success }]}>免费</Text>
-              </View>
-            )}
-            {model.member_only && !model.is_free && (
-              <View style={[styles.modelBadge, styles.memberBadge]}>
-                <Text style={[styles.badgeText, { color: '#D97706' }]}>会员</Text>
-              </View>
-            )}
-            {model.super_member_only && (
-              <View style={[styles.modelBadge, styles.superBadge]}>
-                <Text style={[styles.badgeText, { color: '#7C3AED' }]}>超级会员</Text>
-              </View>
-            )}
+            <View style={styles.modelMeta}>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {model.provider.toUpperCase()}
+              </ThemedText>
+              {model.is_free && (
+                <View style={[styles.modelBadge, { backgroundColor: theme.success + '20' }]}>
+                  <Text style={{ color: theme.success, fontSize: 10, fontWeight: '600' }}>免费</Text>
+                </View>
+              )}
+              {model.member_only && !model.is_free && (
+                <View style={[styles.modelBadge, { backgroundColor: '#D9770620' }]}>
+                  <Text style={{ color: '#D97706', fontSize: 10, fontWeight: '600' }}>会员</Text>
+                </View>
+              )}
+              {model.super_member_only && (
+                <View style={[styles.modelBadge, { backgroundColor: '#7C3AED20' }]}>
+                  <Text style={{ color: '#7C3AED', fontSize: 10, fontWeight: '600' }}>超级会员</Text>
+                </View>
+              )}
+            </View>
+          </View>
+          {isLocked && (
+            <FontAwesome6 name="lock" size={16} color={theme.textMuted} />
+          )}
+        </View>
+
+        {model.description && (
+          <ThemedText variant="small" color={theme.textSecondary} style={{ marginTop: Spacing.sm }}>
+            {model.description}
+          </ThemedText>
+        )}
+
+        <View style={styles.modelFooter}>
+          <View style={styles.priceGroup}>
+            <ThemedText variant="caption" color={theme.textMuted}>输入 ¥/百万</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.inputPrice}</ThemedText>
+          </View>
+          <View style={styles.priceGroup}>
+            <ThemedText variant="caption" color={theme.textMuted}>输出 ¥/百万</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.outputPrice}</ThemedText>
+          </View>
+          <View style={[styles.selectButton, isLocked && { backgroundColor: theme.textMuted }]}>
+            <ThemedText variant="small" color={theme.backgroundRoot}>
+              {isLocked ? '解锁' : '选择'}
+            </ThemedText>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
+    );
+  };
 
-      {model.description && (
-        <ThemedText variant="small" color={theme.textSecondary} style={styles.modelDesc}>
-          {model.description}
-        </ThemedText>
-      )}
-
-      <View style={styles.modelFooter}>
-        <View style={styles.priceGroup}>
-          <ThemedText variant="caption" color={theme.textMuted} style={styles.priceLabel}>
-            输入 ¥/百万tokens
+  const renderSection = (title: string, sectionModels: Model[]) => {
+    if (sectionModels.length === 0) return null;
+    
+    return (
+      <View style={{ marginBottom: Spacing.lg }}>
+        {selectedCategory === 'all' && (
+          <ThemedText variant="label" color={theme.textSecondary} style={{ marginBottom: Spacing.md }}>
+            {title}
           </ThemedText>
-          <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.priceValue}>
-            {model.inputPrice}
-          </ThemedText>
-        </View>
-        <View style={styles.priceGroup}>
-          <ThemedText variant="caption" color={theme.textMuted} style={styles.priceLabel}>
-            输出 ¥/百万tokens
-          </ThemedText>
-          <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.priceValue}>
-            {model.outputPrice}
-          </ThemedText>
-        </View>
-        <TouchableOpacity style={styles.selectButton}>
-          <ThemedText variant="small" color={theme.buttonPrimaryText} style={styles.selectButtonText}>
-            选择
-          </ThemedText>
-        </TouchableOpacity>
+        )}
+        {sectionModels.map(renderModelCard)}
       </View>
-    </TouchableOpacity>
-  );
-
-  const renderGpuCard = (gpu: GpuInstance) => (
-    <TouchableOpacity
-      key={gpu.id}
-      style={styles.gpuCard}
-      onPress={() => Alert.alert('提示', 'GPU服务即将上线')}
-    >
-      <View style={styles.gpuHeader}>
-        <View style={styles.gpuIcon}>
-          <FontAwesome6 name="microchip" size={20} color="#7C3AED" />
-        </View>
-        <View style={styles.gpuInfo}>
-          <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.gpuName}>
-            {gpu.name}
-          </ThemedText>
-          <ThemedText variant="caption" color={theme.textMuted} style={styles.gpuSpecs}>
-            {gpu.gpu_model} · {gpu.vram_gb}GB显存 · {gpu.available_instances}台可用
-          </ThemedText>
-        </View>
-        <View style={styles.gpuPrice}>
-          <ThemedText variant="h4" color={theme.textPrimary} style={styles.gpuPriceValue}>
-            ¥{gpu.pricePerHour}
-          </ThemedText>
-          <ThemedText variant="caption" color={theme.textMuted} style={styles.gpuPriceUnit}>
-            /小时
-          </ThemedText>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -264,132 +280,110 @@ export default function ModelsScreen() {
   }
 
   return (
-    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedView level="root" style={styles.header}>
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ padding: Spacing.sm }}
+          >
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
           <ThemedText variant="h3" color={theme.textPrimary}>
             模型市场
           </ThemedText>
-        </ThemedView>
+          <View style={{ width: 36 }} />
+        </View>
+
+        {/* 会员快捷入口 */}
+        <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg }}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={() => router.push('/payment', { amount: 2900, productType: 'membership' })}
+          >
+            <LinearGradient
+              colors={['#00F0FF', '#BF00FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
+            >
+              <FontAwesome6 name="crown" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>普通会员 ¥29/月</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={() => router.push('/payment', { amount: 9900, productType: 'super_member' })}
+          >
+            <LinearGradient
+              colors={['#FFD700', '#FF6B00']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
+            >
+              <FontAwesome6 name="rocket" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>超级会员 ¥99/月</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
         {/* 提供商筛选 */}
-        <View style={styles.filterRow}>
-          {PROVIDERS.map((provider) => (
-            <TouchableOpacity
-              key={provider.id}
-              style={[
-                styles.filterChip,
-                selectedProvider === provider.id && styles.filterChipActive,
-              ]}
-              onPress={() => setSelectedProvider(provider.id)}
-            >
-              <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
+          <View style={styles.filterRow}>
+            {PROVIDERS.map((provider) => (
+              <TouchableOpacity
+                key={provider.id}
                 style={[
-                  styles.filterChipText,
-                  { color: selectedProvider === provider.id ? theme.buttonPrimaryText : theme.textPrimary },
+                  styles.filterChip,
+                  selectedProvider === provider.id && styles.filterChipActive,
                 ]}
+                onPress={() => setSelectedProvider(provider.id)}
               >
-                {provider.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Text style={[
+                  styles.filterChipText,
+                  { color: selectedProvider === provider.id ? theme.backgroundRoot : theme.textPrimary },
+                ]}>
+                  {provider.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
 
         {/* 分类筛选 */}
-        <View style={styles.filterRow}>
-          {CATEGORIES.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.filterChip,
-                selectedCategory === category.id && styles.filterChipActive,
-              ]}
-              onPress={() => setSelectedCategory(category.id)}
-            >
-              <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
+          <View style={styles.filterRow}>
+            {CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category.id}
                 style={[
-                  styles.filterChipText,
-                  { color: selectedCategory === category.id ? theme.buttonPrimaryText : theme.textPrimary },
+                  styles.filterChip,
+                  selectedCategory === category.id && styles.filterChipActive,
                 ]}
+                onPress={() => setSelectedCategory(category.id)}
               >
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* 对话模型 */}
-        {(selectedCategory === 'all' || selectedCategory === 'chat') && chatModels.length > 0 && (
-          <View>
-            {selectedCategory === 'all' && (
-              <View style={styles.categoryHeader}>
-                <ThemedText variant="caption" color={theme.textSecondary} style={styles.categoryTitle}>
-                  对话模型
-                </ThemedText>
-              </View>
-            )}
-            {chatModels.map(renderModelCard)}
+                <Text style={[
+                  styles.filterChipText,
+                  { color: selectedCategory === category.id ? theme.backgroundRoot : theme.textPrimary },
+                ]}>
+                  {category.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        )}
+        </ScrollView>
 
-        {/* 图像模型 */}
-        {(selectedCategory === 'all' || selectedCategory === 'image') && imageModels.length > 0 && (
-          <View>
-            {selectedCategory === 'all' && (
-              <View style={styles.categoryHeader}>
-                <ThemedText variant="caption" color={theme.textSecondary} style={styles.categoryTitle}>
-                  图像生成
-                </ThemedText>
-              </View>
-            )}
-            {imageModels.map(renderModelCard)}
-          </View>
-        )}
+        {/* 模型列表 */}
+        {(selectedCategory === 'all' || selectedCategory === 'chat') && renderSection('对话模型', chatModels)}
+        {(selectedCategory === 'all' || selectedCategory === 'image') && renderSection('图像生成', imageModels)}
+        {(selectedCategory === 'all' || selectedCategory === 'video') && renderSection('视频生成', videoModels)}
+        {(selectedCategory === 'all' || selectedCategory === 'audio') && renderSection('音频处理', audioModels)}
 
-        {/* 视频模型 */}
-        {(selectedCategory === 'all' || selectedCategory === 'video') && videoModels.length > 0 && (
-          <View>
-            {selectedCategory === 'all' && (
-              <View style={styles.categoryHeader}>
-                <ThemedText variant="caption" color={theme.textSecondary} style={styles.categoryTitle}>
-                  视频生成
-                </ThemedText>
-              </View>
-            )}
-            {videoModels.map(renderModelCard)}
-          </View>
-        )}
-
-        {/* 音频模型 */}
-        {(selectedCategory === 'all' || selectedCategory === 'audio') && audioModels.length > 0 && (
-          <View>
-            {selectedCategory === 'all' && (
-              <View style={styles.categoryHeader}>
-                <ThemedText variant="caption" color={theme.textSecondary} style={styles.categoryTitle}>
-                  音频处理
-                </ThemedText>
-              </View>
-            )}
-            {audioModels.map(renderModelCard)}
-          </View>
-        )}
-
-        {/* GPU实例 */}
-        {gpuInstances.length > 0 && (
-          <View>
-            <View style={styles.categoryHeader}>
-              <ThemedText variant="caption" color={theme.textSecondary} style={styles.categoryTitle}>
-                GPU算力
-              </ThemedText>
-            </View>
-            {gpuInstances.map(renderGpuCard)}
-          </View>
-        )}
-
-        {filteredModels.length === 0 && gpuInstances.length === 0 && (
+        {filteredModels.length === 0 && (
           <View style={styles.emptyState}>
             <FontAwesome6 name="box-open" size={48} color={theme.textMuted} />
-            <ThemedText variant="small" color={theme.textMuted} style={styles.emptyText}>
+            <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
               暂无匹配的模型
             </ThemedText>
           </View>

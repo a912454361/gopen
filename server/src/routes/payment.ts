@@ -265,10 +265,9 @@ router.post('/admin/verify', async (req: Request, res: Response) => {
   try {
     const body = adminConfirmSchema.parse(req.body);
     
-    // 简单的管理员验证（实际项目中应使用JWT或更安全的方式）
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
-    if (body.adminKey !== ADMIN_KEY) {
-      return res.status(403).json({ error: '无权限' });
+    // 验证管理员权限（唯一管理员）
+    if (!verifyAdmin(body.adminKey)) {
+      return res.status(403).json({ error: '无权限，您不是管理员' });
     }
     
     // 查询订单
@@ -351,12 +350,12 @@ router.get('/admin/pending', async (req: Request, res: Response) => {
   try {
     const adminKey = req.query.adminKey as string;
     
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
-    if (adminKey !== ADMIN_KEY) {
-      return res.status(403).json({ error: '无权限' });
+    // 验证管理员权限（唯一管理员）
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限，您不是管理员' });
     }
     
-    // 简化查询，不关联用户表
+    // 查询待审核订单
     const { data: orders, error } = await client
       .from('pay_orders')
       .select('*')
@@ -371,6 +370,50 @@ router.get('/admin/pending', async (req: Request, res: Response) => {
     res.json({ success: true, data: orders || [] });
   } catch (error) {
     console.error('Get pending orders error:', error);
+    res.status(500).json({ error: '查询失败' });
+  }
+});
+
+// ==================== 获取管理员信息 ====================
+
+/**
+ * 获取管理员信息
+ * GET /api/v1/payment/admin/info
+ */
+router.get('/admin/info', async (req: Request, res: Response) => {
+  try {
+    const adminKey = req.query.adminKey as string;
+    
+    // 验证管理员权限
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+    
+    // 获取订单统计
+    const { data: pendingOrders } = await client
+      .from('pay_orders')
+      .select('id')
+      .eq('status', 'confirming');
+    
+    const { data: todayOrders } = await client
+      .from('pay_orders')
+      .select('amount')
+      .eq('status', 'paid')
+      .gte('paid_at', new Date().toISOString().split('T')[0]);
+    
+    const todayAmount = (todayOrders || []).reduce((sum, order) => sum + (order.amount || 0), 0);
+    
+    res.json({
+      success: true,
+      data: {
+        adminName: ADMIN_CONFIG.adminName,
+        pendingCount: pendingOrders?.length || 0,
+        todayAmount,
+        todayOrders: todayOrders?.length || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Get admin info error:', error);
     res.status(500).json({ error: '查询失败' });
   }
 });

@@ -153,12 +153,18 @@ export default function MembershipScreen() {
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
+        {/* Header with back button */}
         <View style={styles.header}>
-          <ThemedText variant="h2" color={theme.textPrimary}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+          >
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h2" color={theme.textPrimary} style={{ marginLeft: Spacing["2xl"] }}>
             会员中心
           </ThemedText>
-          <ThemedText variant="label" color={theme.textMuted}>
+          <ThemedText variant="label" color={theme.textMuted} style={{ marginLeft: Spacing["2xl"] }}>
             三级会员 · 按需开通
           </ThemedText>
           <LinearGradient

@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="wallet" options={{ title: "钱包" }} />
         <Stack.Screen name="models" options={{ title: "模型市场" }} />
         <Stack.Screen name="download" options={{ title: "下载应用" }} />
+        <Stack.Screen name="membership" options={{ title: "会员中心" }} />
       </Stack>
     </MembershipProvider>
   );

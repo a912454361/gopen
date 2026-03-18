@@ -203,7 +203,7 @@ router.post('/chat', async (req: Request, res: Response) => {
         return res.status(500).json({ error: 'Ollama API error' });
       }
       
-      const data = await response.json();
+      const data = await response.json() as { eval_count?: number; prompt_eval_count?: number; message?: { content?: string } };
       const totalTokens = data.eval_count || data.prompt_eval_count || 0;
       
       // 记录消费

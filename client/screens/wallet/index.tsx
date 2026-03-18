@@ -14,6 +14,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

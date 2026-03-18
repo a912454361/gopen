@@ -316,7 +316,7 @@ router.post('/tasks/:taskId/complete', async (req: Request, res: Response) => {
     // 获取用户余额
     const { data: balance } = await client
       .from('user_balances')
-      .select('frozen_balance')
+      .select('balance, frozen_balance')
       .eq('user_id', task.user_id)
       .single();
     

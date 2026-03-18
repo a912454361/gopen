@@ -46,6 +46,7 @@ export default function SettingsScreen() {
       icon: 'bell',
       title: '通知设置',
       subtitle: '推送通知配置',
+      onPress: () => router.push('/notification-settings'),
     },
   ];
 

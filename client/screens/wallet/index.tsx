@@ -124,36 +124,14 @@ export default function WalletScreen() {
       }
     }
 
-    setSubmitting(true);
-    try {
-      const response = await fetch(
-        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/recharge`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            amount,
-            paymentMethod: 'alipay',
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
-        Alert.alert('充值成功', `已充值 ${(amount / 100).toFixed(2)} 元`);
-        setRechargeModal(false);
-        fetchData();
-      } else {
-        Alert.alert('充值失败', result.error);
-      }
-    } catch (error) {
-      console.error('Recharge error:', error);
-      Alert.alert('充值失败', '网络错误，请重试');
-    } finally {
-      setSubmitting(false);
-    }
+    // 关闭弹窗，跳转到支付中心
+    setRechargeModal(false);
+    
+    // 跳转到支付中心进行支付
+    router.push('/payment', { 
+      amount, 
+      productType: 'recharge',
+    });
   };
 
   const getModelIcon = (provider: string, category: string): keyof typeof FontAwesome6.glyphMap => {

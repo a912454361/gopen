@@ -22,6 +22,7 @@ export default function RootLayout() {
         <Stack.Screen name="download" options={{ title: "下载应用" }} />
         <Stack.Screen name="membership" options={{ title: "会员中心" }} />
         <Stack.Screen name="payment-admin" options={{ title: "支付审核" }} />
+        <Stack.Screen name="notification-settings" options={{ title: "通知设置" }} />
       </Stack>
     </MembershipProvider>
   );

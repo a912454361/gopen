@@ -6,6 +6,7 @@ import {
   Image,
   Platform,
   Linking,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ const PLATFORMS = [
     description: 'iPhone / iPad',
     downloadUrl: 'https://apps.apple.com/app/g-open',
     buttonText: 'App Store 下载',
+    available: true,
   },
   {
     id: 'android',
@@ -36,6 +38,18 @@ const PLATFORMS = [
     description: 'Android 手机 / 平板',
     downloadUrl: 'https://play.google.com/store/apps/details?id=com.gopen',
     buttonText: 'Google Play 下载',
+    available: true,
+  },
+  {
+    id: 'android-apk',
+    name: 'Android APK',
+    icon: 'file-arrow-down',
+    color: '#3DDC84',
+    bgColor: '#E8F5E9',
+    description: '直接下载安装包',
+    downloadUrl: 'https://download.gopen.app/android/gopen-latest.apk',
+    buttonText: '下载 APK',
+    available: true,
   },
   {
     id: 'macos',
@@ -46,6 +60,7 @@ const PLATFORMS = [
     description: 'Mac 电脑',
     downloadUrl: 'https://apps.apple.com/app/g-open-mac',
     buttonText: 'Mac App Store',
+    available: true,
   },
   {
     id: 'windows',
@@ -54,8 +69,9 @@ const PLATFORMS = [
     color: '#0078D4',
     bgColor: '#E3F2FD',
     description: 'Windows 电脑',
-    downloadUrl: 'https://www.microsoft.com/store/apps/gopen',
-    buttonText: 'Microsoft Store',
+    downloadUrl: 'https://download.gopen.app/windows/gopen-setup.exe',
+    buttonText: '下载 Windows 版',
+    available: true,
   },
 ];
 
@@ -98,8 +114,32 @@ export default function DownloadScreen() {
     );
   }
 
-  const handleDownload = (url: string) => {
-    window.open(url, '_blank');
+  const handleDownload = async (platform: typeof PLATFORMS[0]) => {
+    try {
+      if (Platform.OS === 'web') {
+        // Web端尝试打开链接
+        const newWindow = window.open(platform.downloadUrl, '_blank');
+        // 如果被浏览器拦截，提示用户
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          window.alert(`即将跳转到下载页面：\n${platform.downloadUrl}\n\n如果页面未打开，请检查浏览器弹窗设置。`);
+        }
+      } else {
+        // 移动端使用 Linking
+        const supported = await Linking.canOpenURL(platform.downloadUrl);
+        if (supported) {
+          await Linking.openURL(platform.downloadUrl);
+        } else {
+          Alert.alert('提示', `无法打开链接：${platform.downloadUrl}`);
+        }
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      if (Platform.OS === 'web') {
+        window.alert(`下载链接：\n${platform.downloadUrl}\n\n请手动复制链接到浏览器打开。`);
+      } else {
+        Alert.alert('下载失败', '请稍后重试或联系客服');
+      }
+    }
   };
 
   return (
@@ -153,7 +193,7 @@ export default function DownloadScreen() {
               </ThemedText>
               <TouchableOpacity
                 style={[styles.downloadButton, { backgroundColor: platform.color }]}
-                onPress={() => handleDownload(platform.downloadUrl)}
+                onPress={() => handleDownload(platform)}
               >
                 <FontAwesome6 name="download" size={14} color="#fff" />
                 <ThemedText variant="smallMedium" color="#fff">

@@ -154,5 +154,48 @@ export const createStyles = (theme: Theme) => {
       marginTop: Spacing.xl,
       paddingHorizontal: Spacing.md,
     },
+    // Modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      width: '90%',
+      maxWidth: 400,
+      borderRadius: BorderRadius.lg,
+      overflow: 'hidden',
+    },
+    modalHeader: {
+      paddingVertical: Spacing.xl,
+      alignItems: 'center',
+    },
+    modalBody: {
+      padding: Spacing.xl,
+      gap: Spacing.md,
+    },
+    payOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.backgroundTertiary,
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      gap: Spacing.md,
+    },
+    payOptionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cancelButton: {
+      paddingVertical: Spacing.md,
+      alignItems: 'center',
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      marginTop: Spacing.sm,
+    },
   });
 };

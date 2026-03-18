@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
+import { Spacing, BorderRadius } from '@/constants/theme';
 
 interface Project {
   id: string;
@@ -19,6 +20,7 @@ interface Project {
   progress: number;
   assets: number;
   lastUpdated: string;
+  coverImage?: string;
 }
 
 const mockProjects: Project[] = [
@@ -30,6 +32,7 @@ const mockProjects: Project[] = [
     progress: 75,
     assets: 24,
     lastUpdated: '2小时前',
+    coverImage: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=400',
   },
   {
     id: '2',
@@ -39,6 +42,7 @@ const mockProjects: Project[] = [
     progress: 45,
     assets: 12,
     lastUpdated: '5小时前',
+    coverImage: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400',
   },
   {
     id: '3',
@@ -48,6 +52,7 @@ const mockProjects: Project[] = [
     progress: 20,
     assets: 6,
     lastUpdated: '1天前',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
   },
   {
     id: '4',
@@ -57,6 +62,7 @@ const mockProjects: Project[] = [
     progress: 10,
     assets: 3,
     lastUpdated: '2天前',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
   },
 ];
 
@@ -66,71 +72,7 @@ export default function ProjectsScreen() {
 
   const activeProjects = mockProjects.filter(p => p.status === 'active');
   const pendingProjects = mockProjects.filter(p => p.status === 'pending');
-
-  const renderProjectCard = (project: Project) => (
-    <TouchableOpacity
-      key={project.id}
-      style={[styles.projectCard, project.status === 'active' && styles.projectCardActive]}
-    >
-      <View style={styles.projectHeader}>
-        <View>
-          <ThemedText variant="title" color={theme.textPrimary}>
-            {project.title}
-          </ThemedText>
-          <ThemedText variant="labelSmall" color={theme.textMuted}>
-            {project.type}
-          </ThemedText>
-        </View>
-        <View
-          style={[
-            styles.projectStatus,
-            project.status === 'active' ? styles.statusActive : styles.statusPending,
-          ]}
-        >
-          <FontAwesome6
-            name={project.status === 'active' ? 'circle' : 'clock'}
-            size={8}
-            color={project.status === 'active' ? theme.success : theme.accent}
-          />
-          <ThemedText
-            variant="tiny"
-            color={project.status === 'active' ? theme.success : theme.accent}
-          >
-            {project.status === 'active' ? '进行中' : '待处理'}
-          </ThemedText>
-        </View>
-      </View>
-
-      <View style={styles.projectProgress}>
-        <View style={styles.progressBar}>
-          <LinearGradient
-            colors={[theme.primary, theme.accent]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.progressFill, { width: `${project.progress}%` }]}
-        />
-        </View>
-        <ThemedText variant="caption" color={theme.textMuted}>
-          已完成 {project.progress}%
-        </ThemedText>
-      </View>
-
-      <View style={styles.projectMeta}>
-        <View style={styles.metaItem}>
-          <FontAwesome6 name="cube" size={12} color={theme.textMuted} />
-          <ThemedText variant="caption" color={theme.textMuted}>
-            {project.assets} 资源
-          </ThemedText>
-        </View>
-        <View style={styles.metaItem}>
-          <FontAwesome6 name="clock" size={12} color={theme.textMuted} />
-          <ThemedText variant="caption" color={theme.textMuted}>
-            {project.lastUpdated}
-          </ThemedText>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+  const totalAssets = mockProjects.reduce((acc, p) => acc + p.assets, 0);
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -154,6 +96,7 @@ export default function ProjectsScreen() {
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, styles.statCardActive]}>
+            <FontAwesome6 name="circle-play" size={20} color={theme.primary} />
             <ThemedText variant="labelSmall" color={theme.textMuted}>
               进行中
             </ThemedText>
@@ -162,6 +105,7 @@ export default function ProjectsScreen() {
             </ThemedText>
           </View>
           <View style={styles.statCard}>
+            <FontAwesome6 name="clock" size={20} color={theme.accent} />
             <ThemedText variant="labelSmall" color={theme.textMuted}>
               待处理
             </ThemedText>
@@ -170,11 +114,12 @@ export default function ProjectsScreen() {
             </ThemedText>
           </View>
           <View style={styles.statCard}>
+            <FontAwesome6 name="cube" size={20} color={theme.textMuted} />
             <ThemedText variant="labelSmall" color={theme.textMuted}>
               总资源
             </ThemedText>
             <ThemedText variant="stat" color={theme.textPrimary}>
-              {mockProjects.reduce((acc, p) => acc + p.assets, 0)}
+              {totalAssets}
             </ThemedText>
           </View>
         </View>
@@ -190,8 +135,71 @@ export default function ProjectsScreen() {
             </ThemedText>
           </TouchableOpacity>
         </View>
+        
         <View style={styles.projectList}>
-          {activeProjects.map(renderProjectCard)}
+          {activeProjects.map(project => (
+            <TouchableOpacity
+              key={project.id}
+              style={[styles.projectCard, styles.projectCardActive]}
+              activeOpacity={0.7}
+            >
+              {/* Project Header */}
+              <View style={styles.projectHeader}>
+                <View style={styles.projectIcon}>
+                  <FontAwesome6 
+                    name={project.type.includes('角色') ? 'user-astronaut' : 'city'} 
+                    size={20} 
+                    color={theme.primary} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="title" color={theme.textPrimary}>
+                    {project.title}
+                  </ThemedText>
+                  <ThemedText variant="labelSmall" color={theme.textMuted}>
+                    {project.type}
+                  </ThemedText>
+                </View>
+                <View style={styles.projectStatus}>
+                  <FontAwesome6 name="circle" size={6} color={theme.success} />
+                  <ThemedText variant="tiny" color={theme.success}>
+                    进行中
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.projectProgress}>
+                <View style={styles.progressBar}>
+                  <LinearGradient
+                    colors={[theme.primary, theme.accent]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.progressFill, { width: `${project.progress}%` }]}
+                  />
+                </View>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  已完成 {project.progress}%
+                </ThemedText>
+              </View>
+
+              {/* Meta Info */}
+              <View style={styles.projectMeta}>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="cube" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.assets} 资源
+                  </ThemedText>
+                </View>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="clock" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.lastUpdated}
+                  </ThemedText>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Pending Projects */}
@@ -200,20 +208,90 @@ export default function ProjectsScreen() {
             待处理项目
           </ThemedText>
         </View>
+        
         <View style={styles.projectList}>
-          {pendingProjects.map(renderProjectCard)}
+          {pendingProjects.map(project => (
+            <TouchableOpacity
+              key={project.id}
+              style={styles.projectCard}
+              activeOpacity={0.7}
+            >
+              {/* Project Header */}
+              <View style={styles.projectHeader}>
+                <View style={[styles.projectIcon, { backgroundColor: theme.backgroundTertiary }]}>
+                  <FontAwesome6 
+                    name={project.type.includes('角色') ? 'user-astronaut' : 'city'} 
+                    size={20} 
+                    color={theme.textMuted} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="title" color={theme.textPrimary}>
+                    {project.title}
+                  </ThemedText>
+                  <ThemedText variant="labelSmall" color={theme.textMuted}>
+                    {project.type}
+                  </ThemedText>
+                </View>
+                <View style={[styles.projectStatus, { backgroundColor: 'rgba(191,0,255,0.1)' }]}>
+                  <FontAwesome6 name="clock" size={6} color={theme.accent} />
+                  <ThemedText variant="tiny" color={theme.accent}>
+                    待处理
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.projectProgress}>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFillPlain, { width: `${project.progress}%`, backgroundColor: theme.textMuted }]} />
+                </View>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  已完成 {project.progress}%
+                </ThemedText>
+              </View>
+
+              {/* Meta Info */}
+              <View style={styles.projectMeta}>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="cube" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.assets} 资源
+                  </ThemedText>
+                </View>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="clock" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.lastUpdated}
+                  </ThemedText>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Create New Button */}
-        <TouchableOpacity style={styles.createButton}>
-          <FontAwesome6 name="plus" size={16} color={theme.primary} />
-          <ThemedText variant="labelTitle" color={theme.primary}>
-            新建项目
-          </ThemedText>
+        <TouchableOpacity style={styles.createButton} activeOpacity={0.8}>
+          <LinearGradient
+            colors={[theme.primary, theme.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: Spacing.sm,
+              padding: Spacing.lg,
+              borderRadius: BorderRadius.md,
+            }}
+          >
+            <FontAwesome6 name="plus" size={16} color={theme.backgroundRoot} />
+            <ThemedText variant="labelTitle" color={theme.backgroundRoot}>
+              新建项目
+            </ThemedText>
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </Screen>
   );
 }
-
-import { Spacing } from '@/constants/theme';

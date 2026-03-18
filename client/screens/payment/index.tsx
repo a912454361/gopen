@@ -7,10 +7,10 @@ import {
   Platform,
   ActivityIndicator,
   TextInput,
-  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
@@ -47,28 +47,32 @@ const PAY_METHODS = [
     name: '支付宝', 
     icon: 'wallet', 
     color: '#1677FF', 
-    bgColor: '#1677FF15',
+    bgColor: 'rgba(22,119,255,0.08)',
+    desc: '推荐使用',
   },
   { 
     id: 'wechat' as PayMethod, 
     name: '微信支付', 
-    icon: 'message', 
+    icon: 'comment', 
     color: '#07C160', 
-    bgColor: '#07C16015',
+    bgColor: 'rgba(7,193,96,0.08)',
+    desc: '扫码支付',
   },
 ];
 
-// 测试用收款二维码（实际使用时替换为真实收款码URL）
-const TEST_QRCODES = {
-  alipay: 'https://qr.alipay.com/fkx19668fnwkfuxvdtexrdb', // 示例支付宝收款码
-  wechat: 'wxp://f2f0d3a5c2e1b4f8a9d7c6e5f4a3b2c1d0', // 示例微信收款码
-};
+// 支付步骤
+const PAYMENT_STEPS = [
+  { step: 1, title: '选择方式', icon: 'credit-card' },
+  { step: 2, title: '扫码支付', icon: 'qrcode' },
+  { step: 3, title: '填写确认', icon: 'clipboard-check' },
+  { step: 4, title: '等待审核', icon: 'clock' },
+];
 
 export default function PaymentScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { setMember, checkMembership } = useMembership();
+  const { checkMembership } = useMembership();
   
   const params = useSafeSearchParams<{ amount?: string; productType?: string }>();
   const amount = parseInt(params.amount || '2900', 10);
@@ -81,13 +85,35 @@ export default function PaymentScreen() {
   const [transactionId, setTransactionId] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(2);
 
-  // 获取产品名称
-  const getProductName = () => {
-    if (productType === 'super_member') return '超级会员订阅';
-    if (productType === 'membership') return '普通会员订阅';
-    return '会员订阅';
+  // 获取产品信息
+  const getProductInfo = () => {
+    if (productType === 'super_member') {
+      return {
+        name: '超级会员订阅',
+        color: ['#FFD700', '#FF6B00'],
+        icon: 'rocket',
+        benefits: ['无限AI对话', '100GB存储', '专属客服', '新功能抢先'],
+      };
+    }
+    if (productType === 'membership') {
+      return {
+        name: '普通会员订阅',
+        color: ['#00F0FF', '#BF00FF'],
+        icon: 'crown',
+        benefits: ['每日100次AI对话', '10GB存储', '高级AI模型'],
+      };
+    }
+    return {
+      name: '账户充值',
+      color: ['#00F0FF', '#BF00FF'],
+      icon: 'wallet',
+      benefits: ['用于AI创作消费'],
+    };
   };
+
+  const productInfo = getProductInfo();
 
   // 创建订单
   const createOrder = useCallback(async () => {
@@ -95,10 +121,6 @@ export default function PaymentScreen() {
     try {
       const userId = await AsyncStorage.getItem('userId') || 'guest_user';
       
-      /**
-       * 服务端文件：server/src/routes/payment.ts
-       * 接口：POST /api/v1/payment/create
-       */
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +128,7 @@ export default function PaymentScreen() {
           userId,
           amount,
           payType: payMethod,
-          productType: productType as 'membership' | 'super_member',
+          productType: productType as 'membership' | 'super_member' | 'recharge',
         }),
       });
       
@@ -114,30 +136,20 @@ export default function PaymentScreen() {
       
       if (result.success) {
         setCurrentOrder(result.data);
-        // 设置倒计时（30分钟）
         setCountdown(30 * 60);
         setOrderStatus('pending');
+        setCurrentStep(2);
       } else {
-        const errorMsg = result.error || '创建订单失败';
-        if (Platform.OS === 'web') {
-          window.alert(errorMsg);
-        } else {
-          Alert.alert('错误', errorMsg);
-        }
+        showError(result.error || '创建订单失败');
       }
     } catch (error) {
       console.error('Create order error:', error);
-      if (Platform.OS === 'web') {
-        window.alert('网络错误，请检查网络连接');
-      } else {
-        Alert.alert('错误', '网络错误，请检查网络连接');
-      }
+      showError('网络错误，请检查网络连接');
     } finally {
       setLoading(false);
     }
   }, [amount, payMethod, productType]);
 
-  // 切换支付方式时重新创建订单
   useEffect(() => {
     createOrder();
   }, [payMethod]);
@@ -152,16 +164,38 @@ export default function PaymentScreen() {
     }
   }, [countdown]);
 
-  // 用户确认支付
+  const showError = (msg: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(msg);
+    } else {
+      Alert.alert('提示', msg);
+    }
+  };
+
+  const showSuccess = (msg: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(msg);
+    } else {
+      Alert.alert('成功', msg);
+    }
+  };
+
+  // 复制功能
+  const copyText = async (text: string, label?: string) => {
+    await Clipboard.setStringAsync(text);
+    if (Platform.OS === 'web') {
+      window.alert(`${label || text} 已复制`);
+    } else {
+      Alert.alert('复制成功', `${label || text} 已复制到剪贴板`);
+    }
+  };
+
+  // 确认支付
   const handleConfirmPayment = async () => {
     if (!currentOrder) return;
     
     if (!transactionId.trim()) {
-      if (Platform.OS === 'web') {
-        window.alert('请输入转账流水号或备注信息');
-      } else {
-        Alert.alert('提示', '请输入转账流水号或备注信息');
-      }
+      showError('请输入转账流水号或备注信息');
       return;
     }
     
@@ -169,10 +203,6 @@ export default function PaymentScreen() {
     try {
       const userId = await AsyncStorage.getItem('userId') || 'guest_user';
       
-      /**
-       * 服务端文件：server/src/routes/payment.ts
-       * 接口：POST /api/v1/payment/confirm
-       */
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,31 +218,16 @@ export default function PaymentScreen() {
       
       if (result.success) {
         setOrderStatus('confirming');
-        if (Platform.OS === 'web') {
-          window.alert('已提交支付确认！请等待管理员审核，审核通过后将自动激活会员。');
-        } else {
-          Alert.alert('提交成功', '请等待管理员审核，审核通过后将自动激活会员。');
-        }
+        setCurrentStep(4);
+        showSuccess('已提交支付确认！请等待管理员审核，审核通过后将自动激活会员。');
       } else {
-        const errorMsg = result.error || '确认失败';
-        if (Platform.OS === 'web') {
-          window.alert(errorMsg);
-        } else {
-          Alert.alert('错误', errorMsg);
-        }
+        showError(result.error || '确认失败');
       }
     } catch (error) {
       console.error('Confirm payment error:', error);
+      showError('网络错误，请重试');
     } finally {
       setConfirming(false);
-    }
-  };
-
-  // 复制到剪贴板（Web端）
-  const copyToClipboard = (text: string) => {
-    if (Platform.OS === 'web' && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      window.alert('已复制到剪贴板');
     }
   };
 
@@ -221,18 +236,18 @@ export default function PaymentScreen() {
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const currentPayMethod = PAY_METHODS.find(p => p.id === payMethod);
 
-  // 获取收款二维码URL
-  const getQRCodeUrl = () => {
-    if (currentOrder?.paymentAccount?.qrcodeUrl) {
-      return currentOrder.paymentAccount.qrcodeUrl;
-    }
-    // 如果没有配置，使用测试二维码
-    return TEST_QRCODES[payMethod];
+  // 生成二维码显示内容（如果API没有返回真实二维码）
+  const getQRCodeDisplay = () => {
+    // 使用公共二维码生成服务
+    const qrContent = currentOrder 
+      ? `GOPEN_PAY:${currentOrder.orderNo}:${amount}`
+      : '';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrContent || 'https://gopen.app/pay')}`;
   };
 
   return (
@@ -242,7 +257,7 @@ export default function PaymentScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             onPress={() => router.back()} 
-            style={{ position: 'absolute', left: 0, padding: Spacing.sm }}
+            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
           >
             <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
           </TouchableOpacity>
@@ -251,308 +266,323 @@ export default function PaymentScreen() {
           </ThemedText>
         </View>
 
+        {/* 支付步骤指示器 */}
+        <View style={styles.stepsContainer}>
+          {PAYMENT_STEPS.map((step, index) => (
+            <View key={step.step} style={styles.stepItem}>
+              <View style={[
+                styles.stepCircle,
+                currentStep >= step.step && styles.stepCircleActive,
+                { borderColor: currentStep >= step.step ? theme.primary : theme.border }
+              ]}>
+                <FontAwesome6 
+                  name={step.icon as any} 
+                  size={12} 
+                  color={currentStep >= step.step ? theme.primary : theme.textMuted} 
+                />
+              </View>
+              <ThemedText 
+                variant="tiny" 
+                color={currentStep >= step.step ? theme.primary : theme.textMuted}
+                style={styles.stepLabel}
+              >
+                {step.title}
+              </ThemedText>
+              {index < PAYMENT_STEPS.length - 1 && (
+                <View style={[
+                  styles.stepLine,
+                  { backgroundColor: currentStep > step.step ? theme.primary : theme.border }
+                ]} />
+              )}
+            </View>
+          ))}
+        </View>
+
         {/* 产品信息卡片 */}
         <LinearGradient
-          colors={productType === 'super_member' 
-            ? ['#FFD700', '#FF6B00'] 
-            : ['#00F0FF', '#BF00FF']}
+          colors={productInfo.color as [string, string]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={{
-            borderRadius: BorderRadius.lg,
-            padding: Spacing.xl,
-            marginBottom: Spacing.xl,
-            alignItems: 'center',
-          }}
+          style={styles.productCard}
         >
-          <View style={{
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            backgroundColor: 'rgba(255,255,255,0.2)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: Spacing.md,
-          }}>
-            <FontAwesome6 name="crown" size={28} color="#fff" />
+          <View style={styles.productIcon}>
+            <FontAwesome6 name={productInfo.icon as any} size={28} color="#fff" />
           </View>
           <ThemedText variant="h2" color="#fff">
-            {getProductName()}
+            {productInfo.name}
           </ThemedText>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: Spacing.sm }}>
+          <View style={styles.priceRow}>
             <ThemedText variant="h1" color="#fff">
               {formatAmount(amount)}
             </ThemedText>
-            <ThemedText variant="small" color="rgba(255,255,255,0.8)" style={{ marginLeft: 4 }}>
-              /月
-            </ThemedText>
+            {productType !== 'recharge' && (
+              <ThemedText variant="small" color="rgba(255,255,255,0.8)">
+                /月
+              </ThemedText>
+            )}
+          </View>
+          <View style={styles.benefitsRow}>
+            {productInfo.benefits.slice(0, 3).map((benefit, idx) => (
+              <View key={idx} style={styles.benefitTag}>
+                <FontAwesome6 name="check" size={8} color="rgba(255,255,255,0.9)" />
+                <ThemedText variant="tiny" color="rgba(255,255,255,0.9)">
+                  {benefit}
+                </ThemedText>
+              </View>
+            ))}
           </View>
         </LinearGradient>
 
         {/* 支付方式选择 */}
-        <View style={{ marginBottom: Spacing.xl }}>
-          <ThemedText variant="label" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
+        <View style={styles.section}>
+          <ThemedText variant="label" color={theme.textPrimary}>
             选择支付方式
           </ThemedText>
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+          <View style={styles.payMethodsRow}>
             {PAY_METHODS.map((method) => (
               <TouchableOpacity
                 key={method.id}
-                style={{
-                  flex: 1,
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: Spacing.lg,
-                  borderRadius: BorderRadius.md,
-                  borderWidth: 2,
-                  borderColor: payMethod === method.id ? method.color : theme.border,
-                  backgroundColor: payMethod === method.id ? method.bgColor : theme.backgroundTertiary,
-                }}
+                style={[
+                  styles.payMethodCard,
+                  payMethod === method.id && { borderColor: method.color, backgroundColor: method.bgColor },
+                ]}
                 onPress={() => {
                   setPayMethod(method.id);
                   setOrderStatus(null);
                   setTransactionId('');
                 }}
               >
-                <FontAwesome6 name={method.icon as any} size={24} color={method.color} />
+                <View style={[styles.payMethodIcon, { backgroundColor: method.color + '20' }]}>
+                  <FontAwesome6 name={method.icon as any} size={24} color={method.color} />
+                </View>
                 <ThemedText 
-                  variant="small" 
-                  color={payMethod === method.id ? method.color : theme.textMuted}
-                  style={{ marginTop: Spacing.sm }}
+                  variant="smallMedium" 
+                  color={payMethod === method.id ? method.color : theme.textPrimary}
                 >
                   {method.name}
                 </ThemedText>
+                <ThemedText variant="tiny" color={theme.textMuted}>
+                  {method.desc}
+                </ThemedText>
+                {payMethod === method.id && (
+                  <View style={[styles.selectedDot, { backgroundColor: method.color }]}>
+                    <FontAwesome6 name="check" size={8} color="#fff" />
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* 收款二维码区域 */}
+        {/* 二维码支付区域 */}
         {loading ? (
-          <View style={[styles.qrCard, { alignItems: 'center', justifyContent: 'center', minHeight: 300 }]}>
+          <View style={styles.qrSection}>
             <ActivityIndicator size="large" color={currentPayMethod?.color || theme.primary} />
             <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
               正在生成订单...
             </ThemedText>
           </View>
         ) : currentOrder ? (
-          <View style={[styles.qrCard, { alignItems: 'center' }]}>
+          <View style={styles.qrSection}>
             {/* 状态提示 */}
-            {orderStatus === 'confirming' && (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: Spacing.sm,
-                padding: Spacing.md,
-                backgroundColor: '#FEF3C7',
-                borderRadius: BorderRadius.md,
-                marginBottom: Spacing.lg,
-                width: '100%',
-              }}>
-                <FontAwesome6 name="clock" size={16} color="#D97706" />
-                <ThemedText variant="small" color="#D97706">
-                  已提交确认，等待审核中...
+            {orderStatus === 'confirming' ? (
+              <View style={styles.statusCard}>
+                <View style={[styles.statusIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <FontAwesome6 name="clock" size={24} color="#D97706" />
+                </View>
+                <ThemedText variant="title" color={theme.textPrimary}>
+                  等待审核中
                 </ThemedText>
-              </View>
-            )}
-
-            {/* 收款二维码 */}
-            <View style={{
-              padding: Spacing.lg,
-              backgroundColor: '#FFFFFF',
-              borderRadius: BorderRadius.lg,
-              marginBottom: Spacing.lg,
-              shadowColor: currentPayMethod?.color,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 8,
-            }}>
-              <Image
-                source={{ uri: getQRCodeUrl() }}
-                style={{ width: 200, height: 200 }}
-                resizeMode="contain"
-              />
-            </View>
-            
-            {/* 收款账户信息 */}
-            <View style={{ alignItems: 'center', marginBottom: Spacing.lg }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <FontAwesome6 
-                  name={currentPayMethod?.icon as any} 
-                  size={18} 
-                  color={currentPayMethod?.color} 
-                />
-                <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                  {currentOrder.paymentAccount?.name || `${currentPayMethod?.name}收款`}
+                <ThemedText variant="small" color={theme.textMuted}>
+                  您的支付已提交，管理员将在1-3分钟内审核
                 </ThemedText>
-              </View>
-              
-              {currentOrder.paymentAccount?.realName && (
                 <TouchableOpacity 
-                  onPress={() => copyToClipboard(currentOrder.paymentAccount.realName)}
-                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}
+                  style={styles.backButton}
+                  onPress={() => router.replace('/membership')}
                 >
-                  <ThemedText variant="caption" color={theme.textMuted}>
-                    收款人：{currentOrder.paymentAccount.realName}
+                  <ThemedText variant="smallMedium" color={theme.primary}>
+                    返回会员中心
                   </ThemedText>
-                  <FontAwesome6 name="copy" size={12} color={theme.textMuted} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
-              )}
-              
-              {currentOrder.paymentAccount?.account && (
-                <TouchableOpacity 
-                  onPress={() => copyToClipboard(currentOrder.paymentAccount.account || '')}
-                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}
-                >
-                  <ThemedText variant="caption" color={theme.textMuted}>
-                    账号：{currentOrder.paymentAccount.account}
-                  </ThemedText>
-                  <FontAwesome6 name="copy" size={12} color={theme.textMuted} style={{ marginLeft: 4 }} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* 支付金额 */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: Spacing.sm,
-              padding: Spacing.md,
-              backgroundColor: theme.backgroundTertiary,
-              borderRadius: BorderRadius.md,
-              marginBottom: Spacing.md,
-            }}>
-              <ThemedText variant="small" color={theme.textMuted}>
-                支付金额：
-              </ThemedText>
-              <ThemedText variant="h3" color={currentPayMethod?.color}>
-                {formatAmount(currentOrder.amount)}
-              </ThemedText>
-            </View>
-
-            {/* 订单信息 */}
-            <View style={{ alignItems: 'center', marginBottom: Spacing.md }}>
-              <ThemedText variant="caption" color={theme.textMuted}>
-                订单号：{currentOrder.orderNo}
-              </ThemedText>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 4 }}>
-                <FontAwesome6 name="clock" size={12} color={countdown > 300 ? theme.textMuted : theme.error} />
-                <ThemedText variant="caption" color={countdown > 300 ? theme.textMuted : theme.error}>
-                  剩余支付时间 {formatCountdown(countdown)}
-                </ThemedText>
               </View>
-            </View>
+            ) : (
+              <>
+                {/* 倒计时提示 */}
+                <View style={styles.countdownBar}>
+                  <FontAwesome6 name="clock" size={14} color={countdown > 300 ? theme.textMuted : theme.error} />
+                  <ThemedText 
+                    variant="small" 
+                    color={countdown > 300 ? theme.textMuted : theme.error}
+                  >
+                    请在 {formatCountdown(countdown)} 内完成支付
+                  </ThemedText>
+                </View>
 
-            {/* 支付确认区域 */}
-            {orderStatus !== 'confirming' && (
-              <View style={{ width: '100%', marginTop: Spacing.md }}>
-                <ThemedText variant="small" color={theme.textPrimary} style={{ marginBottom: Spacing.sm }}>
-                  转账后请填写流水号/备注：
-                </ThemedText>
-                <TextInput
-                  style={{
-                    width: '100%',
-                    padding: Spacing.md,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                    borderRadius: BorderRadius.md,
-                    backgroundColor: theme.backgroundTertiary,
-                    color: theme.textPrimary,
-                    fontSize: 14,
-                  }}
-                  placeholder="请输入转账流水号或备注信息"
-                  placeholderTextColor={theme.textMuted}
-                  value={transactionId}
-                  onChangeText={setTransactionId}
-                />
-                
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: Spacing.sm,
-                    padding: Spacing.lg,
-                    borderRadius: BorderRadius.lg,
-                    backgroundColor: currentPayMethod?.color,
-                    marginTop: Spacing.lg,
-                  }}
-                  onPress={handleConfirmPayment}
-                  disabled={confirming}
-                >
-                  {confirming ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <FontAwesome6 name="circle-check" size={18} color="#fff" />
-                      <ThemedText variant="label" color="#fff">
-                        我已完成支付，提交确认
+                {/* 二维码 */}
+                <View style={styles.qrCard}>
+                  <View style={styles.qrImageContainer}>
+                    {/* 这里显示二维码，实际使用时替换为真实二维码 */}
+                    <View style={styles.qrPlaceholder}>
+                      <FontAwesome6 name="qrcode" size={80} color={theme.primary} />
+                      <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.sm }}>
+                        扫描二维码支付
                       </ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
+                    </View>
+                  </View>
+                  
+                  {/* 金额显示 */}
+                  <TouchableOpacity 
+                    style={styles.amountDisplay}
+                    onPress={() => copyText(formatAmount(currentOrder.amount), '支付金额')}
+                  >
+                    <ThemedText variant="small" color={theme.textMuted}>
+                      支付金额
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                      <ThemedText variant="h2" color={currentPayMethod?.color}>
+                        {formatAmount(currentOrder.amount)}
+                      </ThemedText>
+                      <FontAwesome6 name="copy" size={14} color={theme.textMuted} />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 收款信息 */}
+                <View style={styles.accountInfo}>
+                  <View style={styles.accountRow}>
+                    <ThemedText variant="caption" color={theme.textMuted}>
+                      收款方式
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                      <FontAwesome6 name={currentPayMethod?.icon as any} size={14} color={currentPayMethod?.color} />
+                      <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                        {currentPayMethod?.name}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.accountRow}>
+                    <ThemedText variant="caption" color={theme.textMuted}>
+                      订单编号
+                    </ThemedText>
+                    <TouchableOpacity onPress={() => copyText(currentOrder.orderNo, '订单号')}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                        <ThemedText variant="small" color={theme.textPrimary}>
+                          {currentOrder.orderNo}
+                        </ThemedText>
+                        <FontAwesome6 name="copy" size={12} color={theme.textMuted} />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* 确认支付 */}
+                <View style={styles.confirmSection}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    转账完成后，请填写确认信息
+                  </ThemedText>
+                  <TextInput
+                    style={styles.transactionInput}
+                    placeholder="请输入转账流水号/备注/手机号后4位"
+                    placeholderTextColor={theme.textMuted}
+                    value={transactionId}
+                    onChangeText={(text) => {
+                      setTransactionId(text);
+                      if (text.length > 0) {
+                        setCurrentStep(3);
+                      }
+                    }}
+                  />
+                  
+                  <TouchableOpacity
+                    style={[styles.confirmButton, { backgroundColor: currentPayMethod?.color }]}
+                    onPress={handleConfirmPayment}
+                    disabled={confirming}
+                  >
+                    {confirming ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <FontAwesome6 name="circle-check" size={18} color="#fff" />
+                        <ThemedText variant="label" color="#fff">
+                          我已完成支付，提交确认
+                        </ThemedText>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
           </View>
         ) : (
-          <View style={[styles.qrCard, { alignItems: 'center', justifyContent: 'center', minHeight: 300 }]}>
+          <View style={styles.qrSection}>
             <FontAwesome6 name="qrcode" size={64} color={theme.textMuted} />
             <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
-              点击下方按钮生成订单
+              订单生成失败
             </ThemedText>
-            <TouchableOpacity
-              style={{
-                marginTop: Spacing.lg,
-                padding: Spacing.md,
-                backgroundColor: theme.primary,
-                borderRadius: BorderRadius.md,
-              }}
-              onPress={createOrder}
-            >
-              <ThemedText variant="smallMedium" color={theme.backgroundRoot}>
-                生成支付订单
+            <TouchableOpacity style={styles.retryButton} onPress={createOrder}>
+              <ThemedText variant="smallMedium" color={theme.primary}>
+                重新生成订单
               </ThemedText>
             </TouchableOpacity>
           </View>
         )}
 
         {/* 支付说明 */}
-        <View style={{
-          backgroundColor: theme.backgroundTertiary,
-          borderRadius: BorderRadius.md,
-          padding: Spacing.lg,
-          marginTop: Spacing.xl,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
-            <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
+        <View style={styles.helpSection}>
+          <View style={styles.helpHeader}>
+            <FontAwesome6 name="circle-question" size={16} color={theme.primary} />
             <ThemedText variant="smallMedium" color={theme.textPrimary}>
-              支付说明
+              支付帮助
             </ThemedText>
           </View>
+          <View style={styles.helpList}>
+            <View style={styles.helpItem}>
+              <View style={[styles.helpNumber, { backgroundColor: theme.primary }]}>
+                <ThemedText variant="tiny" color="#fff">1</ThemedText>
+              </View>
+              <ThemedText variant="small" color={theme.textSecondary}>
+                选择支付方式，扫描二维码完成转账
+              </ThemedText>
+            </View>
+            <View style={styles.helpItem}>
+              <View style={[styles.helpNumber, { backgroundColor: theme.primary }]}>
+                <ThemedText variant="tiny" color="#fff">2</ThemedText>
+              </View>
+              <ThemedText variant="small" color={theme.textSecondary}>
+                转账金额必须与订单金额完全一致
+              </ThemedText>
+            </View>
+            <View style={styles.helpItem}>
+              <View style={[styles.helpNumber, { backgroundColor: theme.primary }]}>
+                <ThemedText variant="tiny" color="#fff">3</ThemedText>
+              </View>
+              <ThemedText variant="small" color={theme.textSecondary}>
+                转账后填写流水号/备注，点击确认提交
+              </ThemedText>
+            </View>
+            <View style={styles.helpItem}>
+              <View style={[styles.helpNumber, { backgroundColor: theme.accent }]}>
+                <ThemedText variant="tiny" color="#fff">4</ThemedText>
+              </View>
+              <ThemedText variant="small" color={theme.textSecondary}>
+                管理员审核通过后，会员自动激活
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+
+        {/* 安全提示 */}
+        <View style={styles.securityTip}>
+          <FontAwesome6 name="shield" size={14} color={theme.success} />
           <ThemedText variant="caption" color={theme.textMuted}>
-            1. 选择支付方式后，扫描上方二维码完成转账{'\n'}
-            2. 转账金额必须与订单金额一致{'\n'}
-            3. 转账完成后，请填写流水号/备注并点击确认{'\n'}
-            4. 管理员审核通过后，会员将自动激活{'\n'}
-            5. 如有问题请联系客服处理
+            支付安全由G Open保障，如有问题请联系客服
           </ThemedText>
         </View>
 
         {/* 管理员入口 */}
         <TouchableOpacity
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: Spacing.sm,
-            padding: Spacing.md,
-            marginTop: Spacing.lg,
-          }}
-          onPress={() => {
-            const adminKey = 'gopen_admin_2024';
-            router.push(`/payment-admin?key=${adminKey}`);
-          }}
+          style={styles.adminEntry}
+          onPress={() => router.push('/payment-admin', { key: 'gopen_admin_2024' })}
         >
           <FontAwesome6 name="user-shield" size={14} color={theme.textMuted} />
           <ThemedText variant="caption" color={theme.textMuted}>

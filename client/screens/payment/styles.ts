@@ -3,10 +3,6 @@ import { Spacing, BorderRadius, Theme } from '@/constants/theme';
 
 export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.backgroundRoot,
-    },
     scrollContent: {
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing['2xl'],
@@ -16,272 +12,266 @@ export const createStyles = (theme: Theme) => {
       marginBottom: Spacing.xl,
       alignItems: 'center',
     },
-    neonLine: {
-      height: 2,
-      borderRadius: 1,
-      marginTop: Spacing.lg,
-      width: 120,
+    // 步骤指示器
+    stepsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.xl,
+      paddingHorizontal: Spacing.sm,
     },
-    qrCard: {
+    stepItem: {
+      alignItems: 'center',
+      position: 'relative',
+    },
+    stepCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      borderWidth: 2,
+      justifyContent: 'center',
+      alignItems: 'center',
       backgroundColor: theme.backgroundDefault,
-      borderRadius: BorderRadius.sm,
+    },
+    stepCircleActive: {
+      backgroundColor: theme.primary + '15',
+    },
+    stepLabel: {
+      marginTop: Spacing.xs,
+    },
+    stepLine: {
+      position: 'absolute',
+      top: 16,
+      left: '100%',
+      width: 20,
+      height: 2,
+    },
+    // 产品卡片
+    productCard: {
+      borderRadius: BorderRadius.lg,
+      padding: Spacing.xl,
+      alignItems: 'center',
+      marginBottom: Spacing.xl,
+    },
+    productIcon: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      marginTop: Spacing.sm,
+    },
+    benefitsRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginTop: Spacing.lg,
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    },
+    benefitTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderRadius: BorderRadius.xs,
+    },
+    // 支付方式
+    section: {
+      marginBottom: Spacing.xl,
+    },
+    payMethodsRow: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginTop: Spacing.md,
+    },
+    payMethodCard: {
+      flex: 1,
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      borderWidth: 2,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundDefault,
+      alignItems: 'center',
+      position: 'relative',
+    },
+    payMethodIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    selectedDot: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    // 二维码区域
+    qrSection: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.lg,
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.xl,
       alignItems: 'center',
       marginBottom: Spacing.xl,
     },
-    qrContainer: {
-      width: 220,
-      height: 220,
-      borderRadius: BorderRadius.md,
-      backgroundColor: '#FFFFFF',
-      justifyContent: 'center',
+    countdownBar: {
+      flexDirection: 'row',
       alignItems: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
       marginBottom: Spacing.lg,
+      width: '100%',
+      justifyContent: 'center',
+    },
+    qrCard: {
+      alignItems: 'center',
+      width: '100%',
+    },
+    qrImageContainer: {
       padding: Spacing.lg,
+      backgroundColor: '#FFFFFF',
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
     },
     qrPlaceholder: {
-      width: '100%',
-      height: '100%',
+      width: 200,
+      height: 200,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    qrText: {
-      color: theme.textMuted,
-      fontSize: 12,
-      textAlign: 'center',
+    amountDisplay: {
+      alignItems: 'center',
+      padding: Spacing.lg,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      width: '100%',
     },
-    qrAmount: {
-      color: theme.primary,
-      fontSize: 36,
-      fontWeight: '700',
-      marginBottom: Spacing.sm,
+    // 收款信息
+    accountInfo: {
+      width: '100%',
+      marginTop: Spacing.lg,
+      padding: Spacing.md,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
     },
-    qrProductType: {
-      color: theme.textSecondary,
+    accountRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+    },
+    // 确认支付
+    confirmSection: {
+      width: '100%',
+      marginTop: Spacing.xl,
+    },
+    transactionInput: {
+      width: '100%',
+      padding: Spacing.lg,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundTertiary,
+      color: theme.textPrimary,
       fontSize: 14,
-    },
-    qrOrderNo: {
-      color: theme.textMuted,
-      fontSize: 11,
       marginTop: Spacing.md,
     },
-    statusContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-      marginTop: Spacing.lg,
-    },
-    statusPending: {
-      color: theme.textMuted,
-      fontSize: 13,
-    },
-    statusPaid: {
-      color: theme.success,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    statusFailed: {
-      color: theme.error,
-      fontSize: 13,
-    },
-    actionButton: {
+    confirmButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: Spacing.sm,
       padding: Spacing.lg,
-      borderRadius: BorderRadius.sm,
+      borderRadius: BorderRadius.md,
       marginTop: Spacing.lg,
     },
-    actionButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      letterSpacing: 1,
-    },
-    section: {
-      marginBottom: Spacing.xl,
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    // 状态卡片
+    statusCard: {
       alignItems: 'center',
-      marginBottom: Spacing.md,
+      padding: Spacing.xl,
     },
-    sectionTitle: {
-      color: theme.textPrimary,
-      fontSize: 14,
-      fontWeight: '700',
-      letterSpacing: 1,
-    },
-    authCard: {
-      backgroundColor: theme.backgroundDefault,
-      borderRadius: BorderRadius.sm,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: Spacing.lg,
-      marginBottom: Spacing.md,
-    },
-    authHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.md,
-    },
-    authTitle: {
-      color: theme.textPrimary,
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    authBadge: {
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.xs,
-      borderRadius: BorderRadius.xs,
-    },
-    authBadgeActive: {
-      backgroundColor: 'rgba(0, 255, 136, 0.1)',
-      borderWidth: 1,
-      borderColor: theme.success,
-    },
-    authBadgeCancelled: {
-      backgroundColor: 'rgba(255, 0, 60, 0.1)',
-      borderWidth: 1,
-      borderColor: theme.error,
-    },
-    authBadgeText: {
-      fontSize: 11,
-      fontWeight: '600',
-    },
-    authInfo: {
-      gap: Spacing.sm,
-    },
-    authInfoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    authInfoLabel: {
-      color: theme.textMuted,
-      fontSize: 12,
-    },
-    authInfoValue: {
-      color: theme.textPrimary,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    recordList: {
-      gap: Spacing.md,
-    },
-    recordCard: {
-      backgroundColor: theme.backgroundDefault,
-      borderRadius: BorderRadius.sm,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: Spacing.lg,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.md,
-    },
-    recordIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: BorderRadius.sm,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    recordSuccess: {
-      backgroundColor: 'rgba(0, 255, 136, 0.1)',
-    },
-    recordFailed: {
-      backgroundColor: 'rgba(255, 0, 60, 0.1)',
-    },
-    recordPending: {
-      backgroundColor: 'rgba(0, 240, 255, 0.1)',
-    },
-    recordInfo: {
-      flex: 1,
-    },
-    recordAmount: {
-      color: theme.textPrimary,
-      fontSize: 14,
-      fontWeight: '600',
-      marginBottom: Spacing.xs,
-    },
-    recordDate: {
-      color: theme.textMuted,
-      fontSize: 11,
-    },
-    recordStatus: {
-      color: theme.textMuted,
-      fontSize: 11,
-    },
-    emptyState: {
-      alignItems: 'center',
-      paddingVertical: Spacing['3xl'],
-    },
-    emptyIcon: {
+    statusIcon: {
       width: 64,
       height: 64,
-      borderRadius: BorderRadius.lg,
-      backgroundColor: theme.backgroundTertiary,
+      borderRadius: 32,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: Spacing.lg,
     },
-    emptyText: {
-      color: theme.textMuted,
-      fontSize: 14,
-    },
-    tabContainer: {
-      flexDirection: 'row',
-      marginBottom: Spacing.lg,
-      borderRadius: BorderRadius.sm,
-      backgroundColor: theme.backgroundTertiary,
-      padding: Spacing.xs,
-    },
-    tab: {
-      flex: 1,
-      paddingVertical: Spacing.md,
-      alignItems: 'center',
-      borderRadius: BorderRadius.xs,
-    },
-    tabActive: {
-      backgroundColor: theme.primary,
-    },
-    tabText: {
-      color: theme.textMuted,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    tabTextActive: {
-      color: theme.backgroundRoot,
-    },
-    inputContainer: {
-      marginBottom: Spacing.md,
-    },
-    inputLabel: {
-      color: theme.textSecondary,
-      fontSize: 12,
-      marginBottom: Spacing.sm,
-    },
-    input: {
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: BorderRadius.sm,
+    backButton: {
+      marginTop: Spacing.xl,
       padding: Spacing.md,
-      color: theme.textPrimary,
-      fontSize: 14,
     },
-    inputRow: {
+    retryButton: {
+      marginTop: Spacing.lg,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+      backgroundColor: theme.primary,
+      borderRadius: BorderRadius.md,
+    },
+    // 帮助说明
+    helpSection: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+    },
+    helpHeader: {
       flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginBottom: Spacing.lg,
+    },
+    helpList: {
       gap: Spacing.md,
     },
-    inputHalf: {
-      flex: 1,
+    helpItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
     },
-    countdown: {
-      color: theme.textMuted,
-      fontSize: 12,
-      marginTop: Spacing.sm,
+    helpNumber: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    // 安全提示
+    securityTip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      marginTop: Spacing.lg,
+    },
+    // 管理员入口
+    adminEntry: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
     },
   });
 };

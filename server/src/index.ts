@@ -2,6 +2,11 @@ import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
 import payRouter from "./routes/pay.js";
+import oauthRouter from "./routes/oauth.js";
+import riskRouter from "./routes/risk-control.js";
+import billRouter from "./routes/bill.js";
+import offlineRouter from "./routes/offline-sync.js";
+import cloudRouter from "./routes/cloud-storage.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -19,8 +24,13 @@ app.get('/api/v1/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Payment routes
+// API Routes
 app.use('/api/v1/pay', payRouter);
+app.use('/api/v1/oauth', oauthRouter);
+app.use('/api/v1/risk', riskRouter);
+app.use('/api/v1/bill', billRouter);
+app.use('/api/v1/offline', offlineRouter);
+app.use('/api/v1/cloud', cloudRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

@@ -74,6 +74,25 @@ export default function SettingsScreen() {
 
   const accountMenuItems: MenuItem[] = [
     {
+      icon: 'right-to-bracket',
+      title: '账号登录',
+      subtitle: '第三方账号绑定',
+      onPress: () => router.push('/login'),
+    },
+    {
+      icon: 'receipt',
+      title: '账单明细',
+      subtitle: '交易记录与发票',
+      onPress: () => router.push('/bill'),
+    },
+    {
+      icon: 'cloud',
+      title: '云存储设置',
+      subtitle: '百度网盘/阿里云盘',
+      onPress: () => router.push('/cloud-storage'),
+      isMemberOnly: true,
+    },
+    {
       icon: 'user-shield',
       title: '隐私设置',
       subtitle: '数据与隐私管理',

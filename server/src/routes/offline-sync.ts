@@ -14,7 +14,7 @@ const client = getSupabaseClient();
 const addToQueueSchema = z.object({
   userId: z.string(),
   operationType: z.enum(['deduct', 'payment', 'refund', 'sync']),
-  operationData: z.record(z.any()),
+  operationData: z.record(z.string(), z.any()),
 });
 
 router.post('/queue', async (req: Request, res: Response) => {

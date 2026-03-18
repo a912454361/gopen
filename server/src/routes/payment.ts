@@ -5,6 +5,23 @@ import { getSupabaseClient } from '../storage/database/supabase-client.js';
 const router = Router();
 const client = getSupabaseClient();
 
+// ==================== 管理员配置 ====================
+
+// 唯一管理员配置（实际项目中应从数据库读取）
+const ADMIN_CONFIG = {
+  key: process.env.ADMIN_KEY || 'gopen_admin_2024',
+  // 唯一管理员用户ID（可以设置为您的用户ID）
+  adminUserId: process.env.ADMIN_USER_ID || 'gopen_admin',
+  adminName: 'G Open 管理员',
+};
+
+/**
+ * 验证管理员权限
+ */
+const verifyAdmin = (adminKey: string): boolean => {
+  return adminKey === ADMIN_CONFIG.key;
+};
+
 // ==================== 收款账户配置 ====================
 
 // 收款账户信息（实际项目中应从数据库或环境变量读取）

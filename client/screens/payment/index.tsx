@@ -543,7 +543,7 @@ export default function PaymentScreen() {
           <ThemedText variant="caption" color={theme.textMuted}>
             1. 支持支付宝、微信、抖音扫码支付{'\n'}
             2. 请在支付码有效期内完成支付{'\n'}
-            3. 扫码后点击"开始检测支付状态"按钮{'\n'}
+            3. 扫码后点击「开始检测支付状态」按钮{'\n'}
             4. 支付成功后会员权益将自动激活{'\n'}
             5. 如有问题请联系客服处理
           </ThemedText>

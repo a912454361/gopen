@@ -7,6 +7,10 @@ import riskRouter from "./routes/risk-control.js";
 import billRouter from "./routes/bill.js";
 import offlineRouter from "./routes/offline-sync.js";
 import cloudRouter from "./routes/cloud-storage.js";
+import modelsRouter from "./routes/models.js";
+import billingRouter from "./routes/billing.js";
+import ollamaRouter from "./routes/ollama.js";
+import gpuRouter from "./routes/gpu.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -31,6 +35,10 @@ app.use('/api/v1/risk', riskRouter);
 app.use('/api/v1/bill', billRouter);
 app.use('/api/v1/offline', offlineRouter);
 app.use('/api/v1/cloud', cloudRouter);
+app.use('/api/v1/models', modelsRouter);
+app.use('/api/v1/billing', billingRouter);
+app.use('/api/v1/ollama', ollamaRouter);
+app.use('/api/v1/gpu', gpuRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

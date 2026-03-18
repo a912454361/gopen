@@ -17,6 +17,8 @@ export default function RootLayout() {
         <Stack.Screen name="login" options={{ title: "账号登录" }} />
         <Stack.Screen name="bill" options={{ title: "账单明细" }} />
         <Stack.Screen name="cloud-storage" options={{ title: "云存储设置" }} />
+        <Stack.Screen name="wallet" options={{ title: "钱包" }} />
+        <Stack.Screen name="models" options={{ title: "模型市场" }} />
       </Stack>
     </MembershipProvider>
   );

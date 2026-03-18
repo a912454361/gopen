@@ -74,6 +74,18 @@ export default function SettingsScreen() {
 
   const accountMenuItems: MenuItem[] = [
     {
+      icon: 'wallet',
+      title: '钱包',
+      subtitle: '余额充值与消费记录',
+      onPress: () => router.push('/wallet'),
+    },
+    {
+      icon: 'microchip',
+      title: '模型市场',
+      subtitle: '选择AI模型和GPU算力',
+      onPress: () => router.push('/models'),
+    },
+    {
       icon: 'right-to-bracket',
       title: '账号登录',
       subtitle: '第三方账号绑定',

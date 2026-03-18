@@ -263,16 +263,9 @@ export default function PaymentScreen() {
   };
 
   const currentPayMethod = PAY_METHODS.find(p => p.id === payMethod);
-  const currentAccount = paymentAccounts?.[payMethod];
-
-  // 生成二维码显示内容（如果API没有返回真实二维码）
-  const getQRCodeDisplay = () => {
-    // 使用公共二维码生成服务
-    const qrContent = currentOrder 
-      ? `GOPEN_PAY:${currentOrder.orderNo}:${amount}`
-      : '';
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrContent || 'https://gopen.app/pay')}`;
-  };
+  // 优先使用订单返回的收款账户，其次使用全局收款账户配置
+  const currentAccount = currentOrder?.paymentAccount || paymentAccounts?.[payMethod];
+  const qrCodeUrl = currentAccount?.qrcodeUrl;
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -446,9 +439,9 @@ export default function PaymentScreen() {
                 <View style={styles.qrCard}>
                   <View style={styles.qrImageContainer}>
                     {/* 显示真实收款码或占位符 */}
-                    {currentAccount?.qrcodeUrl ? (
+                    {qrCodeUrl ? (
                       <Image 
-                        source={{ uri: currentAccount.qrcodeUrl }} 
+                        source={{ uri: qrCodeUrl }} 
                         style={styles.qrImage}
                         resizeMode="contain"
                       />

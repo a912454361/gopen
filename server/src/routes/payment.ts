@@ -31,7 +31,7 @@ const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
     account: '18321337942', // 支付宝账号（手机号）
-    qrcodeUrl: 'https://qr.alipay.com/fkx19668fnwkfuxvdtexrdb', // 支付宝收款码
+    qrcodeUrl: 'https://qr.alipay.com/fkx19668fnwkfuxvdtexrdb', // 支付宝收款码链接
     realName: 'G Open官方', // 收款人姓名
     desc: '请使用支付宝扫码支付',
   },
@@ -44,25 +44,35 @@ const PAYMENT_ACCOUNTS = {
   },
 };
 
+// 将收款链接转换为可显示的二维码图片URL
+const getQRCodeImageUrl = (qrcodeUrl: string, payType: string): string => {
+  // 如果已经是图片URL，直接返回
+  if (qrcodeUrl.includes('qrserver.com') || qrcodeUrl.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+    return qrcodeUrl;
+  }
+  // 否则使用第三方服务生成二维码图片
+  return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrcodeUrl)}`;
+};
+
 /**
  * 获取收款账户信息
  * GET /api/v1/payment/accounts
  */
 router.get('/accounts', async (req: Request, res: Response) => {
   try {
-    // 返回收款账户信息
+    // 返回收款账户信息，将收款链接转换为可显示的二维码图片
     const accounts = {
       alipay: {
         name: PAYMENT_ACCOUNTS.alipay.name,
         account: PAYMENT_ACCOUNTS.alipay.account,
-        qrcodeUrl: PAYMENT_ACCOUNTS.alipay.qrcodeUrl,
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.alipay.qrcodeUrl, 'alipay'),
         realName: PAYMENT_ACCOUNTS.alipay.realName,
         desc: PAYMENT_ACCOUNTS.alipay.desc,
       },
       wechat: {
         name: PAYMENT_ACCOUNTS.wechat.name,
         account: PAYMENT_ACCOUNTS.wechat.account,
-        qrcodeUrl: PAYMENT_ACCOUNTS.wechat.qrcodeUrl,
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.wechat.qrcodeUrl, 'wechat'),
         realName: PAYMENT_ACCOUNTS.wechat.realName,
         desc: PAYMENT_ACCOUNTS.wechat.desc,
       },
@@ -135,7 +145,7 @@ router.post('/create', async (req: Request, res: Response) => {
         paymentAccount: {
           name: paymentAccount.name,
           account: paymentAccount.account,
-          qrcodeUrl: paymentAccount.qrcodeUrl,
+          qrcodeUrl: getQRCodeImageUrl(paymentAccount.qrcodeUrl, body.payType),
           realName: paymentAccount.realName,
         },
       },
@@ -462,7 +472,10 @@ router.post('/admin/accounts', async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      data: PAYMENT_ACCOUNTS[body.payType],
+      data: {
+        ...PAYMENT_ACCOUNTS[body.payType],
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS[body.payType].qrcodeUrl, body.payType),
+      },
       message: '收款账户更新成功',
     });
   } catch (error) {

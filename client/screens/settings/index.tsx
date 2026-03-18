@@ -3,6 +3,7 @@ import {
   ScrollView,
   View,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -120,6 +121,13 @@ export default function SettingsScreen() {
       title: '帮助与支持',
       subtitle: '获取使用帮助',
     },
+    // Web端显示下载入口
+    ...(Platform.OS === 'web' ? [{
+      icon: 'download',
+      title: '下载应用',
+      subtitle: 'iOS / Android / macOS / Windows',
+      onPress: () => router.push('/download'),
+    } as MenuItem] : []),
   ];
 
   const renderMenuItem = (item: MenuItem, index: number, total: number) => {

@@ -20,6 +20,8 @@ import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
+type PayMethod = 'alipay' | 'wechat' | 'douyin';
+
 interface PayOrder {
   id: string;
   order_no: string;
@@ -30,6 +32,12 @@ interface PayOrder {
   qr_code_data: string;
   expiredAt: string;
 }
+
+const PAY_METHODS = [
+  { id: 'alipay', name: '支付宝', icon: 'wallet', color: '#1677FF', bgColor: '#1677FF20' },
+  { id: 'wechat', name: '微信支付', icon: 'message', color: '#07C160', bgColor: '#07C16020' },
+  { id: 'douyin', name: '抖音支付', icon: 'play', color: '#000000', bgColor: '#00000020' },
+];
 
 export default function PaymentScreen() {
   const { theme } = useTheme();
@@ -42,6 +50,7 @@ export default function PaymentScreen() {
   const amount = params.amount || 2900;
   const productType = params.productType || 'membership';
 
+  const [payMethod, setPayMethod] = useState<PayMethod>('alipay');
   const [loading, setLoading] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<PayOrder | null>(null);
   const [countdown, setCountdown] = useState(0);
@@ -57,7 +66,7 @@ export default function PaymentScreen() {
   // 页面加载时自动生成订单
   useEffect(() => {
     generateOrder();
-  }, []);
+  }, [payMethod]);
 
   // 倒计时
   useEffect(() => {
@@ -105,7 +114,7 @@ export default function PaymentScreen() {
         body: JSON.stringify({
           userId: 'demo_user_001',
           amount: amount,
-          payType: 'alipay',
+          payType: payMethod,
           productType: productType as 'membership' | 'super_member',
         }),
       });
@@ -193,10 +202,12 @@ export default function PaymentScreen() {
   // 生成二维码图片URL
   const getQRCodeUrl = () => {
     if (!currentOrder) return null;
-    // 二维码内容包含订单信息
-    const content = `G Open Payment\nOrder: ${currentOrder.order_no}\nAmount: ${formatAmount(currentOrder.amount)}\nProduct: ${getProductName()}`;
+    const payMethodName = PAY_METHODS.find(p => p.id === payMethod)?.name || '支付';
+    const content = `G Open ${payMethodName}\n订单: ${currentOrder.order_no}\n金额: ${formatAmount(currentOrder.amount)}\n产品: ${getProductName()}`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(content)}`;
   };
+
+  const currentPayMethod = PAY_METHODS.find(p => p.id === payMethod);
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
@@ -252,11 +263,45 @@ export default function PaymentScreen() {
           </View>
         </LinearGradient>
 
+        {/* 支付方式选择 */}
+        <View style={{ marginBottom: Spacing.xl }}>
+          <ThemedText variant="label" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
+            选择支付方式
+          </ThemedText>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            {PAY_METHODS.map((method) => (
+              <TouchableOpacity
+                key={method.id}
+                style={{
+                  flex: 1,
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: Spacing.lg,
+                  borderRadius: BorderRadius.md,
+                  borderWidth: 2,
+                  borderColor: payMethod === method.id ? method.color : theme.border,
+                  backgroundColor: payMethod === method.id ? method.bgColor : theme.backgroundTertiary,
+                }}
+                onPress={() => setPayMethod(method.id as PayMethod)}
+              >
+                <FontAwesome6 name={method.icon as any} size={24} color={method.color} />
+                <ThemedText 
+                  variant="small" 
+                  color={payMethod === method.id ? method.color : theme.textMuted}
+                  style={{ marginTop: Spacing.sm }}
+                >
+                  {method.name}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* 二维码区域 */}
         <View style={[styles.qrCard, { alignItems: 'center' }]}>
           {loading ? (
             <View style={{ height: 280, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator size="large" color={theme.primary} />
+              <ActivityIndicator size="large" color={currentPayMethod?.color || theme.primary} />
               <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
                 正在生成支付码...
               </ThemedText>
@@ -276,9 +321,16 @@ export default function PaymentScreen() {
                 />
               </View>
               
-              <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                请使用支付宝扫码支付
-              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <FontAwesome6 
+                  name={currentPayMethod?.icon as any} 
+                  size={16} 
+                  color={currentPayMethod?.color} 
+                />
+                <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                  请使用{currentPayMethod?.name}扫码支付
+                </ThemedText>
+              </View>
               
               <View style={styles.statusContainer}>
                 <FontAwesome6
@@ -368,9 +420,10 @@ export default function PaymentScreen() {
             </ThemedText>
           </View>
           <ThemedText variant="caption" color={theme.textMuted}>
-            1. 请在支付码有效期内完成支付{'\n'}
-            2. 支付成功后会员权益将自动激活{'\n'}
-            3. 如有问题请联系客服处理
+            1. 支持支付宝、微信、抖音扫码支付{'\n'}
+            2. 请在支付码有效期内完成支付{'\n'}
+            3. 支付成功后会员权益将自动激活{'\n'}
+            4. 如有问题请联系客服处理
           </ThemedText>
         </View>
       </ScrollView>

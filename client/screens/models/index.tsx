@@ -329,50 +329,54 @@ export default function ModelsScreen() {
         </View>
 
         {/* 提供商筛选 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
-          <View style={styles.filterRow}>
-            {PROVIDERS.map((provider) => (
-              <TouchableOpacity
-                key={provider.id}
-                style={[
-                  styles.filterChip,
-                  selectedProvider === provider.id && styles.filterChipActive,
-                ]}
-                onPress={() => setSelectedProvider(provider.id)}
-              >
-                <Text style={[
-                  styles.filterChipText,
-                  { color: selectedProvider === provider.id ? theme.backgroundRoot : theme.textPrimary },
-                ]}>
-                  {provider.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
+            <View style={styles.filterRow}>
+              {PROVIDERS.map((provider) => (
+                <TouchableOpacity
+                  key={provider.id}
+                  style={[
+                    styles.filterChip,
+                    selectedProvider === provider.id && styles.filterChipActive,
+                  ]}
+                  onPress={() => setSelectedProvider(provider.id)}
+                >
+                  <Text style={[
+                    styles.filterChipText,
+                    { color: selectedProvider === provider.id ? theme.backgroundRoot : theme.textPrimary },
+                  ]}>
+                    {provider.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* 分类筛选 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
-          <View style={styles.filterRow}>
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.filterChip,
-                  selectedCategory === category.id && styles.filterChipActive,
-                ]}
-                onPress={() => setSelectedCategory(category.id)}
-              >
-                <Text style={[
-                  styles.filterChipText,
-                  { color: selectedCategory === category.id ? theme.backgroundRoot : theme.textPrimary },
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
+            <View style={styles.filterRow}>
+              {CATEGORIES.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.filterChip,
+                    selectedCategory === category.id && styles.filterChipActive,
+                  ]}
+                  onPress={() => setSelectedCategory(category.id)}
+                >
+                  <Text style={[
+                    styles.filterChipText,
+                    { color: selectedCategory === category.id ? theme.backgroundRoot : theme.textPrimary },
+                  ]}>
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* 模型列表 */}
         {(selectedCategory === 'all' || selectedCategory === 'chat') && renderSection('对话模型', chatModels)}

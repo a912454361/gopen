@@ -387,3 +387,320 @@ export type InsertCloudStorageConfig = typeof cloudStorageConfig.$inferInsert;
 
 export type SyncFile = typeof syncFiles.$inferSelect;
 export type InsertSyncFile = typeof syncFiles.$inferInsert;
+
+// ==================== AI模型与计费表 ====================
+
+// AI模型配置表（后台管理）
+export const aiModels = pgTable(
+  "ai_models",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    code: varchar("code", { length: 64 }).notNull().unique(), // doubao-pro, gpt-4, ollama-llama3
+    name: varchar("name", { length: 128 }).notNull(), // 显示名称
+    provider: varchar("provider", { length: 50 }).notNull(), // openai, anthropic, doubao, ollama
+    category: varchar("category", { length: 50 }).notNull(), // chat, image, video, audio
+    
+    // 成本价（后台可见，用户不可见）
+    costInputPrice: integer("cost_input_price").notNull(), // 输入token成本价（分/百万token）
+    costOutputPrice: integer("cost_output_price").notNull(), // 输出token成本价（分/百万token）
+    costGpuHour: integer("cost_gpu_hour"), // GPU小时成本（分/小时）
+    
+    // 用户售价（加价后）
+    sellInputPrice: integer("sell_input_price").notNull(), // 输入token售价（分/百万token）
+    sellOutputPrice: integer("sell_output_price").notNull(), // 输出token售价（分/百万token）
+    sellGpuHour: integer("sell_gpu_hour"), // GPU小时售价（分/小时）
+    
+    // 加价策略
+    markupType: varchar("markup_type", { length: 20 }).default("percentage"), // percentage/fixed
+    markupValue: integer("markup_value").default(30), // 加价百分比或固定值
+    
+    // 模型参数
+    maxTokens: integer("max_tokens").default(4096),
+    contextWindow: integer("context_window").default(8192),
+    
+    // 服务配置
+    apiEndpoint: text("api_endpoint"), // API地址
+    apiKeyEncrypted: text("api_key_encrypted"), // 加密的API Key
+    modelParams: jsonb("model_params"), // 模型参数配置
+    
+    // Ollama专用
+    isOllama: boolean("is_ollama").default(false),
+    ollamaHost: varchar("ollama_host", { length: 256 }), // Ollama服务地址
+    ollamaModel: varchar("ollama_model", { length: 128 }), // Ollama模型名
+    
+    // 状态
+    isFree: boolean("is_free").default(false), // 是否免费模型
+    isPublic: boolean("is_public").default(true), // 是否对公众开放
+    memberOnly: boolean("member_only").default(false), // 仅会员可用
+    superMemberOnly: boolean("super_member_only").default(false), // 仅超级会员可用
+    status: varchar("status", { length: 20 }).default("active"), // active/disabled
+    
+    // 排序和描述
+    sortOrder: integer("sort_order").default(0),
+    description: text("description"),
+    icon: varchar("icon", { length: 256 }),
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("ai_models_code_idx").on(table.code),
+    index("ai_models_provider_idx").on(table.provider),
+    index("ai_models_category_idx").on(table.category),
+    index("ai_models_status_idx").on(table.status),
+  ]
+);
+
+// 存储费用配置表
+export const storagePricing = pgTable(
+  "storage_pricing",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    storageType: varchar("storage_type", { length: 50 }).notNull(), // local, oss, baidu, aliyun
+    
+    // 成本价
+    costPerGb: integer("cost_per_gb").notNull(), // 每GB成本（分/月）
+    costPerRequest: integer("cost_per_request").default(0), // 每次请求成本（分）
+    costTraffic: integer("cost_traffic").default(0), // 流量成本（分/GB）
+    
+    // 售价
+    sellPerGb: integer("sell_per_gb").notNull(), // 每GB售价（分/月）
+    sellPerRequest: integer("sell_per_request").default(0), // 每次请求售价（分）
+    sellTraffic: integer("sell_traffic").default(0), // 流量售价（分/GB）
+    
+    // 免费额度
+    freeQuotaGb: integer("free_quota_gb").default(1), // 免费存储额度（GB）
+    freeQuotaRequests: integer("free_quota_requests").default(10000), // 免费请求次数
+    
+    markupValue: integer("markup_value").default(50), // 加价比例
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  }
+);
+
+// 用户余额表
+export const userBalances = pgTable(
+  "user_balances",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id", { length: 36 }).notNull().unique(),
+    
+    balance: integer("balance").default(0), // 余额（分）
+    frozenBalance: integer("frozen_balance").default(0), // 冻结金额（分）
+    
+    // 累计统计
+    totalRecharged: integer("total_recharged").default(0), // 累计充值
+    totalConsumed: integer("total_consumed").default(0), // 累计消费
+    totalStorageUsed: integer("total_storage_used").default(0), // 累计存储使用（字节）
+    totalComputeUsed: integer("total_compute_used").default(0), // 累计计算使用（token）
+    totalGpuUsed: integer("total_gpu_used").default(0), // 累计GPU使用（秒）
+    
+    // 本月统计
+    monthlyConsumed: integer("monthly_consumed").default(0), // 本月消费
+    monthlyStorageUsed: integer("monthly_storage_used").default(0), // 本月存储使用
+    monthlyComputeUsed: integer("monthly_compute_used").default(0), // 本月计算使用
+    monthlyGpuUsed: integer("monthly_gpu_used").default(0), // 本月GPU使用
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("user_balances_user_id_idx").on(table.userId),
+  ]
+);
+
+// 消费记录表
+export const consumptionRecords = pgTable(
+  "consumption_records",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    
+    consumptionType: varchar("consumption_type", { length: 50 }).notNull(), // model/storage/gpu/ollama
+    
+    // 关联资源
+    resourceId: varchar("resource_id", { length: 36 }), // 模型ID/存储ID
+    resourceName: varchar("resource_name", { length: 128 }), // 资源名称
+    
+    // 用量明细
+    inputTokens: integer("input_tokens").default(0),
+    outputTokens: integer("output_tokens").default(0),
+    storageBytes: integer("storage_bytes").default(0),
+    gpuSeconds: integer("gpu_seconds").default(0),
+    requestCount: integer("request_count").default(1),
+    
+    // 费用明细（后台可见）
+    costInputFee: integer("cost_input_fee").default(0), // 输入成本（分）
+    costOutputFee: integer("cost_output_fee").default(0), // 输出成本（分）
+    costStorageFee: integer("cost_storage_fee").default(0), // 存储成本（分）
+    costGpuFee: integer("cost_gpu_fee").default(0), // GPU成本（分）
+    costTotal: integer("cost_total").default(0), // 总成本（分）
+    
+    // 收费明细（用户可见）
+    sellInputFee: integer("sell_input_fee").default(0), // 输入收费（分）
+    sellOutputFee: integer("sell_output_fee").default(0), // 输出收费（分）
+    sellStorageFee: integer("sell_storage_fee").default(0), // 存储收费（分）
+    sellGpuFee: integer("sell_gpu_fee").default(0), // GPU收费（分）
+    sellTotal: integer("sell_total").default(0), // 总收费（分）
+    
+    // 利润
+    profit: integer("profit").default(0), // 利润（分）
+    
+    // 关联任务
+    taskId: varchar("task_id", { length: 36 }), // 关联的创作任务ID
+    projectId: varchar("project_id", { length: 36 }), // 关联项目ID
+    
+    status: varchar("status", { length: 20 }).default("completed"), // pending/completed/refunded
+    remark: text("remark"),
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("consumption_records_user_id_idx").on(table.userId),
+    index("consumption_records_type_idx").on(table.consumptionType),
+    index("consumption_records_created_at_idx").on(table.createdAt),
+  ]
+);
+
+// GPU实例配置表
+export const gpuInstances = pgTable(
+  "gpu_instances",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    code: varchar("code", { length: 64 }).notNull().unique(), // rtx-4090, a100-80g
+    name: varchar("name", { length: 128 }).notNull(),
+    gpuModel: varchar("gpu_model", { length: 128 }).notNull(), // RTX 4090, A100
+    vramGb: integer("vram_gb").notNull(), // 显存大小（GB）
+    
+    // 成本与售价
+    costPerHour: integer("cost_per_hour").notNull(), // 每小时成本（分）
+    sellPerHour: integer("sell_per_hour").notNull(), // 每小时售价（分）
+    markupValue: integer("markup_value").default(50),
+    
+    // 性能参数
+    cudaCores: integer("cuda_cores"),
+    tensorCores: integer("tensor_cores"),
+    bandwidth: integer("bandwidth"), // 带宽（GB/s）
+    
+    // 状态
+    totalInstances: integer("total_instances").default(0), // 总实例数
+    availableInstances: integer("available_instances").default(0), // 可用实例数
+    status: varchar("status", { length: 20 }).default("active"),
+    
+    sortOrder: integer("sort_order").default(0),
+    description: text("description"),
+    icon: varchar("icon", { length: 256 }),
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("gpu_instances_code_idx").on(table.code),
+    index("gpu_instances_status_idx").on(table.status),
+  ]
+);
+
+// GPU任务记录表
+export const gpuTasks = pgTable(
+  "gpu_tasks",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    gpuInstanceId: varchar("gpu_instance_id", { length: 36 }).notNull(),
+    
+    taskType: varchar("task_type", { length: 50 }).notNull(), // render, train, inference
+    taskName: varchar("task_name", { length: 128 }).notNull(),
+    
+    // 执行信息
+    startTime: timestamp("start_time", { withTimezone: true }),
+    endTime: timestamp("end_time", { withTimezone: true }),
+    duration: integer("duration").default(0), // 实际执行时长（秒）
+    
+    // 资源配置
+    inputParams: jsonb("input_params"), // 输入参数
+    inputData: jsonb("input_data"), // 输入数据引用
+    outputData: jsonb("output_data"), // 输出数据引用
+    
+    // 费用
+    estimatedCost: integer("estimated_cost"), // 预估费用（分）
+    actualCost: integer("actual_cost"), // 实际费用（分）
+    estimatedSell: integer("estimated_sell"), // 预估收费（分）
+    actualSell: integer("actual_sell"), // 实际收费（分）
+    
+    status: varchar("status", { length: 20 }).default("pending"), // pending/running/completed/failed
+    errorMessage: text("error_message"),
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("gpu_tasks_user_id_idx").on(table.userId),
+    index("gpu_tasks_status_idx").on(table.status),
+    index("gpu_tasks_created_at_idx").on(table.createdAt),
+  ]
+);
+
+// Ollama服务配置表
+export const ollamaServices = pgTable(
+  "ollama_services",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: varchar("name", { length: 128 }).notNull(),
+    host: varchar("host", { length: 256 }).notNull(), // 服务地址
+    port: integer("port").default(11434),
+    
+    // 资源限制
+    maxConcurrent: integer("max_concurrent").default(10), // 最大并发
+    maxQueueSize: integer("max_queue_size").default(100), // 最大队列
+    
+    // 计费配置
+    isFree: boolean("is_free").default(false), // 是否免费
+    pricePerRequest: integer("price_per_request").default(0), // 每次请求价格（分）
+    pricePerToken: integer("price_per_token").default(0), // 每token价格（分/千）
+    
+    // 状态
+    status: varchar("status", { length: 20 }).default("active"),
+    healthCheckUrl: varchar("health_check_url", { length: 256 }),
+    lastHealthCheck: timestamp("last_health_check", { withTimezone: true }),
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  }
+);
+
+// 模型类型导出
+export type AiModel = typeof aiModels.$inferSelect;
+export type InsertAiModel = typeof aiModels.$inferInsert;
+
+export type StoragePricing = typeof storagePricing.$inferSelect;
+export type InsertStoragePricing = typeof storagePricing.$inferInsert;
+
+export type UserBalance = typeof userBalances.$inferSelect;
+export type InsertUserBalance = typeof userBalances.$inferInsert;
+
+export type ConsumptionRecord = typeof consumptionRecords.$inferSelect;
+export type InsertConsumptionRecord = typeof consumptionRecords.$inferInsert;
+
+export type GpuInstance = typeof gpuInstances.$inferSelect;
+export type InsertGpuInstance = typeof gpuInstances.$inferInsert;
+
+export type GpuTask = typeof gpuTasks.$inferSelect;
+export type InsertGpuTask = typeof gpuTasks.$inferInsert;
+
+export type OllamaService = typeof ollamaServices.$inferSelect;
+export type InsertOllamaService = typeof ollamaServices.$inferInsert;

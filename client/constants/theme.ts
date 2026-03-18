@@ -1,35 +1,43 @@
 export const Colors = {
   light: {
-    textPrimary: "#1C1917",
-    textSecondary: "#78716c",
-    textMuted: "#9CA3AF",
-    primary: "#4F46E5", // Indigo-600 - 品牌主色，代表科技与智能
-    accent: "#8B5CF6", // Violet-500 - 辅助色，代表创造力
-    success: "#10B981", // Emerald-500
-    error: "#EF4444",
-    backgroundRoot: "#FAFAFA",
-    backgroundDefault: "#FFFFFF",
-    backgroundTertiary: "#F9FAFB", // 更浅的背景色，用于去线留白
-    buttonPrimaryText: "#FFFFFF",
-    tabIconSelected: "#4F46E5",
-    border: "#E5E7EB",
-    borderLight: "#F3F4F6",
+    textPrimary: "#EAEAEA",
+    textSecondary: "#A8A29E",
+    textMuted: "#555570",
+    primary: "#00F0FF", // 电光青 - 霓虹主色
+    accent: "#BF00FF", // 霓虹紫 - 辅助色
+    success: "#00FF88", // 矩阵绿
+    error: "#FF003C", // 危险红
+    backgroundRoot: "#0A0A0F", // 纯黑背景
+    backgroundDefault: "#12121A", // 微亮黑卡片
+    backgroundTertiary: "#1A1A24", // 三级背景
+    buttonPrimaryText: "#0A0A0F",
+    tabIconSelected: "#00F0FF",
+    border: "rgba(0,240,255,0.15)",
+    borderLight: "rgba(0,240,255,0.08)",
+    neonCyan: "#00F0FF", // 霓虹青
+    neonPurple: "#BF00FF", // 霓虹紫
+    neonRed: "#FF003C", // 霓虹红
+    neonGreen: "#00FF88", // 霓虹绿
   },
   dark: {
-    textPrimary: "#FAFAF9",
+    textPrimary: "#EAEAEA",
     textSecondary: "#A8A29E",
-    textMuted: "#6F767E",
-    primary: "#818CF8", // Indigo-400 - 暗色模式品牌主色
-    accent: "#A78BFA", // Violet-400
-    success: "#34D399",
-    error: "#F87171",
-    backgroundRoot: "#09090B", // 更深的背景色
-    backgroundDefault: "#1C1C1E",
-    backgroundTertiary: "#1F1F22", // 暗色模式去线留白背景
-    buttonPrimaryText: "#09090B",
-    tabIconSelected: "#818CF8",
-    border: "#3F3F46",
-    borderLight: "#27272A",
+    textMuted: "#555570",
+    primary: "#00F0FF", // 电光青 - 霓虹主色
+    accent: "#BF00FF", // 霓虹紫 - 辅助色
+    success: "#00FF88", // 矩阵绿
+    error: "#FF003C", // 危险红
+    backgroundRoot: "#0A0A0F", // 纯黑背景
+    backgroundDefault: "#12121A", // 微亮黑卡片
+    backgroundTertiary: "#1A1A24", // 三级背景
+    buttonPrimaryText: "#0A0A0F",
+    tabIconSelected: "#00F0FF",
+    border: "rgba(0,240,255,0.15)",
+    borderLight: "rgba(0,240,255,0.08)",
+    neonCyan: "#00F0FF", // 霓虹青
+    neonPurple: "#BF00FF", // 霓虹紫
+    neonRed: "#FF003C", // 霓虹红
+    neonGreen: "#00FF88", // 霓虹绿
   },
 };
 
@@ -48,7 +56,7 @@ export const Spacing = {
 
 export const BorderRadius = {
   xs: 4,
-  sm: 8,
+  sm: 8, // 暗黑科技风使用锐利小圆角
   md: 12,
   lg: 16,
   xl: 20,
@@ -89,12 +97,12 @@ export const Typography = {
   h3: {
     fontSize: 24,
     lineHeight: 32,
-    fontWeight: "300" as const,
+    fontWeight: "700" as const,
   },
   h4: {
     fontSize: 20,
     lineHeight: 28,
-    fontWeight: "600" as const,
+    fontWeight: "700" as const,
   },
   title: {
     fontSize: 18,
@@ -132,17 +140,17 @@ export const Typography = {
     fontWeight: "500" as const,
   },
   label: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "500" as const,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "600" as const,
     letterSpacing: 2,
     textTransform: "uppercase" as const,
   },
   labelSmall: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 14,
     fontWeight: "500" as const,
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     textTransform: "uppercase" as const,
   },
   labelTitle: {
@@ -160,7 +168,7 @@ export const Typography = {
   stat: {
     fontSize: 30,
     lineHeight: 36,
-    fontWeight: "300" as const,
+    fontWeight: "700" as const,
   },
   tiny: {
     fontSize: 10,
@@ -168,9 +176,11 @@ export const Typography = {
     fontWeight: "400" as const,
   },
   navLabel: {
-    fontSize: 10,
+    fontSize: 9,
     lineHeight: 14,
-    fontWeight: "500" as const,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+    textTransform: "uppercase" as const,
   },
 };
 

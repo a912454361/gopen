@@ -1,0 +1,191 @@
+import { StyleSheet } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.backgroundRoot,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing['2xl'],
+      paddingBottom: Spacing['5xl'],
+    },
+    header: {
+      marginBottom: Spacing.xl,
+    },
+    headerTitle: {
+      color: theme.textPrimary,
+      fontSize: 24,
+      fontWeight: '700',
+      marginBottom: Spacing.sm,
+    },
+    headerSubtitle: {
+      color: theme.textMuted,
+      fontSize: 11,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      fontWeight: '600',
+    },
+    neonLine: {
+      height: 2,
+      borderRadius: 1,
+      marginTop: Spacing.lg,
+      width: 80,
+    },
+    messagesContainer: {
+      flex: 1,
+      gap: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    messageWrapper: {
+      maxWidth: '85%',
+    },
+    userMessageWrapper: {
+      alignSelf: 'flex-end',
+    },
+    aiMessageWrapper: {
+      alignSelf: 'flex-start',
+    },
+    messageBubble: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+    },
+    userMessage: {
+      backgroundColor: theme.backgroundTertiary,
+      borderColor: theme.border,
+    },
+    aiMessage: {
+      backgroundColor: theme.backgroundDefault,
+      borderColor: theme.primary,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+    },
+    messageText: {
+      fontSize: 15,
+      lineHeight: 22,
+      color: theme.textPrimary,
+    },
+    messageLabel: {
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+      fontWeight: '600',
+      marginBottom: Spacing.xs,
+    },
+    userLabel: {
+      color: theme.accent,
+    },
+    aiLabel: {
+      color: theme.primary,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: Spacing.md,
+      padding: Spacing.lg,
+      backgroundColor: theme.backgroundDefault,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      color: theme.textPrimary,
+      fontSize: 15,
+      minHeight: 48,
+      maxHeight: 120,
+    },
+    sendButton: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+    },
+    sendButtonDisabled: {
+      borderColor: theme.border,
+      shadowOpacity: 0,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing['3xl'],
+    },
+    emptyIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: BorderRadius.lg,
+      backgroundColor: theme.backgroundDefault,
+      borderWidth: 1,
+      borderColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.xl,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+    },
+    emptyTitle: {
+      color: theme.textPrimary,
+      fontSize: 20,
+      fontWeight: '700',
+      marginBottom: Spacing.sm,
+    },
+    emptySubtitle: {
+      color: theme.textMuted,
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    typingIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      padding: Spacing.md,
+    },
+    typingDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.primary,
+    },
+    quickActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.sm,
+      marginTop: Spacing.lg,
+    },
+    quickAction: {
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundDefault,
+    },
+    quickActionText: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      fontWeight: '500',
+    },
+  });
+};

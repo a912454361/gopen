@@ -73,11 +73,9 @@ function getSupabaseCredentials(): SupabaseCredentials {
   const url = process.env.COZE_SUPABASE_URL;
   const anonKey = process.env.COZE_SUPABASE_ANON_KEY;
 
-  if (!url) {
-    throw new Error('COZE_SUPABASE_URL is not set');
-  }
-  if (!anonKey) {
-    throw new Error('COZE_SUPABASE_ANON_KEY is not set');
+  if (!url || !anonKey) {
+    // 不抛出错误，返回空值让调用者处理
+    return { url: '', anonKey: '' };
   }
 
   return { url, anonKey };
@@ -85,6 +83,11 @@ function getSupabaseCredentials(): SupabaseCredentials {
 
 function getSupabaseClient(token?: string): SupabaseClient {
   const { url, anonKey } = getSupabaseCredentials();
+  
+  if (!url || !anonKey) {
+    // 返回一个空的客户端对象，避免null检查
+    return null as any;
+  }
 
   if (token) {
     return createClient(url, anonKey, {

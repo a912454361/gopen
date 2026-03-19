@@ -11,7 +11,6 @@
 
 import express, { type Request, type Response } from 'express';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
 import {
   createNativeOrder,
   queryOrder,
@@ -27,13 +26,8 @@ import { isMockMode } from '../config/wechat-pay.js';
 
 const router = express.Router();
 
-// Supabase客户端 - 仅在有配置时初始化
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-const client = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-// 模拟订单存储（当没有Supabase时使用）
-const mockOrders = new Map<string, any>();
+// 内存订单存储（简化版，实际生产应使用数据库）
+const ordersStore = new Map<string, any>();
 
 // ==================== 创建Native支付订单 ====================
 
@@ -92,18 +86,8 @@ router.post('/create', async (req: Request, res: Response) => {
       updated_at: new Date().toISOString(),
     };
     
-    if (client) {
-      const { error: dbError } = await client
-        .from('pay_orders')
-        .insert(orderData);
-      
-      if (dbError) {
-        console.error('Save order to database error:', dbError);
-      }
-    } else {
-      // 使用内存存储
-      mockOrders.set(out_trade_no, orderData);
-    }
+    // 使用内存存储
+    ordersStore.set(out_trade_no, orderData);
     
     // 返回结果
     res.json({
@@ -142,15 +126,23 @@ router.get('/query', async (req: Request, res: Response) => {
       out_trade_no: req.query.out_trade_no,
     });
     
-    // 先查询本地数据库
-    const { data: localOrder, error: dbError } = await client
-      .from('pay_orders')
-      .select('*')
-      .eq('order_no', out_trade_no)
-      .single();
-    
-    if (dbError || !localOrder) {
-      return res.status(404).json({ error: '订单不存在' });
+    // 先查询本地存储
+    let localOrder: any = null;
+    if (getClient()) {
+      const { data, error: dbError } = await (getClient() as any)
+        .from('pay_orders')
+        .select('*')
+        .eq('order_no', out_trade_no)
+        .single();
+      localOrder = data;
+      if (dbError || !localOrder) {
+        return res.status(404).json({ error: '订单不存在' });
+      }
+    } else {
+      localOrder = ordersStore.get(out_trade_no);
+      if (!localOrder) {
+        return res.status(404).json({ error: '订单不存在' });
+      }
     }
     
     // 如果订单已支付，直接返回本地状态
@@ -177,15 +169,22 @@ router.get('/query', async (req: Request, res: Response) => {
     
     // 如果支付成功，更新本地订单状态
     if (queryResult.trade_state === 'SUCCESS' && localOrder.status === 'pending') {
-      await client
-        .from('pay_orders')
-        .update({
-          status: 'paid',
-          paid_at: queryResult.success_time || new Date().toISOString(),
-          transaction_id: queryResult.transaction_id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', localOrder.id);
+      if (getClient()) {
+        await (getClient() as any)
+          .from('pay_orders')
+          .update({
+            status: 'paid',
+            paid_at: queryResult.success_time || new Date().toISOString(),
+            transaction_id: queryResult.transaction_id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', localOrder.id);
+      } else {
+        localOrder.status = 'paid';
+        localOrder.paid_at = queryResult.success_time || new Date().toISOString();
+        localOrder.transaction_id = queryResult.transaction_id;
+        ordersStore.set(out_trade_no, localOrder);
+      }
     }
     
     res.json({
@@ -223,13 +222,21 @@ router.post('/close', async (req: Request, res: Response) => {
     }
     
     // 更新本地订单状态
-    await client
-      .from('pay_orders')
-      .update({
-        status: 'closed',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('order_no', out_trade_no);
+    if (getClient()) {
+      await (getClient() as any)
+        .from('pay_orders')
+        .update({
+          status: 'closed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('order_no', out_trade_no);
+    } else {
+      const order = ordersStore.get(out_trade_no);
+      if (order) {
+        order.status = 'closed';
+        ordersStore.set(out_trade_no, order);
+      }
+    }
     
     res.json({
       success: true,
@@ -274,15 +281,25 @@ router.post('/refund', async (req: Request, res: Response) => {
     }
     
     // 更新本地订单状态
-    await client
-      .from('pay_orders')
-      .update({
-        status: 'refund',
-        refund_id: refundResult.refund_id,
-        refund_no: out_refund_no,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('order_no', body.out_trade_no);
+    if (getClient()) {
+      await (getClient() as any)
+        .from('pay_orders')
+        .update({
+          status: 'refund',
+          refund_id: refundResult.refund_id,
+          refund_no: out_refund_no,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('order_no', body.out_trade_no);
+    } else {
+      const order = ordersStore.get(body.out_trade_no);
+      if (order) {
+        order.status = 'refund';
+        order.refund_id = refundResult.refund_id;
+        order.refund_no = out_refund_no;
+        ordersStore.set(body.out_trade_no, order);
+      }
+    }
     
     res.json({
       success: true,
@@ -351,19 +368,29 @@ router.post('/notify', async (req: Request, res: Response) => {
     
     // 更新本地订单状态
     if (trade_state === 'SUCCESS') {
-      const { error: updateError } = await client
-        .from('pay_orders')
-        .update({
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          transaction_id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('order_no', out_trade_no);
-      
-      if (updateError) {
-        console.error('[WechatPay] 更新订单状态失败:', updateError);
-        return res.status(500).send(generateFailResponse('更新订单状态失败'));
+      if (getClient()) {
+        const { error: updateError } = await (getClient() as any)
+          .from('pay_orders')
+          .update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            transaction_id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('order_no', out_trade_no);
+        
+        if (updateError) {
+          console.error('[WechatPay] 更新订单状态失败:', updateError);
+          return res.status(500).send(generateFailResponse('更新订单状态失败'));
+        }
+      } else {
+        const order = ordersStore.get(out_trade_no);
+        if (order) {
+          order.status = 'paid';
+          order.paid_at = new Date().toISOString();
+          order.transaction_id = transaction_id;
+          ordersStore.set(out_trade_no, order);
+        }
       }
       
       console.log('[WechatPay] 订单支付成功:', out_trade_no);

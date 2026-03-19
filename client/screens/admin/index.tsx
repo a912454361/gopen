@@ -1,0 +1,363 @@
+/**
+ * 管理后台 - 仅限PC端访问
+ * 功能：订单管理、用户管理、数据统计、系统配置
+ */
+
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import {
+  ScrollView,
+  View,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+  Dimensions,
+  Alert,
+} from 'react-native';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
+import { useTheme } from '@/hooks/useTheme';
+import { Screen } from '@/components/Screen';
+import { ThemedText } from '@/components/ThemedText';
+import { Spacing, BorderRadius } from '@/constants/theme';
+
+// 子页面组件
+import { OrdersPanel } from './components/OrdersPanel';
+import { UsersPanel } from './components/UsersPanel';
+import { StatsPanel } from './components/StatsPanel';
+import { ConfigPanel } from './components/ConfigPanel';
+import { LogsPanel } from './components/LogsPanel';
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+type TabType = 'dashboard' | 'orders' | 'users' | 'config' | 'logs';
+
+interface AdminStats {
+  totalUsers: number;
+  memberUsers: number;
+  todayOrders: number;
+  todayAmount: number;
+  pendingOrders: number;
+  totalRevenue: number;
+}
+
+export default function AdminDashboardScreen() {
+  const { theme, isDark } = useTheme();
+  const router = useSafeRouter();
+  const params = useSafeSearchParams<{ key?: string }>();
+  const adminKey = params.key || '';
+  
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  
+  // 检测是否为PC端
+  const isPC = Platform.OS === 'web' && Dimensions.get('window').width >= 1024;
+  const screenWidth = Dimensions.get('window').width;
+
+  // 验证管理员权限
+  useEffect(() => {
+    const verifyAdmin = async () => {
+      if (!adminKey) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/verify?key=${adminKey}`
+        );
+        const result = await response.json();
+        setAuthorized(result.success);
+      } catch (error) {
+        console.error('Verify admin error:', error);
+        setAuthorized(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    verifyAdmin();
+  }, [adminKey]);
+
+  // 获取统计数据
+  const fetchStats = useCallback(async () => {
+    if (!authorized) return;
+    
+    try {
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/stats?key=${adminKey}`
+      );
+      const result = await response.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error('Fetch stats error:', error);
+    }
+  }, [adminKey, authorized]);
+
+  useEffect(() => {
+    if (authorized) {
+      fetchStats();
+      // 每30秒刷新一次
+      const interval = setInterval(fetchStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [authorized, fetchStats]);
+
+  // 非PC端提示
+  if (!isPC && Platform.OS === 'web') {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+          <FontAwesome6 name="desktop" size={64} color={theme.textMuted} />
+          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg, textAlign: 'center' }}>
+            请在电脑端访问
+          </ThemedText>
+          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md, textAlign: 'center' }}>
+            管理后台仅支持桌面浏览器访问
+          </ThemedText>
+          <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: Spacing.lg }}>
+            当前屏幕宽度: {Math.round(screenWidth)}px
+          </ThemedText>
+        </View>
+      </Screen>
+    );
+  }
+
+  // 移动端直接拒绝
+  if (Platform.OS !== 'web') {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+          <FontAwesome6 name="ban" size={64} color={theme.error} />
+          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
+            仅支持Web端
+          </ThemedText>
+          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+            请在电脑浏览器中打开管理后台
+          </ThemedText>
+        </View>
+      </Screen>
+    );
+  }
+
+  // 加载中
+  if (loading) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+            验证权限中...
+          </ThemedText>
+        </View>
+      </Screen>
+    );
+  }
+
+  // 未授权
+  if (!authorized) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+          <FontAwesome6 name="lock" size={64} color={theme.error} />
+          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
+            访问被拒绝
+          </ThemedText>
+          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md, textAlign: 'center' }}>
+            无效的管理员密钥，请检查URL参数
+          </ThemedText>
+          <TouchableOpacity
+            style={{
+              marginTop: Spacing.xl,
+              paddingVertical: Spacing.md,
+              paddingHorizontal: Spacing.xl,
+              backgroundColor: theme.primary,
+              borderRadius: BorderRadius.lg,
+            }}
+            onPress={() => router.replace('/')}
+          >
+            <ThemedText variant="smallMedium" color="#fff">返回首页</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </Screen>
+    );
+  }
+
+  // 侧边栏菜单
+  const menuItems: { key: TabType; label: string; icon: string }[] = [
+    { key: 'dashboard', label: '数据概览', icon: 'chart-pie' },
+    { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
+    { key: 'users', label: '用户管理', icon: 'users' },
+    { key: 'config', label: '系统配置', icon: 'gear' },
+    { key: 'logs', label: '操作日志', icon: 'clock-rotate-left' },
+  ];
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {/* 侧边栏 */}
+        <View style={{
+          width: 240,
+          backgroundColor: isDark ? '#0A0A0F' : '#1E293B',
+          paddingVertical: Spacing.lg,
+          borderRightWidth: 1,
+          borderRightColor: isDark ? '#1E293B' : '#334155',
+        }}>
+          {/* Logo */}
+          <View style={{ 
+            paddingHorizontal: Spacing.lg, 
+            paddingBottom: Spacing.lg,
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? '#1E293B' : '#334155',
+            marginBottom: Spacing.lg,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: BorderRadius.lg,
+                backgroundColor: theme.primary,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <FontAwesome6 name="g" size={20} color="#fff" />
+              </View>
+              <View>
+                <ThemedText variant="smallMedium" color="#fff">G Open</ThemedText>
+                <ThemedText variant="tiny" color={isDark ? '#64748B' : '#94A3B8'}>管理后台</ThemedText>
+              </View>
+            </View>
+          </View>
+
+          {/* 菜单 */}
+          <View style={{ paddingHorizontal: Spacing.md }}>
+            {menuItems.map(item => (
+              <TouchableOpacity
+                key={item.key}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Spacing.md,
+                  paddingVertical: Spacing.md,
+                  paddingHorizontal: Spacing.lg,
+                  borderRadius: BorderRadius.lg,
+                  marginBottom: Spacing.xs,
+                  backgroundColor: activeTab === item.key 
+                    ? (isDark ? 'rgba(79,70,229,0.2)' : 'rgba(79,70,229,0.3)')
+                    : 'transparent',
+                }}
+                onPress={() => setActiveTab(item.key)}
+              >
+                <FontAwesome6 
+                  name={item.icon as any} 
+                  size={16} 
+                  color={activeTab === item.key ? theme.primary : (isDark ? '#64748B' : '#94A3B8')} 
+                />
+                <ThemedText 
+                  variant="small" 
+                  color={activeTab === item.key ? '#fff' : (isDark ? '#94A3B8' : '#CBD5E1')}
+                >
+                  {item.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* 底部信息 */}
+          <View style={{ 
+            position: 'absolute', 
+            bottom: 0, 
+            left: 0, 
+            right: 0,
+            padding: Spacing.lg,
+            borderTopWidth: 1,
+            borderTopColor: isDark ? '#1E293B' : '#334155',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+              <View style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: theme.success,
+              }} />
+              <ThemedText variant="tiny" color={isDark ? '#64748B' : '#94A3B8'}>
+                系统运行正常
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+
+        {/* 主内容区 */}
+        <View style={{ flex: 1, backgroundColor: theme.backgroundRoot }}>
+          {/* 顶部栏 */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: Spacing.xl,
+            paddingVertical: Spacing.lg,
+            backgroundColor: theme.backgroundDefault,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.border,
+          }}>
+            <View>
+              <ThemedText variant="h4" color={theme.textPrimary}>
+                {menuItems.find(m => m.key === activeTab)?.label || '管理后台'}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {new Date().toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </ThemedText>
+            </View>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.lg }}>
+              {/* 刷新按钮 */}
+              <TouchableOpacity
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: theme.backgroundTertiary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                onPress={fetchStats}
+              >
+                <FontAwesome6 name="rotate" size={16} color={theme.textPrimary} />
+              </TouchableOpacity>
+              
+              {/* 退出按钮 */}
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Spacing.sm,
+                  paddingVertical: Spacing.sm,
+                  paddingHorizontal: Spacing.lg,
+                  backgroundColor: theme.error,
+                  borderRadius: BorderRadius.lg,
+                }}
+                onPress={() => router.replace('/')}
+              >
+                <FontAwesome6 name="right-from-bracket" size={14} color="#fff" />
+                <ThemedText variant="small" color="#fff">退出</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* 内容区 */}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.xl }}>
+            {activeTab === 'dashboard' && <StatsPanel stats={stats} adminKey={adminKey} onRefresh={fetchStats} />}
+            {activeTab === 'orders' && <OrdersPanel adminKey={adminKey} />}
+            {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}
+            {activeTab === 'config' && <ConfigPanel adminKey={adminKey} />}
+            {activeTab === 'logs' && <LogsPanel adminKey={adminKey} />}
+          </ScrollView>
+        </View>
+      </View>
+    </Screen>
+  );
+}

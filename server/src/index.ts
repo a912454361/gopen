@@ -13,6 +13,7 @@ import billingRouter from "./routes/billing.js";
 import ollamaRouter from "./routes/ollama.js";
 import gpuRouter from "./routes/gpu.js";
 import wechatPayRouter from "./routes/wechat-pay.js";
+import adminRouter from "./routes/admin.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -34,6 +35,7 @@ app.get('/api/v1/health', (req, res) => {
 app.use('/api/v1/pay', payRouter);
 app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/wechat-pay', wechatPayRouter);
+app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/oauth', oauthRouter);
 app.use('/api/v1/risk', riskRouter);
 app.use('/api/v1/bill', billRouter);

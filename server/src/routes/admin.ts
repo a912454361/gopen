@@ -18,6 +18,72 @@ const verifyAdmin = (key: string): boolean => {
 };
 
 /**
+ * 自动审核超过30分钟的待审核订单
+ */
+const autoApproveTimeoutOrders = async () => {
+  try {
+    const timeoutMinutes = 30;
+    const timeoutDate = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+    
+    const { data: timeoutOrders } = await client
+      .from('pay_orders')
+      .select('*')
+      .eq('status', 'confirming')
+      .lt('confirmed_at', timeoutDate.toISOString());
+    
+    if (!timeoutOrders || timeoutOrders.length === 0) {
+      return { processed: 0 };
+    }
+    
+    let processed = 0;
+    for (const order of timeoutOrders) {
+      try {
+        await client
+          .from('pay_orders')
+          .update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            admin_remark: '系统自动审核（超时30分钟）',
+          })
+          .eq('id', order.id);
+        
+        if (order.product_type === 'membership' || order.product_type === 'super_member') {
+          const memberLevel = order.product_type === 'super_member' ? 'super' : 'member';
+          const expireDate = new Date();
+          expireDate.setMonth(expireDate.getMonth() + 1);
+          
+          await client
+            .from('users')
+            .update({
+              member_level: memberLevel,
+              member_expire_at: expireDate.toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', order.user_id);
+        }
+        
+        await client.from('admin_logs').insert([{
+          action: 'auto_approve',
+          target: order.order_no,
+          operator: 'system',
+          details: `订单超时30分钟自动审核通过，金额: ¥${(order.amount / 100).toFixed(2)}`,
+        }]);
+        
+        processed++;
+      } catch (err) {
+        console.error(`[AutoApprove] Error:`, err);
+      }
+    }
+    
+    return { processed };
+  } catch (error) {
+    console.error('[AutoApprove] Error:', error);
+    return { processed: 0 };
+  }
+};
+
+/**
  * 验证管理员权限
  * GET /api/v1/admin/verify
  */
@@ -43,6 +109,9 @@ router.get('/stats', async (req: Request, res: Response) => {
     if (!verifyAdmin(key)) {
       return res.status(403).json({ error: '无权限' });
     }
+
+    // 先执行自动审核（超时30分钟的订单）
+    await autoApproveTimeoutOrders();
 
     // 获取用户统计
     const { data: users } = await client

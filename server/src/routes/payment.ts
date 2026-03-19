@@ -161,6 +161,87 @@ router.post('/create', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== 自动审核超时订单 ====================
+
+/**
+ * 自动审核超过30分钟的待审核订单
+ * 规则：用户提交支付确认后，如果30分钟内管理员未处理，自动通过
+ */
+const autoApproveTimeoutOrders = async () => {
+  try {
+    const timeoutMinutes = 30;
+    const timeoutDate = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+    
+    // 查询超时的待审核订单
+    const { data: timeoutOrders, error: queryError } = await client
+      .from('pay_orders')
+      .select('*')
+      .eq('status', 'confirming')
+      .lt('confirmed_at', timeoutDate.toISOString());
+    
+    if (queryError || !timeoutOrders || timeoutOrders.length === 0) {
+      return { processed: 0 };
+    }
+    
+    console.log(`[AutoApprove] Found ${timeoutOrders.length} timeout orders to process`);
+    
+    let processed = 0;
+    for (const order of timeoutOrders) {
+      try {
+        // 自动通过
+        const { error: updateError } = await client
+          .from('pay_orders')
+          .update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            admin_remark: '系统自动审核（超时30分钟）',
+          })
+          .eq('id', order.id);
+        
+        if (updateError) {
+          console.error(`[AutoApprove] Failed to update order ${order.order_no}:`, updateError);
+          continue;
+        }
+        
+        // 激活会员
+        if (order.product_type === 'membership' || order.product_type === 'super_member') {
+          const memberLevel = order.product_type === 'super_member' ? 'super' : 'member';
+          const expireDate = new Date();
+          expireDate.setMonth(expireDate.getMonth() + 1);
+          
+          await client
+            .from('users')
+            .update({
+              member_level: memberLevel,
+              member_expire_at: expireDate.toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', order.user_id);
+        }
+        
+        // 记录日志
+        await client.from('admin_logs').insert([{
+          action: 'auto_approve',
+          target: order.order_no,
+          operator: 'system',
+          details: `订单超时30分钟自动审核通过，金额: ¥${(order.amount / 100).toFixed(2)}`,
+        }]);
+        
+        processed++;
+        console.log(`[AutoApprove] Auto approved order ${order.order_no}`);
+      } catch (err) {
+        console.error(`[AutoApprove] Error processing order ${order.order_no}:`, err);
+      }
+    }
+    
+    return { processed };
+  } catch (error) {
+    console.error('[AutoApprove] Error:', error);
+    return { processed: 0, error };
+  }
+};
+
 // ==================== 用户确认支付（固定收款码模式）====================
 
 const confirmPaymentSchema = z.object({
@@ -370,6 +451,12 @@ router.get('/admin/pending', async (req: Request, res: Response) => {
       return res.status(403).json({ error: '无权限，您不是管理员' });
     }
     
+    // 先执行自动审核（超时30分钟的订单）
+    const autoResult = await autoApproveTimeoutOrders();
+    if (autoResult.processed > 0) {
+      console.log(`[AutoApprove] Auto approved ${autoResult.processed} orders`);
+    }
+    
     // 查询待审核订单
     const { data: orders, error } = await client
       .from('pay_orders')
@@ -382,7 +469,11 @@ router.get('/admin/pending', async (req: Request, res: Response) => {
       return res.status(500).json({ error: '查询失败' });
     }
     
-    res.json({ success: true, data: orders || [] });
+    res.json({ 
+      success: true, 
+      data: orders || [],
+      autoApproved: autoResult.processed,
+    });
   } catch (error) {
     console.error('Get pending orders error:', error);
     res.status(500).json({ error: '查询失败' });

@@ -480,4 +480,190 @@ router.post('/admin/accounts', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== 刷新收款码 ====================
+
+/**
+ * 刷新收款码（从数据库重新加载）
+ * POST /api/v1/payment/admin/qrcode/refresh
+ */
+router.post('/admin/qrcode/refresh', async (req: Request, res: Response) => {
+  try {
+    const adminKey = req.query.adminKey as string;
+    const payType = req.query.payType as 'alipay' | 'wechat';
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+    
+    if (!payType || !['alipay', 'wechat'].includes(payType)) {
+      return res.status(400).json({ error: '无效的支付类型' });
+    }
+    
+    // 尝试从数据库获取最新配置
+    const { data: config, error } = await client
+      .from('payment_configs')
+      .select('*')
+      .eq('pay_type', payType)
+      .eq('is_active', true)
+      .single();
+    
+    if (config) {
+      // 更新内存中的配置
+      PAYMENT_ACCOUNTS[payType] = {
+        name: config.name || PAYMENT_ACCOUNTS[payType].name,
+        account: config.account || PAYMENT_ACCOUNTS[payType].account,
+        qrcodeUrl: config.qrcode_url || PAYMENT_ACCOUNTS[payType].qrcodeUrl,
+        realName: config.real_name || PAYMENT_ACCOUNTS[payType].realName,
+        desc: config.desc || PAYMENT_ACCOUNTS[payType].desc,
+      };
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        ...PAYMENT_ACCOUNTS[payType],
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS[payType].qrcodeUrl, payType),
+      },
+      message: '收款码已刷新',
+    });
+  } catch (error) {
+    console.error('Refresh QR code error:', error);
+    res.status(500).json({ error: '刷新失败' });
+  }
+});
+
+// ==================== 商家配置 ====================
+
+// 商家配置（内存存储，实际应存储在数据库）
+let MERCHANT_CONFIG: {
+  enabled: boolean;
+  type: 'personal' | 'business';
+  wechat?: {
+    mchId: string;
+    apiKey: string;
+    certUploaded: boolean;
+    status: string;
+  };
+  alipay?: {
+    appId: string;
+    privateKeyUploaded: boolean;
+    status: string;
+  };
+} = {
+  enabled: false,
+  type: 'personal',
+};
+
+/**
+ * 获取商家配置
+ * GET /api/v1/payment/admin/merchant
+ */
+router.get('/admin/merchant', async (req: Request, res: Response) => {
+  try {
+    const adminKey = req.query.adminKey as string;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+    
+    // 尝试从数据库获取配置
+    const { data: merchantData } = await client
+      .from('merchant_configs')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+    
+    if (merchantData) {
+      MERCHANT_CONFIG = {
+        enabled: merchantData.enabled || false,
+        type: merchantData.type || 'personal',
+        wechat: merchantData.wechat_config || undefined,
+        alipay: merchantData.alipay_config || undefined,
+      };
+    }
+    
+    res.json({ success: true, data: MERCHANT_CONFIG });
+  } catch (error) {
+    // 数据库查询失败，返回默认配置
+    res.json({ success: true, data: MERCHANT_CONFIG });
+  }
+});
+
+const openMerchantSchema = z.object({
+  type: z.enum(['personal', 'business']),
+  wechatMchId: z.string().optional(),
+  wechatApiKey: z.string().optional(),
+  alipayAppId: z.string().optional(),
+});
+
+/**
+ * 开通商家收款
+ * POST /api/v1/payment/admin/merchant
+ */
+router.post('/admin/merchant', async (req: Request, res: Response) => {
+  try {
+    const adminKey = req.headers['x-admin-key'] as string;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+    
+    const body = openMerchantSchema.parse(req.body);
+    
+    // 构建新的商家配置
+    const newConfig = {
+      enabled: !!(body.wechatMchId || body.alipayAppId),
+      type: body.type,
+      wechat: body.wechatMchId ? {
+        mchId: body.wechatMchId,
+        apiKey: body.wechatApiKey || '',
+        certUploaded: false,
+        status: 'pending',
+      } : undefined,
+      alipay: body.alipayAppId ? {
+        appId: body.alipayAppId,
+        privateKeyUploaded: false,
+        status: 'pending',
+      } : undefined,
+    };
+    
+    // 保存到数据库
+    try {
+      // 先尝试更新
+      const { error: upsertError } = await client
+        .from('merchant_configs')
+        .upsert([{
+          id: 1, // 固定ID，只保留一条配置
+          enabled: newConfig.enabled,
+          type: newConfig.type,
+          wechat_config: newConfig.wechat,
+          alipay_config: newConfig.alipay,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        }], { onConflict: 'id' });
+      
+      if (upsertError) {
+        console.error('Save merchant config error:', upsertError);
+      }
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+    }
+    
+    // 更新内存配置
+    MERCHANT_CONFIG = newConfig;
+    
+    res.json({
+      success: true,
+      message: newConfig.enabled ? '商家开通申请已提交' : '请至少填写一个支付渠道',
+      data: MERCHANT_CONFIG,
+    });
+  } catch (error) {
+    console.error('Open merchant error:', error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: '参数错误', details: error.issues });
+    }
+    res.status(500).json({ error: '开通失败' });
+  }
+});
+
 export default router;

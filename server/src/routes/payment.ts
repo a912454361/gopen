@@ -31,7 +31,7 @@ const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
     account: '18321337942', // 支付宝账号（手机号）
-    qrcodeUrl: 'https://qr.alipay.com/fkx14477fzt0e5zqgq6k02', // 支付宝商户收款码（2024年更新）
+    qrcodeUrl: 'https://qr.alipay.com/fkx14741z0gq0f9v0g3n62d', // 支付宝收款码
     realName: 'G Open官方', // 收款人姓名
     desc: '请使用支付宝扫码支付',
   },

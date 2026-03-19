@@ -156,67 +156,58 @@ router.post('/create', async (req: Request, res: Response) => {
   }
 });
 
-// ==================== 用户确认支付 ====================
+// ==================== 用户确认支付（固定收款码模式）====================
 
 const confirmPaymentSchema = z.object({
-  orderNo: z.string().min(1),
   userId: z.string().min(1),
-  transactionId: z.string().optional(), // 用户填写的交易流水号
+  amount: z.number().int().positive(), // 支付金额（分）
+  payType: z.enum(['alipay', 'wechat']),
+  productType: z.enum(['membership', 'super_member']),
+  transactionId: z.string().min(1), // 用户填写的交易流水号
   remark: z.string().optional(), // 用户备注
 });
 
 /**
- * 用户确认已支付
+ * 用户确认已支付（固定收款码模式）
  * POST /api/v1/payment/confirm
  */
 router.post('/confirm', async (req: Request, res: Response) => {
   try {
     const body = confirmPaymentSchema.parse(req.body);
     
-    // 查询订单
-    const { data: order, error: orderError } = await client
+    // 生成订单号
+    const orderNo = `GO${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    
+    // 创建待审核订单
+    const { data: order, error } = await client
       .from('pay_orders')
-      .select('*')
-      .eq('order_no', body.orderNo)
-      .eq('user_id', body.userId)
+      .insert([{
+        order_no: orderNo,
+        user_id: body.userId,
+        amount: body.amount,
+        pay_type: body.payType,
+        product_type: body.productType,
+        status: 'confirming', // 待审核状态
+        transaction_id: body.transactionId,
+        user_remark: body.remark,
+        confirmed_at: new Date().toISOString(),
+        qr_code_url: PAYMENT_ACCOUNTS[body.payType].qrcodeUrl,
+      }])
+      .select()
       .single();
     
-    if (orderError || !order) {
-      return res.status(404).json({ error: '订单不存在' });
-    }
-    
-    if (order.status !== 'pending') {
-      return res.status(400).json({ error: '订单状态异常' });
-    }
-    
-    // 检查订单是否过期
-    if (new Date(order.expired_at) < new Date()) {
-      return res.status(400).json({ error: '订单已过期' });
-    }
-    
-    // 更新订单状态为待审核
-    const { error: updateError } = await client
-      .from('pay_orders')
-      .update({
-        status: 'confirming', // 待审核状态
-        user_remark: body.remark,
-        transaction_id: body.transactionId,
-        confirmed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', order.id);
-    
-    if (updateError) {
-      console.error('Failed to update order:', updateError);
-      return res.status(500).json({ error: '确认失败' });
+    if (error) {
+      console.error('Failed to create confirm order:', error);
+      return res.status(500).json({ error: '提交失败' });
     }
     
     res.json({
       success: true,
-      message: '已提交支付确认，请等待审核',
+      message: '已提交支付确认，请等待管理员审核',
       data: {
-        orderNo: body.orderNo,
+        orderNo,
         status: 'confirming',
+        confirmedAt: new Date().toISOString(),
       },
     });
   } catch (error) {
@@ -224,6 +215,8 @@ router.post('/confirm', async (req: Request, res: Response) => {
     res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
   }
 });
+
+// ==================== 旧版用户确认支付（依赖订单号，已废弃）====================
 
 // ==================== 查询订单状态 ====================
 

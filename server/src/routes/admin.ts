@@ -146,7 +146,7 @@ router.get('/stats', async (req: Request, res: Response) => {
       .from('pay_orders')
       .select('amount, pay_type');
     
-    const totalRevenue = totalOrders?.filter(o => o.status === 'paid' || true).reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const totalRevenue = totalOrders?.reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
     
     // 已支付订单统计
     const { data: paidOrders } = await client

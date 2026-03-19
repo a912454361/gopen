@@ -218,7 +218,7 @@ export function ConfigPanel({ adminKey }: ConfigPanelProps) {
               >
                 {saving ? <ActivityIndicator size="small" color="#fff" /> : (
                   <>
-                    <FontAwesome6 name="save" size={14} color="#fff" />
+                    <FontAwesome6 name="floppy-disk" size={14} color="#fff" />
                     <ThemedText variant="smallMedium" color="#fff">保存配置</ThemedText>
                   </>
                 )}
@@ -302,7 +302,7 @@ export function ConfigPanel({ adminKey }: ConfigPanelProps) {
               >
                 {saving ? <ActivityIndicator size="small" color="#fff" /> : (
                   <>
-                    <FontAwesome6 name="save" size={14} color="#fff" />
+                    <FontAwesome6 name="floppy-disk" size={14} color="#fff" />
                     <ThemedText variant="smallMedium" color="#fff">保存配置</ThemedText>
                   </>
                 )}

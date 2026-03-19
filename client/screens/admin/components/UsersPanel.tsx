@@ -154,7 +154,7 @@ export function UsersPanel({ adminKey }: UsersPanelProps) {
           paddingVertical: Spacing.sm,
           minWidth: 250,
         }}>
-          <FontAwesome6 name="search" size={14} color={theme.textMuted} />
+          <FontAwesome6 name="magnifying-glass" size={14} color={theme.textMuted} />
           <TextInput
             style={{ flex: 1, color: theme.textPrimary, outline: 'none' }}
             value={searchText}

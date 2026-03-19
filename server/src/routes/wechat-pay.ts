@@ -27,10 +27,13 @@ import { isMockMode } from '../config/wechat-pay.js';
 
 const router = express.Router();
 
-// Supabase客户端
+// Supabase客户端 - 仅在有配置时初始化
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-const client = createClient(supabaseUrl, supabaseKey);
+const client = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// 模拟订单存储（当没有Supabase时使用）
+const mockOrders = new Map<string, any>();
 
 // ==================== 创建Native支付订单 ====================
 
@@ -73,26 +76,33 @@ router.post('/create', async (req: Request, res: Response) => {
       });
     }
     
-    // 保存订单到数据库
-    const { error: dbError } = await client
-      .from('pay_orders')
-      .insert({
-        id: crypto.randomUUID(),
-        order_no: out_trade_no,
-        user_id: body.userId,
-        amount: body.amount,
-        pay_type: 'wechat_native',
-        product_type: body.productType,
-        status: 'pending',
-        expired_at: expiredAt.toISOString(),
-        code_url: orderResult.code_url,
-        prepay_id: orderResult.prepay_id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+    // 保存订单到数据库或内存
+    const orderData = {
+      id: crypto.randomUUID(),
+      order_no: out_trade_no,
+      user_id: body.userId,
+      amount: body.amount,
+      pay_type: 'wechat_native',
+      product_type: body.productType,
+      status: 'pending',
+      expired_at: expiredAt.toISOString(),
+      code_url: orderResult.code_url,
+      prepay_id: orderResult.prepay_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
     
-    if (dbError) {
-      console.error('Save order to database error:', dbError);
+    if (client) {
+      const { error: dbError } = await client
+        .from('pay_orders')
+        .insert(orderData);
+      
+      if (dbError) {
+        console.error('Save order to database error:', dbError);
+      }
+    } else {
+      // 使用内存存储
+      mockOrders.set(out_trade_no, orderData);
     }
     
     // 返回结果

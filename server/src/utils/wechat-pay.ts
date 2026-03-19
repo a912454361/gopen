@@ -126,12 +126,14 @@ export const createNativeOrder = async (
       },
     });
     
-    console.log('[WechatPay] 统一下单成功:', { out_trade_no, code_url: result.code_url });
+    // result.data 包含实际返回数据
+    const data = result.data as any;
+    console.log('[WechatPay] 统一下单成功:', { out_trade_no, code_url: data?.code_url });
     
     return {
       success: true,
-      code_url: result.code_url as string,
-      prepay_id: result.prepay_id as string,
+      code_url: data?.code_url,
+      prepay_id: data?.prepay_id,
       out_trade_no,
       amount,
     };
@@ -176,22 +178,20 @@ export const queryOrder = async (out_trade_no: string): Promise<OrderQueryResult
       throw new Error('微信支付服务初始化失败');
     }
     
-    const result = await service.query({
-      out_trade_no,
-      mchid: config.mchid,
-    });
+    const result = await service.query({ out_trade_no });
+    const data = result.data as any;
     
-    console.log('[WechatPay] 查询订单成功:', result);
+    console.log('[WechatPay] 查询订单成功:', data);
     
     return {
       success: true,
-      trade_state: result.trade_state as OrderQueryResult['trade_state'],
-      trade_state_desc: result.trade_state_desc as string,
-      transaction_id: result.transaction_id as string,
-      out_trade_no: result.out_trade_no as string,
-      amount: (result.amount as { total: number })?.total,
-      payer: result.payer as { openid: string },
-      success_time: result.success_time as string,
+      trade_state: data?.trade_state,
+      trade_state_desc: data?.trade_state_desc,
+      transaction_id: data?.transaction_id,
+      out_trade_no: data?.out_trade_no,
+      amount: data?.amount?.total,
+      payer: data?.payer,
+      success_time: data?.success_time,
     };
   } catch (error: any) {
     console.error('[WechatPay] 查询订单失败:', error);
@@ -273,12 +273,13 @@ export const createRefund = async (
       notify_url: `${config.notify_url.replace('/notify', '/refund-notify')}`,
     });
     
-    console.log('[WechatPay] 申请退款成功:', result);
+    const data = result.data as any;
+    console.log('[WechatPay] 申请退款成功:', data);
     
     return {
       success: true,
-      refund_id: result.refund_id as string,
-      out_refund_no: result.out_refund_no as string,
+      refund_id: data?.refund_id,
+      out_refund_no: data?.out_refund_no,
     };
   } catch (error: any) {
     console.error('[WechatPay] 申请退款失败:', error);

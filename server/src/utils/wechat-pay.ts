@@ -3,7 +3,7 @@
  * 支持Native扫码支付（PC网页支付）
  */
 
-import { PaymentService } from 'wechatpay-node-v3';
+import Pay from 'wechatpay-node-v3';
 import { getWechatPayConfig, isMockMode } from '../config/wechat-pay.js';
 import crypto from 'crypto';
 
@@ -37,12 +37,12 @@ export interface RefundResult {
   error?: string;
 }
 
-let paymentService: PaymentService | null = null;
+let paymentService: Pay | null = null;
 
 /**
  * 获取微信支付服务实例
  */
-const getPaymentService = (): PaymentService | null => {
+const getPaymentService = (): Pay | null => {
   if (isMockMode()) {
     return null;
   }
@@ -51,12 +51,18 @@ const getPaymentService = (): PaymentService | null => {
     const config = getWechatPayConfig();
     if (!config) return null;
     
-    paymentService = new PaymentService({
+    // 使用 Buffer 格式的私钥
+    const privateKeyBuffer = Buffer.from(config.privateKey);
+    // 公钥可以通过平台证书下载，这里简化处理
+    const publicKeyBuffer = Buffer.from(''); // 实际使用时需要下载平台证书
+    
+    paymentService = new Pay({
       appid: config.appid,
       mchid: config.mchid,
       serial_no: config.serial_no,
-      privateKey: config.privateKey,
-      apiV3Key: config.apiV3Key,
+      privateKey: privateKeyBuffer,
+      publicKey: publicKeyBuffer,
+      key: config.apiV3Key,
     });
   }
   
@@ -106,7 +112,7 @@ export const createNativeOrder = async (
       throw new Error('微信支付服务初始化失败');
     }
     
-    const result = await service.native({
+    const result = await service.transactions_native({
       appid: config.appid,
       mchid: config.mchid,
       description,
@@ -124,8 +130,8 @@ export const createNativeOrder = async (
     
     return {
       success: true,
-      code_url: result.code_url,
-      prepay_id: result.prepay_id,
+      code_url: result.code_url as string,
+      prepay_id: result.prepay_id as string,
       out_trade_no,
       amount,
     };
@@ -170,7 +176,7 @@ export const queryOrder = async (out_trade_no: string): Promise<OrderQueryResult
       throw new Error('微信支付服务初始化失败');
     }
     
-    const result = await service.queryOrder({
+    const result = await service.query({
       out_trade_no,
       mchid: config.mchid,
     });
@@ -179,13 +185,13 @@ export const queryOrder = async (out_trade_no: string): Promise<OrderQueryResult
     
     return {
       success: true,
-      trade_state: result.trade_state,
-      trade_state_desc: result.trade_state_desc,
-      transaction_id: result.transaction_id,
-      out_trade_no: result.out_trade_no,
-      amount: result.amount?.total,
-      payer: result.payer,
-      success_time: result.success_time,
+      trade_state: result.trade_state as OrderQueryResult['trade_state'],
+      trade_state_desc: result.trade_state_desc as string,
+      transaction_id: result.transaction_id as string,
+      out_trade_no: result.out_trade_no as string,
+      amount: (result.amount as { total: number })?.total,
+      payer: result.payer as { openid: string },
+      success_time: result.success_time as string,
     };
   } catch (error: any) {
     console.error('[WechatPay] 查询订单失败:', error);
@@ -214,10 +220,7 @@ export const closeOrder = async (out_trade_no: string): Promise<{ success: boole
       throw new Error('微信支付服务初始化失败');
     }
     
-    await service.closeOrder({
-      out_trade_no,
-      mchid: config.mchid,
-    });
+    await service.close(out_trade_no);
     
     console.log('[WechatPay] 关闭订单成功:', { out_trade_no });
     return { success: true };
@@ -274,8 +277,8 @@ export const createRefund = async (
     
     return {
       success: true,
-      refund_id: result.refund_id,
-      out_refund_no: result.out_refund_no,
+      refund_id: result.refund_id as string,
+      out_refund_no: result.out_refund_no as string,
     };
   } catch (error: any) {
     console.error('[WechatPay] 申请退款失败:', error);

@@ -116,52 +116,127 @@ router.get('/stats', async (req: Request, res: Response) => {
     // 获取用户统计
     const { data: users } = await client
       .from('users')
-      .select('id, member_level');
+      .select('id, member_level, created_at');
     
     const totalUsers = users?.length || 0;
     const memberUsers = users?.filter(u => u.member_level !== 'free').length || 0;
+    const superMemberUsers = users?.filter(u => u.member_level === 'super').length || 0;
+    const normalMemberUsers = users?.filter(u => u.member_level === 'member').length || 0;
 
     // 获取订单统计
     const today = new Date().toISOString().split('T')[0];
     
     const { data: todayOrders } = await client
       .from('pay_orders')
-      .select('amount')
+      .select('amount, pay_type')
       .eq('status', 'paid')
       .gte('paid_at', today);
     
     const todayOrderCount = todayOrders?.length || 0;
     const todayAmount = todayOrders?.reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const todayAlipayAmount = todayOrders?.filter(o => o.pay_type === 'alipay').reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const todayWechatAmount = todayOrders?.filter(o => o.pay_type === 'wechat').reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
 
     const { data: pendingOrders } = await client
       .from('pay_orders')
-      .select('id')
+      .select('id, amount, pay_type, confirmed_at')
       .eq('status', 'confirming');
     
     const { data: totalOrders } = await client
       .from('pay_orders')
-      .select('amount')
+      .select('amount, pay_type');
+    
+    const totalRevenue = totalOrders?.filter(o => o.status === 'paid' || true).reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    
+    // 已支付订单统计
+    const { data: paidOrders } = await client
+      .from('pay_orders')
+      .select('amount, pay_type')
       .eq('status', 'paid');
     
-    const totalRevenue = totalOrders?.reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const totalPaidRevenue = paidOrders?.reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const totalAlipayRevenue = paidOrders?.filter(o => o.pay_type === 'alipay').reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const totalWechatRevenue = paidOrders?.filter(o => o.pay_type === 'wechat').reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const totalPaidCount = paidOrders?.length || 0;
 
-    // 获取最近订单
+    // 计算待审核订单中超时的数量
+    const timeoutMinutes = 30;
+    const timeoutDate = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+    const timeoutPendingCount = pendingOrders?.filter(o => 
+      o.confirmed_at && new Date(o.confirmed_at) < timeoutDate
+    ).length || 0;
+
+    // 获取最近订单（包含收款账户信息）
     const { data: recentOrders } = await client
       .from('pay_orders')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(10);
+
+    const recentOrdersWithAccount = (recentOrders || []).map(order => ({
+      ...order,
+      paymentAccount: PAYMENT_ACCOUNTS[order.pay_type as keyof typeof PAYMENT_ACCOUNTS] || null,
+    }));
+
+    // 获取本月统计
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    
+    const { data: monthOrders } = await client
+      .from('pay_orders')
+      .select('amount')
+      .eq('status', 'paid')
+      .gte('paid_at', monthStart.toISOString());
+    
+    const monthRevenue = monthOrders?.reduce((sum, o) => sum + (o.amount || 0), 0) || 0;
+    const monthOrderCount = monthOrders?.length || 0;
+
+    // 获取新增用户统计
+    const { data: newUsersToday } = await client
+      .from('users')
+      .select('id')
+      .gte('created_at', today);
+    
+    const { data: newUsersMonth } = await client
+      .from('users')
+      .select('id')
+      .gte('created_at', monthStart.toISOString());
 
     res.json({
       success: true,
       data: {
+        // 用户统计
         totalUsers,
         memberUsers,
+        superMemberUsers,
+        normalMemberUsers,
+        newUsersToday: newUsersToday?.length || 0,
+        newUsersMonth: newUsersMonth?.length || 0,
+        
+        // 订单统计
         todayOrders: todayOrderCount,
         todayAmount,
+        todayAlipayAmount,
+        todayWechatAmount,
+        monthOrders: monthOrderCount,
+        monthRevenue,
+        
+        // 待处理
         pendingOrders: pendingOrders?.length || 0,
-        totalRevenue,
-        recentOrders: recentOrders || [],
+        timeoutPendingCount,
+        
+        // 总计
+        totalRevenue: totalPaidRevenue,
+        totalAlipayRevenue,
+        totalWechatRevenue,
+        totalPaidCount,
+        
+        // 收款账户信息
+        paymentAccounts: PAYMENT_ACCOUNTS,
+        
+        // 最近订单
+        recentOrders: recentOrdersWithAccount,
       },
     });
   } catch (error) {
@@ -220,6 +295,20 @@ router.get('/revenue-chart', async (req: Request, res: Response) => {
   }
 });
 
+// 收款账户配置（与payment.ts保持一致）
+const PAYMENT_ACCOUNTS = {
+  alipay: {
+    name: '支付宝收款',
+    account: '18321337942',
+    realName: 'G Open官方',
+  },
+  wechat: {
+    name: '微信收款',
+    account: 'G Open官方',
+    realName: 'G Open官方',
+  },
+};
+
 /**
  * 获取订单列表
  * GET /api/v1/admin/orders
@@ -253,7 +342,13 @@ router.get('/orders', async (req: Request, res: Response) => {
       return res.status(500).json({ error: '查询失败' });
     }
 
-    res.json({ success: true, data: orders || [] });
+    // 为每个订单添加收款账户信息
+    const ordersWithAccount = (orders || []).map(order => ({
+      ...order,
+      paymentAccount: PAYMENT_ACCOUNTS[order.pay_type as keyof typeof PAYMENT_ACCOUNTS] || null,
+    }));
+
+    res.json({ success: true, data: ordersWithAccount });
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: '获取订单失败' });

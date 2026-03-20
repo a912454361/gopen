@@ -62,7 +62,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 二、信息使用 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             二、信息使用
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -85,7 +85,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 三、信息存储 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             三、信息存储与保护
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -108,7 +108,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 四、信息共享 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             四、信息共享
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -128,7 +128,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 五、用户权利 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             五、您的权利
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -154,7 +154,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 六、Cookie */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             六、Cookie 和追踪技术
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -171,7 +171,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 七、未成年人保护 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             七、未成年人保护
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -188,7 +188,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 八、政策更新 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             八、隐私政策更新
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -205,7 +205,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           {/* 九、联系我们 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             九、联系我们
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>

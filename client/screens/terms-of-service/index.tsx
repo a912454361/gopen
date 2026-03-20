@@ -39,7 +39,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 一、服务说明 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             一、服务说明
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -53,7 +53,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 二、用户注册 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             二、账户注册与使用
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -70,7 +70,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 三、会员服务 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             三、会员服务与付费
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -87,7 +87,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 四、使用规范 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             四、使用规范
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
@@ -116,7 +116,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 五、知识产权 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             五、知识产权
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -133,7 +133,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 六、免责声明 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             六、免责声明
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -150,7 +150,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 七、服务终止 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             七、服务终止
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -164,7 +164,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 八、争议解决 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             八、争议解决
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -178,7 +178,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 九、条款修改 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             九、条款修改
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.listItem}>
@@ -192,7 +192,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           {/* 十、联系我们 */}
-          <ThemedText variant="h5" color={theme.textPrimary} style={styles.sectionTitle}>
+          <ThemedText variant="title" color={theme.textPrimary} style={styles.sectionTitle}>
             十、联系我们
           </ThemedText>
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>

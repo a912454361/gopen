@@ -248,12 +248,35 @@ const PROMOTION_STATS = {
 
 export function PromotionPanel({ adminKey }: PromotionPanelProps) {
   const { theme, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'materials' | 'copywriting' | 'stats'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'copywriting' | 'stats'>('stats');
   const [materialType, setMaterialType] = useState<'video' | 'image'>('video');
   const [showWatermark, setShowWatermark] = useState(true);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const videoRef = useRef<Video>(null);
+  
+  // 真实推广数据
+  const [statsData, setStatsData] = useState<PromotionStatsData | null>(null);
+
+  // 加载推广统计数据
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/promotion/stats?key=${adminKey}`);
+      const data = await res.json();
+      if (data.success) {
+        setStatsData(data.data);
+      }
+    } catch (error) {
+      console.error('Load promotion stats error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [adminKey]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   // 复制文案
   const handleCopy = async (content: string, title: string) => {
@@ -265,33 +288,6 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
     }
   };
 
-  // 一键推广
-  const handleQuickPromote = async (material: any, platform: typeof PLATFORMS[0]) => {
-    // 找到对应平台的文案
-    const template = COPYWRITING_TEMPLATES.find(t => t.platform === platform.key);
-    const content = template?.content || '推荐G Open AI创作助手！';
-    
-    await Clipboard.setStringAsync(content);
-    
-    if (Platform.OS === 'web') {
-      window.open(platform.url, '_blank');
-    }
-    
-    Alert.alert('推广文案已复制', `即将打开${platform.name}，粘贴文案即可发布`);
-  };
-
-  // 分享
-  const handleShare = async (material: any) => {
-    const content = `【${material.title}】\n下载G Open体验AI创作\n#Gopen #AI工具`;
-    
-    if (Platform.OS === 'web') {
-      await Clipboard.setStringAsync(content);
-      Alert.alert('已复制', '分享内容已复制到剪贴板');
-    } else {
-      await Share.share({ message: content });
-    }
-  };
-
   // 打开平台
   const openPlatform = (platform: typeof PLATFORMS[0]) => {
     if (Platform.OS === 'web') {
@@ -299,14 +295,20 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
     }
   };
 
+  // 获取转化率
+  const getConversionRate = () => {
+    if (!statsData || statsData.totalClicks === 0) return '0%';
+    return ((statsData.totalConversions / statsData.totalClicks) * 100).toFixed(2) + '%';
+  };
+
   return (
     <View style={{ flex: 1 }}>
       {/* Tab 切换 */}
       <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
         {[
+          { key: 'stats', label: '数据统计', icon: 'chart-line' },
           { key: 'materials', label: '素材库', icon: 'photo-film' },
           { key: 'copywriting', label: '文案模板', icon: 'file-lines' },
-          { key: 'stats', label: '数据统计', icon: 'chart-line' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -336,6 +338,199 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* 数据统计 */}
+      {activeTab === 'stats' && (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {isLoading ? (
+            <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+          ) : (
+            <>
+              {/* 总览卡片 */}
+              <View style={{ marginBottom: Spacing.xl }}>
+                <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
+                  推广系统总览
+                </ThemedText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md }}>
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#10B98115',
+                    borderRadius: BorderRadius.lg,
+                    padding: Spacing.lg,
+                    alignItems: 'center',
+                  }}>
+                    <FontAwesome6 name="coins" size={24} color="#10B981" />
+                    <ThemedText variant="h2" color="#10B981" style={{ marginTop: Spacing.sm }}>
+                      ¥{((statsData?.totalEarnings || 0) / 100).toFixed(2)}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>总佣金发放</ThemedText>
+                  </View>
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#3B82F615',
+                    borderRadius: BorderRadius.lg,
+                    padding: Spacing.lg,
+                    alignItems: 'center',
+                  }}>
+                    <FontAwesome6 name="users" size={24} color="#3B82F6" />
+                    <ThemedText variant="h2" color="#3B82F6" style={{ marginTop: Spacing.sm }}>
+                      {statsData?.totalPromoters || 0}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>推广员数量</ThemedText>
+                  </View>
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#F59E0B15',
+                    borderRadius: BorderRadius.lg,
+                    padding: Spacing.lg,
+                    alignItems: 'center',
+                  }}>
+                    <FontAwesome6 name="hand-pointer" size={24} color="#F59E0B" />
+                    <ThemedText variant="h2" color="#F59E0B" style={{ marginTop: Spacing.sm }}>
+                      {statsData?.totalClicks || 0}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>总点击数</ThemedText>
+                  </View>
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#EF444415',
+                    borderRadius: BorderRadius.lg,
+                    padding: Spacing.lg,
+                    alignItems: 'center',
+                  }}>
+                    <FontAwesome6 name="user-plus" size={24} color="#EF4444" />
+                    <ThemedText variant="h2" color="#EF4444" style={{ marginTop: Spacing.sm }}>
+                      {statsData?.totalConversions || 0}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>转化用户</ThemedText>
+                  </View>
+                </View>
+
+                {/* 今日数据 */}
+                <View style={{
+                  backgroundColor: theme.backgroundDefault,
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.lg,
+                  marginTop: Spacing.md,
+                }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginBottom: Spacing.sm }}>
+                    今日数据
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <View>
+                      <ThemedText variant="caption" color={theme.textMuted}>点击</ThemedText>
+                      <ThemedText variant="h4" color={theme.textPrimary}>{statsData?.todayClicks || 0}</ThemedText>
+                    </View>
+                    <View>
+                      <ThemedText variant="caption" color={theme.textMuted}>转化</ThemedText>
+                      <ThemedText variant="h4" color={theme.textPrimary}>{statsData?.todayConversions || 0}</ThemedText>
+                    </View>
+                    <View>
+                      <ThemedText variant="caption" color={theme.textMuted}>佣金</ThemedText>
+                      <ThemedText variant="h4" color={theme.primary}>¥{((statsData?.todayEarnings || 0) / 100).toFixed(2)}</ThemedText>
+                    </View>
+                  </View>
+                </View>
+
+                {/* 转化率 */}
+                <View style={{
+                  backgroundColor: theme.backgroundDefault,
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.lg,
+                  marginTop: Spacing.md,
+                }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <ThemedText variant="small" color={theme.textSecondary}>转化率</ThemedText>
+                    <ThemedText variant="smallMedium" color={theme.success}>{getConversionRate()}</ThemedText>
+                  </View>
+                  <View style={{
+                    height: 8,
+                    backgroundColor: theme.backgroundTertiary,
+                    borderRadius: 4,
+                    marginTop: Spacing.sm,
+                  }}>
+                    <View style={{
+                      width: `${Math.min(parseFloat(getConversionRate()) * 5, 100)}%`,
+                      height: '100%',
+                      backgroundColor: '#10B981',
+                      borderRadius: 4,
+                    }} />
+                  </View>
+                </View>
+              </View>
+
+              {/* 待处理提现 */}
+              {(statsData?.pendingWithdrawals || 0) > 0 && (
+                <View style={{
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.lg,
+                  marginBottom: Spacing.lg,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    <FontAwesome6 name="exclamation-triangle" size={18} color="#F59E0B" />
+                    <ThemedText variant="smallMedium" color="#92400E">
+                      有 {statsData?.pendingWithdrawals} 笔提现申请待处理
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+
+              {/* TOP推广员 */}
+              {statsData?.topPromoters && statsData.topPromoters.length > 0 && (
+                <View style={{ marginBottom: Spacing.xl }}>
+                  <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
+                    TOP推广员
+                  </ThemedText>
+                  {statsData.topPromoters.map((promoter, index) => (
+                    <View
+                      key={promoter.id}
+                      style={{
+                        backgroundColor: theme.backgroundDefault,
+                        borderRadius: BorderRadius.lg,
+                        padding: Spacing.lg,
+                        marginBottom: Spacing.md,
+                        borderWidth: 1,
+                        borderColor: theme.border,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                        <View style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          <ThemedText variant="smallMedium" color="#fff">{index + 1}</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                            {promoter.promoter_code}
+                          </ThemedText>
+                          <ThemedText variant="caption" color={theme.textMuted}>
+                            点击: {promoter.total_clicks} · 转化: {promoter.total_conversions}
+                          </ThemedText>
+                        </View>
+                        <ThemedText variant="h4" color={theme.success}>
+                          ¥{(promoter.total_earnings / 100).toFixed(2)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+      )}
 
       {/* 素材库 */}
       {activeTab === 'materials' && (

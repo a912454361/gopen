@@ -356,7 +356,7 @@ export default function AdminLoginScreen() {
 
               {/* 提示信息 */}
               <View style={styles.hintSection}>
-                <FontAwesome6 name="info-circle" size={14} color={theme.textMuted} />
+                <FontAwesome6 name="circle-info" size={14} color={theme.textMuted} />
                 <ThemedText variant="caption" color={theme.textMuted} style={styles.hintText}>
                   管理后台仅限授权管理员访问
                 </ThemedText>

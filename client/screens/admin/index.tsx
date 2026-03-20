@@ -26,10 +26,11 @@ import { UsersPanel } from './components/UsersPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { ConfigPanel } from './components/ConfigPanel';
 import { LogsPanel } from './components/LogsPanel';
+import { ProfitPanel } from './components/ProfitPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
-type TabType = 'dashboard' | 'orders' | 'users' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -190,6 +191,7 @@ export default function AdminDashboardScreen() {
   // 侧边栏菜单
   const menuItems: { key: TabType; label: string; icon: string }[] = [
     { key: 'dashboard', label: '数据概览', icon: 'chart-pie' },
+    { key: 'profit', label: '利润统计', icon: 'coins' },
     { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
     { key: 'users', label: '用户管理', icon: 'users' },
     { key: 'config', label: '系统配置', icon: 'gear' },
@@ -351,6 +353,7 @@ export default function AdminDashboardScreen() {
           {/* 内容区 */}
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.xl }}>
             {activeTab === 'dashboard' && <StatsPanel stats={stats} adminKey={adminKey} onRefresh={fetchStats} />}
+            {activeTab === 'profit' && <ProfitPanel adminKey={adminKey} />}
             {activeTab === 'orders' && <OrdersPanel adminKey={adminKey} />}
             {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}
             {activeTab === 'config' && <ConfigPanel adminKey={adminKey} />}

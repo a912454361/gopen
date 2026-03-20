@@ -486,4 +486,268 @@ router.get('/logs', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 获取利润统计面板
+ * GET /api/v1/admin/profit
+ */
+router.get('/profit', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // 本月开始
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // 本周开始
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    // ==================== 消费记录统计 ====================
+    const { data: todayConsumption } = await client
+      .from('consumption_records')
+      .select('sell_total, cost_total, profit')
+      .gte('created_at', todayStr);
+    
+    const { data: weekConsumption } = await client
+      .from('consumption_records')
+      .select('sell_total, cost_total, profit')
+      .gte('created_at', weekStart.toISOString());
+    
+    const { data: monthConsumption } = await client
+      .from('consumption_records')
+      .select('sell_total, cost_total, profit')
+      .gte('created_at', monthStart.toISOString());
+    
+    const { data: totalConsumption } = await client
+      .from('consumption_records')
+      .select('sell_total, cost_total, profit');
+
+    // 聚合计算
+    const calcStats = (data: any[] | null | undefined) => {
+      if (!data || data.length === 0) return { revenue: 0, cost: 0, profit: 0, margin: 0 };
+      const revenue = data.reduce((sum, r) => sum + (r.sell_total || 0), 0);
+      const cost = data.reduce((sum, r) => sum + (r.cost_total || 0), 0);
+      const profit = data.reduce((sum, r) => sum + (r.profit || 0), 0);
+      return {
+        revenue: revenue / 100, // 转为元
+        cost: cost / 100,
+        profit: profit / 100,
+        margin: revenue > 0 ? (profit / revenue * 100) : 0,
+      };
+    };
+
+    // ==================== 按模型分类统计 ====================
+    const { data: modelStats } = await client
+      .from('consumption_records')
+      .select('resource_name, consumption_type, sell_total, cost_total, profit, input_tokens, output_tokens')
+      .gte('created_at', monthStart.toISOString());
+    
+    const modelAggregation: Record<string, any> = {};
+    (modelStats || []).forEach(record => {
+      const key = record.resource_name || 'unknown';
+      if (!modelAggregation[key]) {
+        modelAggregation[key] = {
+          name: key,
+          type: record.consumption_type,
+          calls: 0,
+          revenue: 0,
+          cost: 0,
+          profit: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+        };
+      }
+      modelAggregation[key].calls++;
+      modelAggregation[key].revenue += record.sell_total || 0;
+      modelAggregation[key].cost += record.cost_total || 0;
+      modelAggregation[key].profit += record.profit || 0;
+      modelAggregation[key].inputTokens += record.input_tokens || 0;
+      modelAggregation[key].outputTokens += record.output_tokens || 0;
+    });
+
+    const topModels = Object.values(modelAggregation)
+      .sort((a: any, b: any) => b.revenue - a.revenue)
+      .slice(0, 10)
+      .map((m: any) => ({
+        ...m,
+        revenue: m.revenue / 100,
+        cost: m.cost / 100,
+        profit: m.profit / 100,
+        margin: m.revenue > 0 ? (m.profit / m.revenue * 100) : 0,
+      }));
+
+    // ==================== 按用户分类统计 ====================
+    const { data: userStats } = await client
+      .from('consumption_records')
+      .select('user_id, sell_total, profit')
+      .gte('created_at', monthStart.toISOString());
+    
+    const userAggregation: Record<string, any> = {};
+    (userStats || []).forEach(record => {
+      const key = record.user_id;
+      if (!userAggregation[key]) {
+        userAggregation[key] = {
+          userId: key,
+          calls: 0,
+          revenue: 0,
+          profit: 0,
+        };
+      }
+      userAggregation[key].calls++;
+      userAggregation[key].revenue += record.sell_total || 0;
+      userAggregation[key].profit += record.profit || 0;
+    });
+
+    const topUsers = Object.values(userAggregation)
+      .sort((a: any, b: any) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // ==================== 利润趋势（近7天） ====================
+    const profitTrend = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const { data: dayRecords } = await client
+        .from('consumption_records')
+        .select('sell_total, cost_total, profit')
+        .gte('created_at', dateStr)
+        .lt('created_at', new Date(date.getTime() + 86400000).toISOString().split('T')[0]);
+      
+      const stats = calcStats(dayRecords);
+      profitTrend.push({
+        date: dateStr,
+        ...stats,
+      });
+    }
+
+    // ==================== 会员收入统计 ====================
+    const { data: memberPayments } = await client
+      .from('pay_orders')
+      .select('amount, product_type')
+      .eq('status', 'paid')
+      .gte('paid_at', monthStart.toISOString());
+    
+    const memberRevenue = {
+      total: 0,
+      normal: 0,
+      super: 0,
+    };
+    
+    (memberPayments || []).forEach(payment => {
+      const amount = payment.amount || 0;
+      memberRevenue.total += amount;
+      if (payment.product_type === 'membership') {
+        memberRevenue.normal += amount;
+      } else if (payment.product_type === 'super_member') {
+        memberRevenue.super += amount;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        // 概览统计
+        overview: {
+          today: calcStats(todayConsumption),
+          week: calcStats(weekConsumption),
+          month: calcStats(monthConsumption),
+          total: calcStats(totalConsumption),
+        },
+        
+        // 会员收入（本月）
+        memberRevenue: {
+          total: memberRevenue.total / 100,
+          normal: memberRevenue.normal / 100,
+          super: memberRevenue.super / 100,
+        },
+        
+        // 模型排行
+        topModels,
+        
+        // 用户排行
+        topUsers: topUsers.map((u: any) => ({
+          ...u,
+          revenue: u.revenue / 100,
+          profit: u.profit / 100,
+        })),
+        
+        // 利润趋势
+        profitTrend,
+        
+        // AI 调用统计
+        aiCalls: {
+          today: todayConsumption?.length || 0,
+          week: weekConsumption?.length || 0,
+          month: monthConsumption?.length || 0,
+          total: totalConsumption?.length || 0,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get profit stats error:', error);
+    res.status(500).json({ error: '获取利润统计失败' });
+  }
+});
+
+/**
+ * 获取利润图表数据
+ * GET /api/v1/admin/profit-chart
+ */
+router.get('/profit-chart', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    const type = (req.query.type as string) || 'daily'; // daily, weekly, monthly
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const chartData = [];
+    const labels = ['日', '一', '二', '三', '四', '五', '六'];
+    
+    // 获取近7天数据
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const { data: records } = await client
+        .from('consumption_records')
+        .select('sell_total, cost_total, profit')
+        .gte('created_at', dateStr)
+        .lt('created_at', new Date(date.getTime() + 86400000).toISOString().split('T')[0]);
+      
+      const revenue = (records || []).reduce((sum, r) => sum + (r.sell_total || 0), 0) / 100;
+      const cost = (records || []).reduce((sum, r) => sum + (r.cost_total || 0), 0) / 100;
+      const profit = (records || []).reduce((sum, r) => sum + (r.profit || 0), 0) / 100;
+      
+      chartData.push({
+        label: `周${labels[date.getDay()]}`,
+        revenue,
+        cost,
+        profit,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        chartData,
+      },
+    });
+  } catch (error) {
+    console.error('Get profit chart error:', error);
+    res.status(500).json({ error: '获取图表数据失败' });
+  }
+});
+
 export default router;

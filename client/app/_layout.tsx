@@ -26,6 +26,7 @@ export default function RootLayout() {
         <Stack.Screen name="notification-settings" options={{ title: "通知设置" }} />
         <Stack.Screen name="privacy" options={{ title: "隐私政策" }} />
         <Stack.Screen name="terms" options={{ title: "用户协议" }} />
+        <Stack.Screen name="profit-panel" options={{ title: "利润统计" }} />
       </Stack>
     </MembershipProvider>
   );

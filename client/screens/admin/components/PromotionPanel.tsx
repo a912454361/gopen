@@ -295,6 +295,33 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
     }
   };
 
+  // 分享
+  const handleShare = async (material: any) => {
+    const content = `【${material.title}】\n下载G Open体验AI创作\n#Gopen #AI工具`;
+    
+    if (Platform.OS === 'web') {
+      await Clipboard.setStringAsync(content);
+      Alert.alert('已复制', '分享内容已复制到剪贴板');
+    } else {
+      await Share.share({ message: content });
+    }
+  };
+
+  // 一键推广
+  const handleQuickPromote = async (material: any, platform: typeof PLATFORMS[0]) => {
+    // 找到对应平台的文案
+    const template = COPYWRITING_TEMPLATES.find(t => t.platform === platform.key);
+    const content = template?.content || '推荐G Open AI创作助手！';
+    
+    await Clipboard.setStringAsync(content);
+    
+    if (Platform.OS === 'web') {
+      window.open(platform.url, '_blank');
+    }
+    
+    Alert.alert('推广文案已复制', `即将打开${platform.name}，粘贴文案即可发布`);
+  };
+
   // 获取转化率
   const getConversionRate = () => {
     if (!statsData || statsData.totalClicks === 0) return '0%';
@@ -474,7 +501,7 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
                   marginBottom: Spacing.lg,
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                    <FontAwesome6 name="exclamation-triangle" size={18} color="#F59E0B" />
+                    <FontAwesome6 name="triangle-exclamation" size={18} color="#F59E0B" />
                     <ThemedText variant="smallMedium" color="#92400E">
                       有 {statsData?.pendingWithdrawals} 笔提现申请待处理
                     </ThemedText>

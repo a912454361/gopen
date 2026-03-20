@@ -842,31 +842,86 @@ router.get('/promotion/stats', async (req: Request, res: Response) => {
       return res.status(403).json({ error: '无权限' });
     }
 
-    // 尝试从数据库获取推广统计数据
-    // 如果表不存在，返回模拟数据
-    let promotionStats;
-    
-    try {
-      const { data: stats, error } = await client
-        .from('promotion_stats')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      
-      if (error) {
-        // 表不存在，使用模拟数据
-        promotionStats = generateMockPromotionStats();
-      } else {
-        // 聚合统计数据
-        promotionStats = aggregatePromotionStats(stats || []);
-      }
-    } catch (err) {
-      promotionStats = generateMockPromotionStats();
-    }
+    // 获取今日日期
+    const today = new Date().toISOString().split('T')[0];
+
+    // 获取推广员总数
+    const { data: promoters } = await client
+      .from('promoters')
+      .select('id, status, total_clicks, total_conversions, total_earnings, promoter_code');
+
+    const totalPromoters = promoters?.length || 0;
+    const activePromoters = promoters?.filter(p => p.status === 'active').length || 0;
+
+    // 获取总点击和转化
+    const totalClicks = promoters?.reduce((sum, p) => sum + (p.total_clicks || 0), 0) || 0;
+    const totalConversions = promoters?.reduce((sum, p) => sum + (p.total_conversions || 0), 0) || 0;
+    const totalEarnings = promoters?.reduce((sum, p) => sum + (p.total_earnings || 0), 0) || 0;
+
+    // 获取今日点击
+    const { data: todayClicks } = await client
+      .from('promotion_clicks')
+      .select('id')
+      .gte('click_time', today);
+
+    // 获取今日转化
+    const { data: todayConversions } = await client
+      .from('promotion_conversions')
+      .select('id')
+      .gte('conversion_time', today);
+
+    // 获取今日佣金
+    const { data: todayEarnings } = await client
+      .from('promotion_earnings')
+      .select('commission')
+      .gte('earned_at', today);
+
+    const todayEarningsTotal = (todayEarnings || []).reduce((sum, e) => sum + (e.commission || 0), 0);
+
+    // 获取待处理提现数量
+    const { data: pendingWithdrawals } = await client
+      .from('promotion_withdrawals')
+      .select('id')
+      .eq('status', 'pending');
+
+    // 获取TOP推广员
+    const topPromoters = (promoters || [])
+      .sort((a, b) => (b.total_earnings || 0) - (a.total_earnings || 0))
+      .slice(0, 5);
+
+    // 获取最近收益记录
+    const { data: recentEarnings } = await client
+      .from('promotion_earnings')
+      .select('id, amount, commission, created_at')
+      .order('earned_at', { ascending: false })
+      .limit(10);
 
     res.json({
       success: true,
-      data: promotionStats,
+      data: {
+        totalPromoters,
+        activePromoters,
+        totalClicks,
+        totalConversions,
+        totalEarnings,
+        todayClicks: todayClicks?.length || 0,
+        todayConversions: todayConversions?.length || 0,
+        todayEarnings: todayEarningsTotal,
+        pendingWithdrawals: pendingWithdrawals?.length || 0,
+        topPromoters: topPromoters.map(p => ({
+          id: p.id,
+          promoter_code: p.promoter_code,
+          total_clicks: p.total_clicks || 0,
+          total_conversions: p.total_conversions || 0,
+          total_earnings: p.total_earnings || 0,
+        })),
+        recentEarnings: (recentEarnings || []).map(e => ({
+          id: e.id,
+          amount: e.amount,
+          commission: e.commission,
+          created_at: e.created_at,
+        })),
+      },
     });
   } catch (error) {
     console.error('Get promotion stats error:', error);

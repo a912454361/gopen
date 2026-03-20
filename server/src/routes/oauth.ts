@@ -84,6 +84,7 @@ const callbackSchema = z.object({
   platform: z.enum(['alipay', 'wechat', 'douyin']),
   code: z.string(),
   state: z.string().optional(),
+  referrerCode: z.string().optional(), // 推广码，用于推广追踪
 });
 
 /**

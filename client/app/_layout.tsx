@@ -33,6 +33,7 @@ export default function RootLayout() {
         <Stack.Screen name="terms-of-service" options={{ title: "服务条款" }} />
         <Stack.Screen name="api-keys" options={{ title: "API密钥管理" }} />
         <Stack.Screen name="promotion" options={{ title: "推广中心" }} />
+        <Stack.Screen name="admin-login" options={{ title: "管理员登录" }} />
       </Stack>
     </MembershipProvider>
   );

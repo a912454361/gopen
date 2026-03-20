@@ -26,6 +26,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
@@ -46,10 +47,14 @@ interface Stats {
   todayClicks: number;
   todayConversions: number;
   todayEarnings: number;
+  todayEarningsYuan: string;
   monthClicks: number;
   monthConversions: number;
   monthEarnings: number;
+  monthEarningsYuan: string;
   conversionRate: string;
+  availableEarnings: number;
+  availableEarningsYuan: string;
 }
 
 // 推广用户
@@ -113,9 +118,7 @@ export default function PromotionScreen() {
 
   const loadUserId = async () => {
     try {
-      const storedUserId = await FileSystem.readAsStringAsync(
-        FileSystem.documentDirectory + 'user_id.txt'
-      );
+      const storedUserId = await AsyncStorage.getItem('userId');
       setUserId(storedUserId);
     } catch {
       setUserId(null);
@@ -221,8 +224,8 @@ export default function PromotionScreen() {
   const handleShareQRCode = async () => {
     if (await Sharing.isAvailableAsync()) {
       // 下载二维码图片
-      const downloadPath = FileSystem.cacheDirectory + 'promotion_qrcode.png';
-      await FileSystem.downloadAsync(qrCodeUrl, downloadPath);
+      const downloadPath = (FileSystem as any).cacheDirectory + 'promotion_qrcode.png';
+      await (FileSystem as any).downloadAsync(qrCodeUrl, downloadPath);
       await Sharing.shareAsync(downloadPath);
     }
   };

@@ -15,6 +15,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "scheme": "gopen",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "cli": {
+      "appVersionSource": "remote"
+    },
     "ios": {
       "supportsTablet": true
     },

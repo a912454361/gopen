@@ -104,5 +104,12 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       paddingVertical: Spacing['5xl'],
     },
+    tokenUsageCard: {
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
   });
 };

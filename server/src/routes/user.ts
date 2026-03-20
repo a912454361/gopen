@@ -9,6 +9,99 @@ const router = Router();
 const client = getSupabaseClient();
 
 /**
+ * 获取用户Token使用情况
+ * GET /api/v1/user/:userId/token-usage
+ */
+router.get('/:userId/token-usage', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    // 获取本月使用情况
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    
+    const { data: monthUsage } = await client
+      .from('consumption_records')
+      .select('input_tokens, output_tokens, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', monthStart.toISOString());
+    
+    // 统计本月Token
+    const monthInputTokens = monthUsage?.reduce((sum, r) => sum + (r.input_tokens || 0), 0) || 0;
+    const monthOutputTokens = monthUsage?.reduce((sum, r) => sum + (r.output_tokens || 0), 0) || 0;
+    
+    // 获取今日使用情况
+    const today = new Date().toISOString().split('T')[0];
+    const { data: todayUsage } = await client
+      .from('consumption_records')
+      .select('input_tokens, output_tokens')
+      .eq('user_id', userId)
+      .gte('created_at', today);
+    
+    const todayInputTokens = todayUsage?.reduce((sum, r) => sum + (r.input_tokens || 0), 0) || 0;
+    const todayOutputTokens = todayUsage?.reduce((sum, r) => sum + (r.output_tokens || 0), 0) || 0;
+    
+    // 获取总使用情况
+    const { data: totalUsage } = await client
+      .from('consumption_records')
+      .select('input_tokens, output_tokens')
+      .eq('user_id', userId);
+    
+    const totalInputTokens = totalUsage?.reduce((sum, r) => sum + (r.input_tokens || 0), 0) || 0;
+    const totalOutputTokens = totalUsage?.reduce((sum, r) => sum + (r.output_tokens || 0), 0) || 0;
+    
+    // 获取用户余额
+    const { data: balance } = await client
+      .from('user_balances')
+      .select('balance, total_recharged, total_consumed')
+      .eq('user_id', userId)
+      .single();
+    
+    // 获取最近使用记录
+    const { data: recentUsage } = await client
+      .from('consumption_records')
+      .select('resource_name, input_tokens, output_tokens, sell_total, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    res.json({
+      success: true,
+      data: {
+        today: {
+          inputTokens: todayInputTokens,
+          outputTokens: todayOutputTokens,
+          totalTokens: todayInputTokens + todayOutputTokens,
+          calls: todayUsage?.length || 0,
+        },
+        month: {
+          inputTokens: monthInputTokens,
+          outputTokens: monthOutputTokens,
+          totalTokens: monthInputTokens + monthOutputTokens,
+          calls: monthUsage?.length || 0,
+        },
+        total: {
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          totalTokens: totalInputTokens + totalOutputTokens,
+          calls: totalUsage?.length || 0,
+        },
+        balance: {
+          available: balance?.balance || 0,
+          recharged: balance?.total_recharged || 0,
+          consumed: balance?.total_consumed || 0,
+        },
+        recentUsage: recentUsage || [],
+      },
+    });
+  } catch (error) {
+    console.error('Get token usage error:', error);
+    res.status(500).json({ error: '获取Token使用情况失败' });
+  }
+});
+
+/**
  * 上传用户头像
  * POST /api/v1/user/avatar
  */

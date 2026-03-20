@@ -88,6 +88,11 @@ export default function ModelsScreen() {
   const [selectedProvider, setSelectedProvider] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [tokenUsage, setTokenUsage] = useState({
+    today: { totalTokens: 0, calls: 0 },
+    month: { totalTokens: 0, calls: 0 },
+    balance: { available: 0 },
+  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -109,9 +114,31 @@ export default function ModelsScreen() {
     }
   }, []);
 
+  /**
+   * 获取Token使用情况
+   * 服务端文件：server/src/routes/user.ts
+   * 接口：GET /api/v1/user/:userId/token-usage
+   */
+  const fetchTokenUsage = useCallback(async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) return;
+
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}/token-usage`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setTokenUsage(data.data);
+      }
+    } catch (error) {
+      console.error('Fetch token usage error:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchTokenUsage();
+  }, [fetchData, fetchTokenUsage]);
 
   const filteredModels = useMemo(() => {
     return models.filter((model) => {
@@ -326,6 +353,46 @@ export default function ModelsScreen() {
               <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>超级会员 ¥99/月</Text>
             </LinearGradient>
           </TouchableOpacity>
+        </View>
+
+        {/* Token使用情况卡片 */}
+        <View style={[styles.tokenUsageCard, { backgroundColor: theme.backgroundDefault }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>Token使用统计</ThemedText>
+            <TouchableOpacity onPress={fetchTokenUsage}>
+              <FontAwesome6 name="rotate" size={14} color={theme.textMuted} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>今日使用</ThemedText>
+              <ThemedText variant="h3" color={theme.primary}>
+                {tokenUsage.today.totalTokens.toLocaleString()}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {tokenUsage.today.calls} 次调用
+              </ThemedText>
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>本月使用</ThemedText>
+              <ThemedText variant="h3" color={theme.accent}>
+                {tokenUsage.month.totalTokens.toLocaleString()}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {tokenUsage.month.calls} 次调用
+              </ThemedText>
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>账户余额</ThemedText>
+              <ThemedText variant="h3" color={theme.success}>
+                ¥{tokenUsage.balance.available.toFixed(2)}
+              </ThemedText>
+              <TouchableOpacity onPress={() => router.push('/payment', { amount: 1000, productType: 'balance' })}>
+                <ThemedText variant="caption" color={theme.primary}>充值</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* 提供商筛选 */}

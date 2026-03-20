@@ -98,6 +98,32 @@ export default function ProjectsScreen() {
     }
   };
 
+  const handleStatPress = (type: 'active' | 'pending' | 'assets') => {
+    if (type === 'active') {
+      // 滚动到进行中项目
+      if (Platform.OS === 'web') {
+        window.alert(`进行中的项目：${activeProjects.length} 个\n${activeProjects.map(p => p.title).join('\n')}`);
+      } else {
+        Alert.alert('进行中的项目', activeProjects.map(p => `${p.title} (${p.progress}%)`).join('\n'));
+      }
+    } else if (type === 'pending') {
+      // 显示待处理项目
+      if (Platform.OS === 'web') {
+        window.alert(`待处理项目：${pendingProjects.length} 个\n${pendingProjects.map(p => p.title).join('\n')}`);
+      } else {
+        Alert.alert('待处理项目', pendingProjects.map(p => `${p.title} (${p.progress}%)`).join('\n'));
+      }
+    } else if (type === 'assets') {
+      // 显示资源统计
+      const assetList = mockProjects.map(p => `${p.title}: ${p.assets} 个资源`);
+      if (Platform.OS === 'web') {
+        window.alert(`总资源数：${totalAssets} 个\n${assetList.join('\n')}`);
+      } else {
+        Alert.alert('资源统计', assetList.join('\n'));
+      }
+    }
+  };
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -119,7 +145,7 @@ export default function ProjectsScreen() {
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, styles.statCardActive]}>
+          <TouchableOpacity style={[styles.statCard, styles.statCardActive]} onPress={() => handleStatPress('active')}>
             <FontAwesome6 name="circle-play" size={20} color={theme.primary} />
             <ThemedText variant="labelSmall" color={theme.textMuted}>
               进行中
@@ -127,8 +153,8 @@ export default function ProjectsScreen() {
             <ThemedText variant="stat" color={theme.primary}>
               {activeProjects.length}
             </ThemedText>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.statCard} onPress={() => handleStatPress('pending')}>
             <FontAwesome6 name="clock" size={20} color={theme.accent} />
             <ThemedText variant="labelSmall" color={theme.textMuted}>
               待处理
@@ -136,8 +162,8 @@ export default function ProjectsScreen() {
             <ThemedText variant="stat" color={theme.textPrimary}>
               {pendingProjects.length}
             </ThemedText>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.statCard} onPress={() => handleStatPress('assets')}>
             <FontAwesome6 name="cube" size={20} color={theme.textMuted} />
             <ThemedText variant="labelSmall" color={theme.textMuted}>
               总资源
@@ -145,7 +171,7 @@ export default function ProjectsScreen() {
             <ThemedText variant="stat" color={theme.textPrimary}>
               {totalAssets}
             </ThemedText>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Active Projects */}

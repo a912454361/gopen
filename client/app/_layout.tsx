@@ -28,6 +28,7 @@ export default function RootLayout() {
         <Stack.Screen name="terms" options={{ title: "用户协议" }} />
         <Stack.Screen name="profit-panel" options={{ title: "利润统计" }} />
         <Stack.Screen name="cloud-storage-setup" options={{ title: "云存储开通" }} />
+        <Stack.Screen name="privacy-settings" options={{ title: "隐私设置" }} />
       </Stack>
     </MembershipProvider>
   );

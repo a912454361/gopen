@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { Avatar } from '@/components/Avatar';
 import { createStyles } from './styles';
 
 interface MenuItem {
@@ -28,6 +29,12 @@ export default function SettingsScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   const { isMember, expireDate } = useMembership();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userId] = useState('demo-user-001'); // 示例用户ID
+
+  const handleAvatarChange = (url: string) => {
+    setAvatarUrl(url);
+  };
 
   const generalMenuItems: MenuItem[] = [
     {
@@ -116,6 +123,7 @@ export default function SettingsScreen() {
       icon: 'user-shield',
       title: '隐私设置',
       subtitle: '数据与隐私管理',
+      onPress: () => router.push('/privacy-settings'),
     },
     {
       icon: 'key',
@@ -196,9 +204,13 @@ export default function SettingsScreen() {
 
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <FontAwesome6 name={isMember ? 'crown' : 'user'} size={28} color={theme.primary} />
-          </View>
+          <Avatar 
+            userId={userId}
+            size={56}
+            avatarUrl={avatarUrl}
+            editable={true}
+            onAvatarChange={handleAvatarChange}
+          />
           <View style={styles.profileInfo}>
             <ThemedText variant="title" color={theme.textPrimary}>
               {isMember ? 'G open 会员' : '免费用户'}

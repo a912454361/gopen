@@ -227,9 +227,27 @@ export default function CloudStorageSetupScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 标题 */}
         <ThemedView level="root" style={styles.header}>
-          <ThemedText variant="h2" color={theme.textPrimary}>
-            云存储设置
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: theme.backgroundTertiary,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: Spacing.md,
+              }}
+            >
+              <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="h2" color={theme.textPrimary}>
+                云存储设置
+              </ThemedText>
+            </View>
+          </View>
           <ThemedText variant="body" color={theme.textMuted}>
             连接云盘，自动同步创作文件
           </ThemedText>

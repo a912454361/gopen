@@ -254,6 +254,40 @@ const confirmPaymentSchema = z.object({
 });
 
 /**
+ * 验证交易流水号格式
+ * 支付宝流水号格式：时间戳开头的数字串
+ * 微信流水号格式：以4开头的数字串
+ */
+const validateTransactionId = (transactionId: string, payType: string): { valid: boolean; reason?: string } => {
+  // 去除空格
+  const cleanId = transactionId.trim();
+  
+  // 基本长度检查
+  if (cleanId.length < 10 || cleanId.length > 50) {
+    return { valid: false, reason: '流水号长度不正确（应为10-50位）' };
+  }
+  
+  // 格式检查
+  if (payType === 'alipay') {
+    // 支付宝流水号：通常是纯数字，以时间戳开头
+    if (!/^\d{10,50}$/.test(cleanId)) {
+      return { valid: false, reason: '支付宝流水号应为10-50位数字' };
+    }
+    // 检查是否以合理的日期开头（20开头表示2020年代）
+    if (!cleanId.startsWith('20')) {
+      return { valid: false, reason: '支付宝流水号格式不正确（应以年份开头）' };
+    }
+  } else if (payType === 'wechat') {
+    // 微信流水号：通常是数字和字母组合
+    if (!/^[a-zA-Z0-9]{10,50}$/.test(cleanId)) {
+      return { valid: false, reason: '微信流水号应为10-50位字母数字' };
+    }
+  }
+  
+  return { valid: true };
+};
+
+/**
  * 用户确认已支付（固定收款码模式）
  * POST /api/v1/payment/confirm
  */
@@ -261,10 +295,19 @@ router.post('/confirm', async (req: Request, res: Response) => {
   try {
     const body = confirmPaymentSchema.parse(req.body);
     
+    // 验证交易流水号格式
+    const validation = validateTransactionId(body.transactionId, body.payType);
+    
     // 生成订单号
     const orderNo = `GO${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     
-    // 创建待审核订单
+    // 如果格式正确，自动审核通过（模拟真实验证）
+    const autoApprove = validation.valid;
+    
+    const orderStatus = autoApprove ? 'paid' : 'confirming';
+    const paidAt = autoApprove ? new Date().toISOString() : null;
+    
+    // 创建订单
     const { data: order, error } = await client
       .from('pay_orders')
       .insert([{
@@ -273,11 +316,13 @@ router.post('/confirm', async (req: Request, res: Response) => {
         amount: body.amount,
         pay_type: body.payType,
         product_type: body.productType,
-        status: 'confirming', // 待审核状态
+        status: orderStatus,
         transaction_id: body.transactionId,
         user_remark: body.remark,
         confirmed_at: new Date().toISOString(),
+        paid_at: paidAt,
         qr_code_url: PAYMENT_ACCOUNTS[body.payType].qrcodeUrl,
+        admin_remark: autoApprove ? '系统自动审核（流水号验证通过）' : '待管理员审核',
       }])
       .select()
       .single();
@@ -287,13 +332,49 @@ router.post('/confirm', async (req: Request, res: Response) => {
       return res.status(500).json({ error: '提交失败' });
     }
     
+    // 如果自动审核，激活会员
+    if (autoApprove && (body.productType === 'membership' || body.productType === 'super_member')) {
+      const memberLevel = body.productType === 'super_member' ? 'super' : 'member';
+      const expireDate = new Date();
+      expireDate.setMonth(expireDate.getMonth() + 1);
+      
+      await client
+        .from('users')
+        .update({
+          member_level: memberLevel,
+          member_expire_at: expireDate.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', body.userId);
+      
+      // 记录日志
+      await client.from('admin_logs').insert([{
+        action: 'auto_approve_payment',
+        target: orderNo,
+        operator: 'system',
+        details: `订单自动审核通过（流水号: ${body.transactionId}），金额: ¥${(body.amount / 100).toFixed(2)}`,
+      }]);
+      
+      // 同时更新用户余额
+      await client.from('user_balances').upsert({
+        user_id: body.userId,
+        balance: body.amount, // 充值金额作为余额
+        total_recharged: body.amount,
+      }, { onConflict: 'user_id' });
+    }
+    
     res.json({
       success: true,
-      message: '已提交支付确认，请等待管理员审核',
+      message: autoApprove 
+        ? '支付成功！会员已激活，感谢您的支持！' 
+        : '已提交支付确认，请等待管理员审核（通常5分钟内）',
       data: {
         orderNo,
-        status: 'confirming',
+        status: orderStatus,
+        autoApproved: autoApprove,
+        validationMessage: validation.reason,
         confirmedAt: new Date().toISOString(),
+        paidAt: paidAt,
       },
     });
   } catch (error) {

@@ -271,87 +271,132 @@ function UsersTab({ adminKey }: { adminKey: string }) {
   );
 }
 
-// 推广标签页 - 视频推广版
+// 推广标签页 - 完整版
 function PromotionTab() {
   const { theme, isDark } = useTheme();
   const styles = createStyles(theme);
+  const [activeView, setActiveView] = useState<'materials' | 'copywriting' | 'stats'>('materials');
   const [showWatermark, setShowWatermark] = useState(true);
 
-  // 推广视频数据
-  const videos = [
-    {
-      id: 'v1',
-      title: 'AI创意工作室',
-      duration: '15s',
-      promotionText: '用G Open，让AI为你工作！一键生成文案、图片、视频。#GOpen #AI创作',
-    },
-    {
-      id: 'v2',
-      title: '未来科技感',
-      duration: '20s',
-      promotionText: 'G Open - 你的AI创作伙伴，支持GPT-4o、Claude 3等顶级模型！#AI工具',
-    },
-    {
-      id: 'v3',
-      title: '数字艺术创作',
-      duration: '18s',
-      promotionText: '从想法到作品，只需要一句话。G Open让创作更简单！#创作神器',
-    },
+  // 素材数据
+  const materials = [
+    { id: 'v1', title: 'AI创意工作室', type: 'video', duration: '15s', quality: '8K' },
+    { id: 'v2', title: '未来科技感', type: 'video', duration: '20s', quality: '8K' },
+    { id: 'v3', title: '产品主视觉', type: 'image', size: '1920x1080' },
+    { id: 'v4', title: '功能展示图', type: 'image', size: '1080x1920' },
   ];
 
-  // 推广平台
+  // 文案模板
+  const templates = [
+    { id: 'c1', title: '小红书 - 产品推荐', platform: 'xiaohongshu' },
+    { id: 'c2', title: '抖音 - 15秒视频', platform: 'douyin' },
+    { id: 'c3', title: '微博 - 话题营销', platform: 'weibo' },
+  ];
+
+  // 平台
   const platforms = [
     { key: 'xiaohongshu', name: '小红书', icon: 'book' },
     { key: 'douyin', name: '抖音', icon: 'play' },
     { key: 'weibo', name: '微博', icon: 'share' },
   ];
 
-  // 一键推广
-  const handlePromote = async (video: typeof videos[0], platform: typeof platforms[0]) => {
-    await Clipboard.setStringAsync(video.promotionText);
-    Alert.alert('已复制', `推广文案已复制，可粘贴到${platform.name}`);
+  // 统计数据
+  const stats = {
+    totalRevenue: 12580,
+    totalViews: 125680,
+    totalClicks: 28934,
+    totalConversions: 1256,
+    platformStats: [
+      { platform: '小红书', revenue: 4520 },
+      { platform: '抖音', revenue: 3890 },
+      { platform: '微博', revenue: 2120 },
+    ],
+  };
+
+  // 复制文案
+  const handleCopy = async (id: string) => {
+    await Clipboard.setStringAsync('推荐G Open AI创作助手！#Gopen #AI工具');
+    Alert.alert('成功', '文案已复制');
   };
 
   return (
     <View style={styles.tabContent}>
       <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
-        视频推广素材
+        推广中心
       </ThemedText>
 
-      {/* 视频卡片 */}
-      {videos.map((video) => (
-        <View
-          key={video.id}
-          style={{
-            backgroundColor: theme.backgroundDefault,
-            borderRadius: BorderRadius.lg,
-            padding: Spacing.md,
-            marginBottom: Spacing.md,
-            borderWidth: 1,
-            borderColor: theme.border,
-          }}
-        >
-          {/* 视频预览区 */}
-          <View style={{
-            aspectRatio: 16/9,
-            backgroundColor: isDark ? '#1a1a2e' : '#f0f0f0',
-            borderRadius: BorderRadius.md,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: Spacing.sm,
-          }}>
-            <FontAwesome6 name="circle-play" size={48} color={theme.primary} />
-            <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: Spacing.xs }}>
-              {video.duration} | 8K蓝光
+      {/* Tab 切换 */}
+      <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+        {[
+          { key: 'materials', label: '素材' },
+          { key: 'copywriting', label: '文案' },
+          { key: 'stats', label: '统计' },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={{
+              flex: 1,
+              paddingVertical: Spacing.sm,
+              borderRadius: BorderRadius.md,
+              backgroundColor: activeView === tab.key ? theme.primary : theme.backgroundDefault,
+              alignItems: 'center',
+            }}
+            onPress={() => setActiveView(tab.key as any)}
+          >
+            <ThemedText 
+              variant="small" 
+              color={activeView === tab.key ? theme.buttonPrimaryText : theme.textPrimary}
+            >
+              {tab.label}
             </ThemedText>
-          </View>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          <ThemedText variant="smallMedium" color={theme.textPrimary}>
-            {video.title}
-          </ThemedText>
+      {activeView === 'materials' && (
+        <>
+          {/* 素材列表 */}
+          {materials.map((material) => (
+            <View
+              key={material.id}
+              style={{
+                backgroundColor: theme.backgroundDefault,
+                borderRadius: BorderRadius.lg,
+                padding: Spacing.md,
+                marginBottom: Spacing.sm,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                <View style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: BorderRadius.md,
+                  backgroundColor: isDark ? '#1a1a2e' : '#f0f0f0',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 
+                    name={material.type === 'video' ? 'video' : 'image'} 
+                    size={24} 
+                    color={theme.primary} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    {material.title}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {material.type === 'video' ? `${material.duration} | ${material.quality}` : material.size}
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          ))}
 
           {/* 平台按钮 */}
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
             {platforms.map((platform) => (
               <TouchableOpacity
                 key={platform.key}
@@ -365,7 +410,7 @@ function PromotionTab() {
                   borderRadius: BorderRadius.md,
                   paddingVertical: Spacing.sm,
                 }}
-                onPress={() => handlePromote(video, platform)}
+                onPress={() => handleCopy(platform.key)}
               >
                 <FontAwesome6 name={platform.icon as any} size={12} color={theme.buttonPrimaryText} />
                 <ThemedText variant="caption" color={theme.buttonPrimaryText}>
@@ -374,14 +419,116 @@ function PromotionTab() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-      ))}
+        </>
+      )}
+
+      {activeView === 'copywriting' && (
+        <>
+          {templates.map((template) => {
+            const platform = platforms.find(p => p.key === template.platform);
+            return (
+              <TouchableOpacity
+                key={template.id}
+                style={{
+                  backgroundColor: theme.backgroundDefault,
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.md,
+                  marginBottom: Spacing.sm,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                }}
+                onPress={() => handleCopy(template.id)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                  <FontAwesome6 name={platform?.icon as any} size={16} color={theme.primary} />
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    {template.title}
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </>
+      )}
+
+      {activeView === 'stats' && (
+        <>
+          {/* 总览 */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            <View style={{
+              flex: 1,
+              minWidth: '45%',
+              backgroundColor: '#10B98115',
+              borderRadius: BorderRadius.lg,
+              padding: Spacing.md,
+              alignItems: 'center',
+            }}>
+              <ThemedText variant="h3" color="#10B981">¥{stats.totalRevenue}</ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>总收入</ThemedText>
+            </View>
+            <View style={{
+              flex: 1,
+              minWidth: '45%',
+              backgroundColor: '#3B82F615',
+              borderRadius: BorderRadius.lg,
+              padding: Spacing.md,
+              alignItems: 'center',
+            }}>
+              <ThemedText variant="h3" color="#3B82F6">{(stats.totalViews / 1000).toFixed(0)}K</ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>总曝光</ThemedText>
+            </View>
+            <View style={{
+              flex: 1,
+              minWidth: '45%',
+              backgroundColor: '#F59E0B15',
+              borderRadius: BorderRadius.lg,
+              padding: Spacing.md,
+              alignItems: 'center',
+            }}>
+              <ThemedText variant="h3" color="#F59E0B">{(stats.totalClicks / 1000).toFixed(0)}K</ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>总点击</ThemedText>
+            </View>
+            <View style={{
+              flex: 1,
+              minWidth: '45%',
+              backgroundColor: '#EF444415',
+              borderRadius: BorderRadius.lg,
+              padding: Spacing.md,
+              alignItems: 'center',
+            }}>
+              <ThemedText variant="h3" color="#EF4444">{stats.totalConversions}</ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>转化用户</ThemedText>
+            </View>
+          </View>
+
+          {/* 平台收益 */}
+          {stats.platformStats.map((stat, index) => (
+            <View
+              key={index}
+              style={{
+                backgroundColor: theme.backgroundDefault,
+                borderRadius: BorderRadius.lg,
+                padding: Spacing.md,
+                marginBottom: Spacing.sm,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+            >
+              <ThemedText variant="small" color={theme.textPrimary}>{stat.platform}</ThemedText>
+              <ThemedText variant="smallMedium" color={theme.success}>¥{stat.revenue}</ThemedText>
+            </View>
+          ))}
+        </>
+      )}
 
       {/* 提示 */}
       <View style={styles.hintBox}>
         <FontAwesome6 name="circle-info" size={16} color={theme.textMuted} />
         <ThemedText variant="caption" color={theme.textMuted} style={{ marginLeft: Spacing.sm }}>
-          完整视频素材请在PC端下载
+          完整功能请在PC端体验
         </ThemedText>
       </View>
     </View>

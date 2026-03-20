@@ -24,6 +24,8 @@ export default function RootLayout() {
         <Stack.Screen name="payment-admin" options={{ title: "支付审核" }} />
         <Stack.Screen name="admin" options={{ title: "管理后台" }} />
         <Stack.Screen name="notification-settings" options={{ title: "通知设置" }} />
+        <Stack.Screen name="privacy" options={{ title: "隐私政策" }} />
+        <Stack.Screen name="terms" options={{ title: "用户协议" }} />
       </Stack>
     </MembershipProvider>
   );

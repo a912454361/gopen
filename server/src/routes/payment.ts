@@ -5,6 +5,87 @@ import { getSupabaseClient } from '../storage/database/supabase-client.js';
 const router = Router();
 const client = getSupabaseClient();
 
+// ==================== 推广佣金计算 ====================
+
+/**
+ * 计算并记录推广佣金
+ * 在用户消费成功后调用
+ * @param userId 消费用户ID
+ * @param amount 消费金额（分）
+ * @param orderId 订单ID
+ */
+const calculatePromotionCommission = async (
+  userId: string,
+  amount: number,
+  orderId: string
+): Promise<void> => {
+  try {
+    // 1. 查找该用户的推广转化记录（判断用户是否是被推广的）
+    const { data: conversion } = await client
+      .from('promotion_conversions')
+      .select('id, promoter_id, commission_rate')
+      .eq('converted_user_id', userId)
+      .eq('status', 'active')
+      .single();
+
+    if (!conversion) {
+      // 该用户不是通过推广链接注册的，无需计算佣金
+      return;
+    }
+
+    // 2. 获取推广员的分成比例
+    const { data: promoter } = await client
+      .from('promoters')
+      .select('commission_rate, status')
+      .eq('id', conversion.promoter_id)
+      .single();
+
+    if (!promoter || promoter.status !== 'active') {
+      return;
+    }
+
+    // 3. 计算佣金
+    const commissionRate = promoter.commission_rate || 0.10;
+    const commission = Math.floor(amount * commissionRate);
+
+    if (commission <= 0) {
+      return;
+    }
+
+    // 4. 创建佣金记录
+    const { error } = await client
+      .from('promotion_earnings')
+      .insert([{
+        promoter_id: conversion.promoter_id,
+        conversion_id: conversion.id,
+        order_id: orderId,
+        user_id: userId,
+        amount: amount,
+        commission_rate: commissionRate,
+        commission: commission,
+        status: 'confirmed', // 直接确认为已确认状态
+        confirmed_at: new Date().toISOString(),
+      }]);
+
+    if (error) {
+      console.error('Create promotion earning error:', error);
+    } else {
+      console.log(`[Promotion] Created commission: ¥${(commission / 100).toFixed(2)} for promoter ${conversion.promoter_id}`);
+
+      // 5. 更新转化记录的总消费和总佣金
+      await client
+        .from('promotion_conversions')
+        .update({
+          total_spent: amount,
+          total_commission: commission,
+        })
+        .eq('id', conversion.id);
+    }
+  } catch (error) {
+    console.error('Calculate promotion commission error:', error);
+  }
+};
+
 // ==================== 管理员配置 ====================
 
 // 唯一管理员配置（实际项目中应从数据库读取）
@@ -220,6 +301,9 @@ const autoApproveTimeoutOrders = async () => {
             .eq('id', order.user_id);
         }
         
+        // 计算推广佣金
+        await calculatePromotionCommission(order.user_id, order.amount, order.id);
+        
         // 记录日志
         await client.from('admin_logs').insert([{
           action: 'auto_approve',
@@ -361,6 +445,18 @@ router.post('/confirm', async (req: Request, res: Response) => {
         balance: body.amount, // 充值金额作为余额
         total_recharged: body.amount,
       }, { onConflict: 'user_id' });
+      
+      // 计算推广佣金
+      // 需要获取刚创建的订单ID
+      const { data: newOrder } = await client
+        .from('pay_orders')
+        .select('id')
+        .eq('order_no', orderNo)
+        .single();
+      
+      if (newOrder) {
+        await calculatePromotionCommission(body.userId, body.amount, newOrder.id);
+      }
     }
     
     res.json({

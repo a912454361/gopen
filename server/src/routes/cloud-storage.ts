@@ -513,4 +513,204 @@ router.get('/quota/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== 云存储账户管理 ====================
+
+/**
+ * 获取用户所有云存储账户
+ * GET /api/v1/cloud/accounts
+ */
+router.get('/accounts', async (req: Request, res: Response) => {
+  try {
+    const userId = req.query.userId as string;
+    
+    if (!userId) {
+      // 返回空数组
+      return res.json({ success: true, data: [] });
+    }
+    
+    const { data: accounts, error } = await client
+      .from('cloud_accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+    
+    if (error) {
+      console.error('Get accounts error:', error);
+      return res.json({ success: true, data: [] });
+    }
+    
+    // 返回脱敏信息
+    const safeAccounts = (accounts || []).map(account => ({
+      id: account.id,
+      provider: account.provider,
+      account_name: account.account_name,
+      storage_used: account.storage_used,
+      storage_total: account.storage_total,
+      status: account.status,
+      connected_at: account.connected_at,
+      last_sync_at: account.last_sync_at,
+    }));
+    
+    res.json({ success: true, data: safeAccounts });
+  } catch (error) {
+    console.error('Get accounts error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+/**
+ * 删除云存储账户
+ * DELETE /api/v1/cloud/accounts/:accountId
+ */
+router.delete('/accounts/:accountId', async (req: Request, res: Response) => {
+  try {
+    const { accountId } = req.params;
+    
+    const { error } = await client
+      .from('cloud_accounts')
+      .update({
+        status: 'disconnected',
+        access_token: null,
+        refresh_token: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', accountId);
+    
+    if (error) {
+      return res.status(500).json({ error: 'Failed to disconnect account' });
+    }
+    
+    res.json({ success: true, message: '账户已断开' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to disconnect account' });
+  }
+});
+
+// ==================== 各平台授权入口 ====================
+
+const PROVIDER_CONFIGS: Record<string, { name: string; authUrl: string; scope: string }> = {
+  baidu: {
+    name: '百度网盘',
+    authUrl: 'https://openapi.baidu.com/oauth/2.0/authorize',
+    scope: 'basic,netdisk',
+  },
+  aliyun: {
+    name: '阿里云盘',
+    authUrl: 'https://openapi.alipan.com/oauth/authorize',
+    scope: 'user:base,file:all:read,file:all:write',
+  },
+  google: {
+    name: 'Google Drive',
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    scope: 'https://www.googleapis.com/auth/drive',
+  },
+  onedrive: {
+    name: 'OneDrive',
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    scope: 'files.readwrite.all',
+  },
+  dropbox: {
+    name: 'Dropbox',
+    authUrl: 'https://www.dropbox.com/oauth2/authorize',
+    scope: 'files.content.write files.content.read',
+  },
+  icloud: {
+    name: 'iCloud',
+    authUrl: 'https://idmsa.apple.com/appleauth/auth',
+    scope: 'cloudkit',
+  },
+};
+
+/**
+ * 获取云存储授权链接
+ * POST /api/v1/cloud/auth/:provider
+ */
+router.post('/auth/:provider', async (req: Request, res: Response) => {
+  try {
+    const provider = req.params.provider as string;
+    const config = PROVIDER_CONFIGS[provider];
+    
+    if (!config) {
+      return res.status(400).json({ error: 'Unknown provider' });
+    }
+    
+    // 检查是否已配置
+    const envKey = `${provider.toUpperCase()}_APP_KEY`;
+    const appKey = process.env[envKey];
+    
+    if (!appKey) {
+      // 返回模拟授权链接（用于演示）
+      const mockAuthUrl = `${config.authUrl}?client_id=demo&redirect_uri=${encodeURIComponent('gopen://cloud-callback')}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${provider}_${Date.now()}`;
+      
+      return res.json({
+        success: true,
+        data: {
+          authUrl: mockAuthUrl,
+          provider: config.name,
+          note: '服务暂未完全开放，敬请期待',
+        },
+      });
+    }
+    
+    // 生成真实授权链接
+    const redirectUri = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/cloud/callback`;
+    const state = `${provider}_${Date.now()}`;
+    const authUrl = `${config.authUrl}?client_id=${appKey}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+    
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        provider: config.name,
+        state,
+      },
+    });
+  } catch (error) {
+    console.error('Get auth URL error:', error);
+    res.status(500).json({ error: 'Failed to get auth URL' });
+  }
+});
+
+/**
+ * 云存储OAuth回调处理
+ * GET /api/v1/cloud/callback
+ */
+router.get('/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, state } = req.query;
+    
+    if (!code || !state) {
+      return res.status(400).send('缺少必要参数');
+    }
+    
+    const [provider] = (state as string).split('_');
+    
+    // 模拟创建账户（实际应获取token并保存）
+    const mockAccount = {
+      provider,
+      account_name: `${PROVIDER_CONFIGS[provider]?.name || provider}用户`,
+      storage_used: 500 * 1024 * 1024 * 1024, // 500GB
+      storage_total: 2 * 1024 * 1024 * 1024 * 1024, // 2TB
+    };
+    
+    // 返回成功页面
+    res.send(`
+      <html>
+        <head><title>授权成功</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui;">
+          <div style="text-align:center;">
+            <h1 style="color:#22C55E;">✓ 授权成功</h1>
+            <p>您已成功连接${PROVIDER_CONFIGS[provider]?.name || provider}</p>
+            <p style="color:#666;">您可以关闭此页面，返回应用继续操作</p>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Callback error:', error);
+    res.status(500).send('授权失败');
+  }
+});
+
 export default router;

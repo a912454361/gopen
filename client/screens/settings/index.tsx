@@ -107,6 +107,12 @@ export default function SettingsScreen() {
       isMemberOnly: true,
     },
     {
+      icon: 'cloud-arrow-up',
+      title: '云存储开通',
+      subtitle: '连接百度网盘/阿里云盘/Google Drive',
+      onPress: () => router.push('/cloud-storage-setup'),
+    },
+    {
       icon: 'user-shield',
       title: '隐私设置',
       subtitle: '数据与隐私管理',

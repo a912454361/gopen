@@ -15,6 +15,7 @@ import gpuRouter from "./routes/gpu.js";
 import wechatPayRouter from "./routes/wechat-pay.js";
 import adminRouter from "./routes/admin.js";
 import aiGatewayRouter from "./routes/ai-gateway.js";
+import modelSyncRouter from "./routes/model-sync.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -47,6 +48,7 @@ app.use('/api/v1/billing', billingRouter);
 app.use('/api/v1/ollama', ollamaRouter);
 app.use('/api/v1/gpu', gpuRouter);
 app.use('/api/v1/ai', aiGatewayRouter);
+app.use('/api/v1/model-sync', modelSyncRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

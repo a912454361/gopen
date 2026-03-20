@@ -408,9 +408,9 @@ export default function CloudStorageSetupScreen() {
                   {isConnecting ? (
                     <ActivityIndicator size="small" color={theme.primary} />
                   ) : isConnected ? (
-                    <FontAwesome6 name="check-circle" size={20} color={theme.success} />
+                    <FontAwesome6 name="circle-check" size={20} color={theme.success} />
                   ) : (
-                    <FontAwesome6 name="plus-circle" size={20} color={theme.primary} />
+                    <FontAwesome6 name="circle-plus" size={20} color={theme.primary} />
                   )}
                 </View>
 
@@ -450,7 +450,7 @@ export default function CloudStorageSetupScreen() {
         {/* 提示信息 */}
         <ThemedView level="default" style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md }}>
-            <FontAwesome6 name="info-circle" size={20} color={theme.primary} />
+            <FontAwesome6 name="circle-info" size={20} color={theme.primary} />
             <View style={{ flex: 1 }}>
               <ThemedText variant="bodyMedium" color={theme.textPrimary}>
                 关于云存储

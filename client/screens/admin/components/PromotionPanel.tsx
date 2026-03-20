@@ -45,21 +45,21 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
       id: 'xhs1',
       title: '产品介绍',
       type: '产品推荐',
-      content: `姐妹们！这个AI工具太好用了😭
+      content: `姐妹们！这个AI工具太好用了
 
 作为一个自媒体博主，每天要写3篇文章+5条微博
-还要发小红书和抖音，真的累死了😭
+还要发小红书和抖音，真的累死了
 
 直到我发现了G open！
 
-✨ 它集成了GPT-4o、Claude 3、豆包等多个顶级AI
-💰 按Token计费，比订阅便宜太多了
-📊 还有项目管理功能，所有创作一目了然
+它集成了GPT-4o、Claude 3、豆包等多个顶级AI
+按Token计费，比订阅便宜太多了
+还有项目管理功能，所有创作一目了然
 
 最让我惊喜的是：
-🎨 它还能生成图片！封面图再也不用找设计师了
+它还能生成图片！封面图再也不用找设计师了
 
-用了2周，我的创作效率提升了200%✨
+用了2周，我的创作效率提升了200%
 强烈推荐给所有内容创作者！
 
 #AI工具 #写作神器 #自媒体必备 #效率提升 #Gopen`,
@@ -70,19 +70,19 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
       type: '功能展示',
       content: `一个APP集齐所有顶级AI模型！这是什么神仙体验？
 
-✨ GPT-4o：最强的语言理解能力
-✨ Claude 3：最擅长写作和推理
-✨ 豆包：中文能力最强
+GPT-4o：最强的语言理解能力
+Claude 3：最擅长写作和推理
+豆包：中文能力最强
 
-关键是💰按需付费！
+关键是按需付费！
 不像其他AI工具动不动就几十块一个月
 这里用多少付多少，学生党也能轻松负担
 
-还有超贴心的项目管理功能📊
+还有超贴心的项目管理功能
 所有创作历史一目了然
 再也不用翻聊天记录找了
 
-赶紧去试试！新手注册还送2000 Token免费额度🎁
+赶紧去试试！新手注册还送2000 Token免费额度
 
 #AI工具 #Gopen #效率神器 #自媒体工具`,
     },
@@ -90,7 +90,7 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
       id: 'xhs3',
       title: '价格对比',
       type: '性价比',
-      content: `算了一笔账，我一年省了1200块！💰
+      content: `算了一笔账，我一年省了1200块！
 
 之前订阅ChatGPT Plus：20美元/月 = 145元/月
 订阅Claude Pro：20美元/月 = 145元/月
@@ -101,15 +101,15 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
 平均每月只需要50块
 一年只要600块！
 
-省下来的钱可以吃好几顿火锅了🍲
+省下来的钱可以吃好几顿火锅了
 
 关键是功能一点没少：
-✅ 多个顶级AI模型
-✅ 图像生成功能
-✅ 项目管理
-✅ 云存储同步
+- 多个顶级AI模型
+- 图像生成功能
+- 项目管理
+- 云存储同步
 
-性价比之王，不接受反驳！👑
+性价比之王，不接受反驳！
 
 #省钱攻略 #AI工具 #Gopen #性价比`,
     },
@@ -126,18 +126,18 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
 16:00 写微博，发抖音
 18:00 终于忙完了...
 
-一天都在写写写，累得不行😭
+一天都在写写写，累得不行
 
 直到我发现了G open这个神器：
-✨ 早上输入主题，10分钟生成公众号文章框架
-✨ 中午一键改写成小红书风格
-✨ 下午再生成微博和抖音文案
+- 早上输入主题，10分钟生成公众号文章框架
+- 中午一键改写成小红书风格
+- 下午再生成微博和抖音文案
 
 一天的工作，半天就搞定了！
-而且质量比我写的还好😂
+而且质量比我写的还好
 
-终于有时间好好休息了～
-强烈推荐给所有自媒体博主！💪
+终于有时间好好休息了
+强烈推荐给所有自媒体博主！
 
 #自媒体 #效率工具 #Gopen #写作神器`,
     },
@@ -145,7 +145,7 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
       id: 'xhs5',
       title: '学生党必备',
       type: '场景应用',
-      content: `考研党的福音来了！📚
+      content: `考研党的福音来了！
 
 英语作文不会写？
 专业课笔记懒得整理？
@@ -154,15 +154,15 @@ const CONTENT_DATA: Record<PlatformType, ContentItem[]> = {
 
 一个G open全搞定！
 
-✨ 英语作文：输入中文，自动生成地道英文
-✨ 专业课笔记：拍照识别，自动整理成思维导图
-✨ 论文框架：输入主题，自动生成大纲和参考文献
-✨ 翻译：多个模型对比，选择最准确的翻译
+- 英语作文：输入中文，自动生成地道英文
+- 专业课笔记：拍照识别，自动整理成思维导图
+- 论文框架：输入主题，自动生成大纲和参考文献
+- 翻译：多个模型对比，选择最准确的翻译
 
-关键是💰学生认证还半价！
+关键是学生认证还半价！
 一杯奶茶钱就能用一个月
 
-考研上岸的神器，冲！🎓
+考研上岸的神器，冲！
 
 #考研 #学习神器 #Gopen #学生必备`,
     },
@@ -226,7 +226,6 @@ GPT-4o、Claude 3、豆包全都有
 自媒体博主、程序员、学生党必备神器
 
 注册还送2000 Token，赶紧去试试！
-👇
 
 #Gopen #效率工具 #AI`,
     },
@@ -395,11 +394,12 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
       </View>
 
       {/* 平台选择 */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: Spacing.lg }}
-      >
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: Spacing.lg }}
+        >
         <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
           {PLATFORMS.map((platform) => (
             <TouchableOpacity
@@ -446,6 +446,7 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
           ))}
         </View>
       </ScrollView>
+      </View>
 
       {/* 快捷操作 */}
       <TouchableOpacity

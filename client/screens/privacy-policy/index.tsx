@@ -35,7 +35,7 @@ export default function PrivacyPolicyScreen() {
           </ThemedText>
 
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
-            感谢您使用 G open（以下简称"我们"或"本应用"）。我们深知个人隐私的重要性，并致力于保护您的个人信息安全。本隐私政策将详细说明我们如何收集、使用、存储和保护您的信息。
+            感谢您使用 G open（以下简称&quot;我们&quot;或&quot;本应用&quot;）。我们深知个人隐私的重要性，并致力于保护您的个人信息安全。本隐私政策将详细说明我们如何收集、使用、存储和保护您的信息。
           </ThemedText>
 
           {/* 一、信息收集 */}

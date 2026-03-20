@@ -111,7 +111,7 @@ export function ProfitPanel({ adminKey }: ProfitPanelProps) {
   if (error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-        <FontAwesome6 name="exclamation-triangle" size={48} color={theme.error} />
+        <FontAwesome6 name="circle-exclamation" size={48} color={theme.error} />
         <ThemedText variant="body" color={theme.error} style={{ marginTop: Spacing.lg }}>
           {error}
         </ThemedText>

@@ -278,7 +278,7 @@ export default function APIKeysScreen() {
 
         {/* 说明卡片 */}
         <View style={[styles.infoCard, { backgroundColor: theme.backgroundDefault }]}>
-          <FontAwesome6 name="info-circle" size={20} color={theme.primary} />
+          <FontAwesome6 name="circle-info" size={20} color={theme.primary} />
           <ThemedText variant="small" color={theme.textSecondary} style={{ flex: 1, marginLeft: Spacing.sm }}>
             配置您自己的API密钥，可使用专属模型并获得更稳定的服务。您的密钥将安全加密存储。
           </ThemedText>
@@ -371,7 +371,7 @@ export default function APIKeysScreen() {
                 添加 {selectedProvider?.name} API密钥
               </ThemedText>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <FontAwesome6 name="times" size={20} color={theme.textMuted} />
+                <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
 

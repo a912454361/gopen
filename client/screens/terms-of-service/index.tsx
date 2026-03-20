@@ -35,7 +35,7 @@ export default function TermsOfServiceScreen() {
           </ThemedText>
 
           <ThemedText variant="small" color={theme.textSecondary} style={styles.paragraph}>
-            欢迎使用 G open！本服务条款（以下简称"本条款"）是您与 G open（以下简称"我们"或"本平台"）之间关于使用本平台服务的法律协议。使用本平台服务前，请仔细阅读本条款。
+            欢迎使用 G open！本服务条款（以下简称&quot;本条款&quot;）是您与 G open（以下简称&quot;我们&quot;或&quot;本平台&quot;）之间关于使用本平台服务的法律协议。使用本平台服务前，请仔细阅读本条款。
           </ThemedText>
 
           {/* 一、服务说明 */}

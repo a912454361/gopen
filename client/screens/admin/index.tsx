@@ -58,6 +58,7 @@ export default function AdminDashboardScreen() {
   // 检测是否为PC端
   const isPC = Platform.OS === 'web' && Dimensions.get('window').width >= 1024;
   const screenWidth = Dimensions.get('window').width;
+  const isMobile = !isPC || Platform.OS !== 'web';
 
   // 登出
   const handleLogout = useCallback(async () => {
@@ -140,43 +141,12 @@ export default function AdminDashboardScreen() {
     }
   }, [authorized, fetchStats]);
 
-  // 非PC端提示
-  if (!isPC && Platform.OS === 'web') {
-    return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-          <FontAwesome6 name="desktop" size={64} color={theme.textMuted} />
-          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg, textAlign: 'center' }}>
-            请在电脑端访问
-          </ThemedText>
-          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md, textAlign: 'center' }}>
-            管理后台仅支持桌面浏览器访问
-          </ThemedText>
-          <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: Spacing.lg }}>
-            当前屏幕宽度: {Math.round(screenWidth)}px
-          </ThemedText>
-        </View>
-      </Screen>
-    );
+  // 移动端显示移动版后台
+  if (isMobile) {
+    // 动态导入移动端组件
+    const AdminMobileScreen = require('./mobile').default;
+    return <AdminMobileScreen />;
   }
-
-  // 移动端直接拒绝
-  if (Platform.OS !== 'web') {
-    return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-          <FontAwesome6 name="ban" size={64} color={theme.error} />
-          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
-            仅支持Web端
-          </ThemedText>
-          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
-            请在电脑浏览器中打开管理后台
-          </ThemedText>
-        </View>
-      </Screen>
-    );
-  }
-
   // 加载中
   if (loading) {
     return (

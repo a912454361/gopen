@@ -350,7 +350,7 @@ export default function PrivacySettingsScreen() {
               borderBottomWidth: 1,
               borderBottomColor: theme.borderLight,
             }}
-            onPress={() => router.push('/privacy')}
+            onPress={() => router.push('/privacy-policy')}
           >
             <FontAwesome6 name="shield-halved" size={20} color={theme.textPrimary} style={{ marginRight: Spacing.md }} />
             <ThemedText variant="bodyMedium" color={theme.textPrimary} style={{ flex: 1 }}>
@@ -365,7 +365,7 @@ export default function PrivacySettingsScreen() {
               alignItems: 'center',
               paddingVertical: Spacing.lg,
             }}
-            onPress={() => router.push('/terms')}
+            onPress={() => router.push('/terms-of-service')}
           >
             <FontAwesome6 name="file-contract" size={20} color={theme.textPrimary} style={{ marginRight: Spacing.md }} />
             <ThemedText variant="bodyMedium" color={theme.textPrimary} style={{ flex: 1 }}>

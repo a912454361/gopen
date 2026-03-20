@@ -28,11 +28,12 @@ import { StatsPanel } from './components/StatsPanel';
 import { ConfigPanel } from './components/ConfigPanel';
 import { LogsPanel } from './components/LogsPanel';
 import { ProfitPanel } from './components/ProfitPanel';
+import { PromotionPanel } from './components/PromotionPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -215,6 +216,7 @@ export default function AdminDashboardScreen() {
     { key: 'profit', label: '利润统计', icon: 'coins' },
     { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
     { key: 'users', label: '用户管理', icon: 'users' },
+    { key: 'promotion', label: '推广中心', icon: 'bullhorn' },
     { key: 'config', label: '系统配置', icon: 'gear' },
     { key: 'logs', label: '操作日志', icon: 'clock-rotate-left' },
   ];
@@ -377,6 +379,7 @@ export default function AdminDashboardScreen() {
             {activeTab === 'profit' && <ProfitPanel adminKey={adminKey} />}
             {activeTab === 'orders' && <OrdersPanel adminKey={adminKey} />}
             {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}
+            {activeTab === 'promotion' && <PromotionPanel adminKey={adminKey} />}
             {activeTab === 'config' && <ConfigPanel adminKey={adminKey} />}
             {activeTab === 'logs' && <LogsPanel adminKey={adminKey} />}
           </ScrollView>

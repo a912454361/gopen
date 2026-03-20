@@ -3,3 +3,4 @@ export { OrdersPanel } from './OrdersPanel';
 export { UsersPanel } from './UsersPanel';
 export { ConfigPanel } from './ConfigPanel';
 export { LogsPanel } from './LogsPanel';
+export { PromotionPanel } from './PromotionPanel';

@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -29,6 +30,7 @@ import { LogsPanel } from './components/LogsPanel';
 import { ProfitPanel } from './components/ProfitPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+const LOGIN_STORAGE_KEY = 'admin_login_status';
 
 type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'config' | 'logs';
 
@@ -55,6 +57,35 @@ export default function AdminDashboardScreen() {
   // 检测是否为PC端
   const isPC = Platform.OS === 'web' && Dimensions.get('window').width >= 1024;
   const screenWidth = Dimensions.get('window').width;
+
+  // 登出
+  const handleLogout = useCallback(async () => {
+    Alert.alert(
+      '确认退出',
+      '确定要退出管理后台吗？',
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+        },
+        {
+          text: '退出',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // 清除登录状态
+              await AsyncStorage.removeItem(LOGIN_STORAGE_KEY);
+              // 跳转到登录页
+              router.replace('/admin-login');
+            } catch (error) {
+              console.error('登出失败:', error);
+              Alert.alert('错误', '登出失败，请重试');
+            }
+          },
+        },
+      ]
+    );
+  }, [router]);
 
   // 验证管理员权限
   useEffect(() => {
@@ -159,30 +190,20 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  // 未授权
+  // 未授权 - 跳转到登录页
   if (!authorized) {
+    // 延迟跳转，避免在渲染过程中调用
+    setTimeout(() => {
+      router.replace('/admin-login');
+    }, 0);
+    
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-          <FontAwesome6 name="lock" size={64} color={theme.error} />
-          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
-            访问被拒绝
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+            正在跳转到登录页...
           </ThemedText>
-          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md, textAlign: 'center' }}>
-            无效的管理员密钥，请检查URL参数
-          </ThemedText>
-          <TouchableOpacity
-            style={{
-              marginTop: Spacing.xl,
-              paddingVertical: Spacing.md,
-              paddingHorizontal: Spacing.xl,
-              backgroundColor: theme.primary,
-              borderRadius: BorderRadius.lg,
-            }}
-            onPress={() => router.replace('/')}
-          >
-            <ThemedText variant="smallMedium" color="#fff">返回首页</ThemedText>
-          </TouchableOpacity>
         </View>
       </Screen>
     );
@@ -342,7 +363,7 @@ export default function AdminDashboardScreen() {
                   backgroundColor: theme.error,
                   borderRadius: BorderRadius.lg,
                 }}
-                onPress={() => router.replace('/')}
+                onPress={handleLogout}
               >
                 <FontAwesome6 name="right-from-bracket" size={14} color="#fff" />
                 <ThemedText variant="small" color="#fff">退出</ThemedText>

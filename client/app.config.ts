@@ -67,6 +67,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           "microphonePermission": `G open 需要访问麦克风以录制视频声音。`,
           "recordAudioAndroid": true
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "允许 G open 使用 Face ID 进行快速身份验证。"
+        }
       ]
     ],
     "experiments": {

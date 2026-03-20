@@ -589,6 +589,9 @@ router.post('/admin/verify', async (req: Request, res: Response) => {
           .eq('id', order.user_id);
       }
       
+      // 计算推广佣金
+      await calculatePromotionCommission(order.user_id, order.amount, order.id);
+      
       res.json({ success: true, message: '支付已确认，会员已激活' });
     } else {
       // 拒绝支付

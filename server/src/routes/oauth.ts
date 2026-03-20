@@ -162,6 +162,32 @@ router.post('/callback', async (req: Request, res: Response) => {
         .insert([{
           user_id: user.id,
         }]);
+      
+      // 推广转化追踪
+      if (body.referrerCode) {
+        try {
+          // 验证推广码
+          const { data: promoter } = await client
+            .from('promoters')
+            .select('id, status')
+            .eq('promoter_code', body.referrerCode)
+            .single();
+          
+          if (promoter && promoter.status === 'active') {
+            // 创建转化记录
+            await client
+              .from('promotion_conversions')
+              .insert([{
+                promoter_id: promoter.id,
+                converted_user_id: user.id,
+              }]);
+            
+            console.log(`[Promotion] User ${user.id} converted by promoter ${promoter.id}`);
+          }
+        } catch (error) {
+          console.error('Promotion conversion error:', error);
+        }
+      }
     }
     
     // 生成本地会话token

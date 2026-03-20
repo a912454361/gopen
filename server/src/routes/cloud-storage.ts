@@ -713,4 +713,175 @@ router.get('/callback', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== API密钥管理 ====================
+
+/**
+ * 获取用户API密钥列表
+ * GET /api/v1/cloud/api-keys/:userId
+ */
+router.get('/api-keys/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const { data: apiKeys, error } = await client
+      .from('api_keys')
+      .select('id, provider, api_key_name, created_at, last_used_at, status')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+    
+    if (error) {
+      console.error('Get API keys error:', error);
+      return res.json({ success: true, data: [] });
+    }
+    
+    // 脱敏处理（只显示前4位和后4位）
+    const safeKeys = (apiKeys || []).map(key => ({
+      ...key,
+      api_key_masked: `${key.api_key_name?.substring(0, 4)}****${key.api_key_name?.substring(key.api_key_name?.length - 4)}`,
+    }));
+    
+    res.json({ success: true, data: safeKeys });
+  } catch (error) {
+    console.error('Get API keys error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+/**
+ * 添加API密钥
+ * POST /api/v1/cloud/api-keys
+ */
+router.post('/api-keys', async (req: Request, res: Response) => {
+  try {
+    const { userId, provider, apiKey, apiSecret } = req.body;
+    
+    if (!userId || !provider || !apiKey) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+    
+    // 检查是否已存在相同provider的key
+    const { data: existingKey } = await client
+      .from('api_keys')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider', provider)
+      .eq('status', 'active')
+      .single();
+    
+    if (existingKey) {
+      // 更新现有key
+      const { error } = await client
+        .from('api_keys')
+        .update({
+          api_key: apiKey,
+          api_secret: apiSecret,
+          api_key_name: apiKey,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingKey.id);
+      
+      if (error) {
+        return res.status(500).json({ error: '更新API密钥失败' });
+      }
+      
+      return res.json({
+        success: true,
+        message: 'API密钥已更新',
+      });
+    }
+    
+    // 创建新key
+    const { error } = await client
+      .from('api_keys')
+      .insert({
+        user_id: userId,
+        provider,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        api_key_name: apiKey,
+        status: 'active',
+        created_at: new Date().toISOString(),
+      });
+    
+    if (error) {
+      return res.status(500).json({ error: '添加API密钥失败' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'API密钥添加成功',
+    });
+  } catch (error) {
+    console.error('Add API key error:', error);
+    res.status(500).json({ error: '添加API密钥失败' });
+  }
+});
+
+/**
+ * 删除API密钥
+ * DELETE /api/v1/cloud/api-keys/:keyId
+ */
+router.delete('/api-keys/:keyId', async (req: Request, res: Response) => {
+  try {
+    const { keyId } = req.params;
+    
+    const { error } = await client
+      .from('api_keys')
+      .update({
+        status: 'deleted',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', keyId);
+    
+    if (error) {
+      return res.status(500).json({ error: '删除API密钥失败' });
+    }
+    
+    res.json({ success: true, message: 'API密钥已删除' });
+  } catch (error) {
+    console.error('Delete API key error:', error);
+    res.status(500).json({ error: '删除API密钥失败' });
+  }
+});
+
+/**
+ * 验证API密钥有效性
+ * POST /api/v1/cloud/api-keys/verify
+ */
+router.post('/api-keys/verify', async (req: Request, res: Response) => {
+  try {
+    const { userId, provider } = req.body;
+    
+    const { data: apiKey, error } = await client
+      .from('api_keys')
+      .select('api_key')
+      .eq('user_id', userId)
+      .eq('provider', provider)
+      .eq('status', 'active')
+      .single();
+    
+    if (error || !apiKey) {
+      return res.json({
+        success: true,
+        data: { valid: false, message: '未配置API密钥' },
+      });
+    }
+    
+    // 更新最后使用时间
+    await client
+      .from('api_keys')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('provider', provider);
+    
+    res.json({
+      success: true,
+      data: { valid: true, message: 'API密钥有效' },
+    });
+  } catch (error) {
+    console.error('Verify API key error:', error);
+    res.status(500).json({ error: '验证API密钥失败' });
+  }
+});
+
 export default router;

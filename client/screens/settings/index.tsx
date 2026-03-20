@@ -129,6 +129,7 @@ export default function SettingsScreen() {
       icon: 'key',
       title: 'API 密钥',
       subtitle: '管理集成配置',
+      onPress: () => router.push('/api-keys'),
       isMemberOnly: true,
     },
     {

@@ -1,9 +1,10 @@
 /**
  * 推广中心组件 - 完整版
  * 包含：素材库（视频+图片+文案）、一键推广、数据统计、推广工具
+ * 数据来源于真实推广系统
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -14,6 +15,7 @@ import {
   Share,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -28,6 +30,34 @@ interface PromotionPanelProps {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2;
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+
+// 推广统计数据接口
+interface PromotionStatsData {
+  totalPromoters: number;
+  activePromoters: number;
+  totalClicks: number;
+  totalConversions: number;
+  totalEarnings: number;
+  todayClicks: number;
+  todayConversions: number;
+  todayEarnings: number;
+  pendingWithdrawals: number;
+  topPromoters: Array<{
+    id: string;
+    promoter_code: string;
+    total_clicks: number;
+    total_conversions: number;
+    total_earnings: number;
+  }>;
+  recentEarnings: Array<{
+    id: string;
+    amount: number;
+    commission: number;
+    created_at: string;
+  }>;
+}
 
 // ==================== 素材数据 ====================
 
@@ -55,17 +85,6 @@ const VIDEO_MATERIALS = [
     tags: ['科技', '未来', '酷炫'],
     downloads: 892,
   },
-  {
-    id: 'v3',
-    title: '数字艺术创作',
-    type: 'video',
-    duration: '18s',
-    quality: '8K蓝光',
-    thumbnail: 'https://images.unsplash.com/photo-1686191128892-3b37add4a636?w=400',
-    videoUrl: 'https://videos.pexels.com/video-files/4434249/4434249-hd_1920_1080_30fps.mp4',
-    tags: ['艺术', 'AI', '创作'],
-    downloads: 756,
-  },
 ];
 
 // 图片素材
@@ -89,26 +108,6 @@ const IMAGE_MATERIALS = [
     imageUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1080',
     tags: ['功能', '展示'],
     downloads: 1876,
-  },
-  {
-    id: 'i3',
-    title: '用户案例',
-    type: 'image',
-    size: '1200x800',
-    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400',
-    imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200',
-    tags: ['案例', '用户'],
-    downloads: 1234,
-  },
-  {
-    id: 'i4',
-    title: '对比效果',
-    type: 'image',
-    size: '1600x900',
-    thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400',
-    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1600',
-    tags: ['对比', '效果'],
-    downloads: 1567,
   },
 ];
 

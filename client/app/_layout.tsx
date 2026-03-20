@@ -32,6 +32,7 @@ export default function RootLayout() {
         <Stack.Screen name="privacy-policy" options={{ title: "隐私政策" }} />
         <Stack.Screen name="terms-of-service" options={{ title: "服务条款" }} />
         <Stack.Screen name="api-keys" options={{ title: "API密钥管理" }} />
+        <Stack.Screen name="promotion" options={{ title: "推广中心" }} />
       </Stack>
     </MembershipProvider>
   );

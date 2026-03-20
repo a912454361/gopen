@@ -89,6 +89,12 @@ export default function SettingsScreen() {
       onPress: () => router.push('/wallet'),
     },
     {
+      icon: 'bullhorn',
+      title: '推广中心',
+      subtitle: '邀请好友赚佣金',
+      onPress: () => router.push('/promotion'),
+    },
+    {
       icon: 'microchip',
       title: '模型市场',
       subtitle: '选择AI模型和GPU算力',

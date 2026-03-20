@@ -147,7 +147,7 @@ export default function AdminMobileScreen() {
         {activeTab === 'dashboard' && <DashboardTab adminKey={adminKey} />}
         {activeTab === 'orders' && <OrdersTab adminKey={adminKey} />}
         {activeTab === 'users' && <UsersTab adminKey={adminKey} />}
-        {activeTab === 'promotion' && <PromotionTab />}
+        {activeTab === 'promotion' && <PromotionTab adminKey={adminKey} />}
       </ScrollView>
 
       {/* 底部导航 */}
@@ -271,12 +271,34 @@ function UsersTab({ adminKey }: { adminKey: string }) {
   );
 }
 
-// 推广标签页 - 完整版
-function PromotionTab() {
+// 推广标签页 - 完整版（真实数据）
+function PromotionTab({ adminKey }: { adminKey: string }) {
   const { theme, isDark } = useTheme();
   const styles = createStyles(theme);
-  const [activeView, setActiveView] = useState<'materials' | 'copywriting' | 'stats'>('materials');
+  const [activeView, setActiveView] = useState<'materials' | 'copywriting' | 'stats'>('stats');
   const [showWatermark, setShowWatermark] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statsData, setStatsData] = useState<any>(null);
+
+  // 加载推广统计
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const response = await fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/promotion/stats?key=${adminKey}`
+        );
+        const result = await response.json();
+        if (result.success) {
+          setStatsData(result.data);
+        }
+      } catch (error) {
+        console.error('Load promotion stats error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadStats();
+  }, [adminKey]);
 
   // 素材数据
   const materials = [
@@ -288,35 +310,30 @@ function PromotionTab() {
 
   // 文案模板
   const templates = [
-    { id: 'c1', title: '小红书 - 产品推荐', platform: 'xiaohongshu' },
-    { id: 'c2', title: '抖音 - 15秒视频', platform: 'douyin' },
-    { id: 'c3', title: '微博 - 话题营销', platform: 'weibo' },
+    { id: 'c1', title: '小红书 - 产品推荐', platform: 'xiaohongshu', content: '姐妹们！这个AI工具太好用了...' },
+    { id: 'c2', title: '抖音 - 15秒视频', platform: 'douyin', content: '【钩子】一个APP，集齐所有顶级AI模型！' },
+    { id: 'c3', title: '微博 - 话题营销', platform: 'weibo', content: '#AI创作工具# 发现一个神仙APP！' },
+    { id: 'c4', title: 'B站 - 视频脚本', platform: 'bilibili', content: '【开场】大家好，我是XXX...' },
   ];
 
   // 平台
   const platforms = [
-    { key: 'xiaohongshu', name: '小红书', icon: 'book' },
-    { key: 'douyin', name: '抖音', icon: 'play' },
-    { key: 'weibo', name: '微博', icon: 'share' },
+    { key: 'xiaohongshu', name: '小红书', icon: 'book', color: '#FF2442' },
+    { key: 'douyin', name: '抖音', icon: 'play', color: '#000000' },
+    { key: 'weibo', name: '微博', icon: 'share', color: '#E6162D' },
+    { key: 'bilibili', name: 'B站', icon: 'tv', color: '#00A1D6' },
   ];
 
-  // 统计数据
-  const stats = {
-    totalRevenue: 12580,
-    totalViews: 125680,
-    totalClicks: 28934,
-    totalConversions: 1256,
-    platformStats: [
-      { platform: '小红书', revenue: 4520 },
-      { platform: '抖音', revenue: 3890 },
-      { platform: '微博', revenue: 2120 },
-    ],
+  // 复制文案
+  const handleCopy = async (content: string) => {
+    await Clipboard.setStringAsync(content || '推荐G Open AI创作助手！#Gopen #AI工具');
+    Alert.alert('成功', '文案已复制');
   };
 
-  // 复制文案
-  const handleCopy = async (id: string) => {
-    await Clipboard.setStringAsync('推荐G Open AI创作助手！#Gopen #AI工具');
-    Alert.alert('成功', '文案已复制');
+  // 获取转化率
+  const getConversionRate = () => {
+    if (!statsData || statsData.totalClicks === 0) return '0%';
+    return ((statsData.totalConversions / statsData.totalClicks) * 100).toFixed(2) + '%';
   };
 
   return (
@@ -328,9 +345,9 @@ function PromotionTab() {
       {/* Tab 切换 */}
       <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
         {[
+          { key: 'stats', label: '统计' },
           { key: 'materials', label: '素材' },
           { key: 'copywriting', label: '文案' },
-          { key: 'stats', label: '统计' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -353,6 +370,201 @@ function PromotionTab() {
         ))}
       </View>
 
+      {/* 统计视图 */}
+      {activeView === 'stats' && (
+        <>
+          {isLoading ? (
+            <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+          ) : (
+            <>
+              {/* 总览卡片 */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md }}>
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#10B98115',
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.md,
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name="coins" size={20} color="#10B981" />
+                  <ThemedText variant="h3" color="#10B981" style={{ marginTop: 4 }}>
+                    ¥{((statsData?.totalEarnings || 0) / 100).toFixed(2)}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>总佣金</ThemedText>
+                </View>
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#3B82F615',
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.md,
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name="users" size={20} color="#3B82F6" />
+                  <ThemedText variant="h3" color="#3B82F6" style={{ marginTop: 4 }}>
+                    {statsData?.totalPromoters || 0}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>推广员</ThemedText>
+                </View>
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#F59E0B15',
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.md,
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name="hand-pointer" size={20} color="#F59E0B" />
+                  <ThemedText variant="h3" color="#F59E0B" style={{ marginTop: 4 }}>
+                    {statsData?.totalClicks || 0}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>总点击</ThemedText>
+                </View>
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#EF444415',
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.md,
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name="user-plus" size={20} color="#EF4444" />
+                  <ThemedText variant="h3" color="#EF4444" style={{ marginTop: 4 }}>
+                    {statsData?.totalConversions || 0}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>转化用户</ThemedText>
+                </View>
+              </View>
+
+              {/* 今日数据 */}
+              <View style={{
+                backgroundColor: theme.backgroundDefault,
+                borderRadius: BorderRadius.lg,
+                padding: Spacing.md,
+                marginBottom: Spacing.md,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}>
+                <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginBottom: Spacing.sm }}>
+                  今日数据
+                </ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <ThemedText variant="h4" color={theme.textPrimary}>{statsData?.todayClicks || 0}</ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>点击</ThemedText>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <ThemedText variant="h4" color={theme.textPrimary}>{statsData?.todayConversions || 0}</ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>转化</ThemedText>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <ThemedText variant="h4" color={theme.primary}>¥{((statsData?.todayEarnings || 0) / 100).toFixed(2)}</ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted}>佣金</ThemedText>
+                  </View>
+                </View>
+              </View>
+
+              {/* 转化率 */}
+              <View style={{
+                backgroundColor: theme.backgroundDefault,
+                borderRadius: BorderRadius.lg,
+                padding: Spacing.md,
+                marginBottom: Spacing.md,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText variant="small" color={theme.textSecondary}>转化率</ThemedText>
+                  <ThemedText variant="smallMedium" color="#10B981">{getConversionRate()}</ThemedText>
+                </View>
+                <View style={{
+                  height: 8,
+                  backgroundColor: theme.backgroundTertiary,
+                  borderRadius: 4,
+                  marginTop: Spacing.sm,
+                }}>
+                  <View style={{
+                    width: `${Math.min(parseFloat(getConversionRate()) * 5, 100)}%`,
+                    height: '100%',
+                    backgroundColor: '#10B981',
+                    borderRadius: 4,
+                  }} />
+                </View>
+              </View>
+
+              {/* 待处理提现 */}
+              {(statsData?.pendingWithdrawals || 0) > 0 && (
+                <View style={{
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: BorderRadius.lg,
+                  padding: Spacing.md,
+                  marginBottom: Spacing.md,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Spacing.sm,
+                }}>
+                  <FontAwesome6 name="triangle-exclamation" size={16} color="#F59E0B" />
+                  <ThemedText variant="small" color="#92400E">
+                    有 {statsData?.pendingWithdrawals} 笔提现申请待处理
+                  </ThemedText>
+                </View>
+              )}
+
+              {/* TOP推广员 */}
+              {statsData?.topPromoters && statsData.topPromoters.length > 0 && (
+                <View style={{ marginBottom: Spacing.md }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginBottom: Spacing.sm }}>
+                    TOP推广员
+                  </ThemedText>
+                  {statsData.topPromoters.slice(0, 3).map((promoter: any, index: number) => (
+                    <View
+                      key={promoter.id}
+                      style={{
+                        backgroundColor: theme.backgroundDefault,
+                        borderRadius: BorderRadius.md,
+                        padding: Spacing.sm,
+                        marginBottom: Spacing.xs,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.sm,
+                        borderWidth: 1,
+                        borderColor: theme.border,
+                      }}
+                    >
+                      <View style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}>
+                        <ThemedText variant="caption" color="#fff">{index + 1}</ThemedText>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText variant="caption" color={theme.textPrimary}>
+                          {promoter.promoter_code}
+                        </ThemedText>
+                        <ThemedText variant="tiny" color={theme.textMuted}>
+                          点击: {promoter.total_clicks} · 转化: {promoter.total_conversions}
+                        </ThemedText>
+                      </View>
+                      <ThemedText variant="smallMedium" color="#10B981">
+                        ¥{(promoter.total_earnings / 100).toFixed(2)}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* 素材视图 */}
       {activeView === 'materials' && (
         <>
           {/* 素材列表 */}
@@ -410,7 +622,7 @@ function PromotionTab() {
                   borderRadius: BorderRadius.md,
                   paddingVertical: Spacing.sm,
                 }}
-                onPress={() => handleCopy(platform.key)}
+                onPress={() => handleCopy('')}
               >
                 <FontAwesome6 name={platform.icon as any} size={12} color={theme.buttonPrimaryText} />
                 <ThemedText variant="caption" color={theme.buttonPrimaryText}>
@@ -422,6 +634,7 @@ function PromotionTab() {
         </>
       )}
 
+      {/* 文案视图 */}
       {activeView === 'copywriting' && (
         <>
           {templates.map((template) => {
@@ -437,100 +650,34 @@ function PromotionTab() {
                   borderWidth: 1,
                   borderColor: theme.border,
                 }}
-                onPress={() => handleCopy(template.id)}
+                onPress={() => handleCopy(template.content)}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                  <FontAwesome6 name={platform?.icon as any} size={16} color={theme.primary} />
-                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                    {template.title}
-                  </ThemedText>
+                  <View style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: BorderRadius.md,
+                    backgroundColor: (platform?.color || theme.primary) + '20',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    <FontAwesome6 name={platform?.icon as any} size={14} color={platform?.color || theme.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                      {template.title}
+                    </ThemedText>
+                    <ThemedText variant="caption" color={theme.textMuted} numberOfLines={1}>
+                      {template.content}
+                    </ThemedText>
+                  </View>
+                  <FontAwesome6 name="copy" size={14} color={theme.textMuted} />
                 </View>
               </TouchableOpacity>
             );
           })}
         </>
       )}
-
-      {activeView === 'stats' && (
-        <>
-          {/* 总览 */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md }}>
-            <View style={{
-              flex: 1,
-              minWidth: '45%',
-              backgroundColor: '#10B98115',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.md,
-              alignItems: 'center',
-            }}>
-              <ThemedText variant="h3" color="#10B981">¥{stats.totalRevenue}</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>总收入</ThemedText>
-            </View>
-            <View style={{
-              flex: 1,
-              minWidth: '45%',
-              backgroundColor: '#3B82F615',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.md,
-              alignItems: 'center',
-            }}>
-              <ThemedText variant="h3" color="#3B82F6">{(stats.totalViews / 1000).toFixed(0)}K</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>总曝光</ThemedText>
-            </View>
-            <View style={{
-              flex: 1,
-              minWidth: '45%',
-              backgroundColor: '#F59E0B15',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.md,
-              alignItems: 'center',
-            }}>
-              <ThemedText variant="h3" color="#F59E0B">{(stats.totalClicks / 1000).toFixed(0)}K</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>总点击</ThemedText>
-            </View>
-            <View style={{
-              flex: 1,
-              minWidth: '45%',
-              backgroundColor: '#EF444415',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.md,
-              alignItems: 'center',
-            }}>
-              <ThemedText variant="h3" color="#EF4444">{stats.totalConversions}</ThemedText>
-              <ThemedText variant="caption" color={theme.textMuted}>转化用户</ThemedText>
-            </View>
-          </View>
-
-          {/* 平台收益 */}
-          {stats.platformStats.map((stat, index) => (
-            <View
-              key={index}
-              style={{
-                backgroundColor: theme.backgroundDefault,
-                borderRadius: BorderRadius.lg,
-                padding: Spacing.md,
-                marginBottom: Spacing.sm,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
-            >
-              <ThemedText variant="small" color={theme.textPrimary}>{stat.platform}</ThemedText>
-              <ThemedText variant="smallMedium" color={theme.success}>¥{stat.revenue}</ThemedText>
-            </View>
-          ))}
-        </>
-      )}
-
-      {/* 提示 */}
-      <View style={styles.hintBox}>
-        <FontAwesome6 name="circle-info" size={16} color={theme.textMuted} />
-        <ThemedText variant="caption" color={theme.textMuted} style={{ marginLeft: Spacing.sm }}>
-          完整功能请在PC端体验
-        </ThemedText>
-      </View>
     </View>
   );
 }

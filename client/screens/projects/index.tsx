@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,8 +6,6 @@ import {
   ScrollView,
   Dimensions,
   Image,
-  Animated,
-  StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -191,22 +189,8 @@ function ProjectDetailModal({
   onStartCreate: (serviceType: string) => void;
 }) {
   const { theme } = useTheme();
-  // 使用 useMemo 创建动画值，确保只创建一次
-  const fadeAnim = useMemo(() => new Animated.Value(0), []);
-  
-  React.useEffect(() => {
-    if (visible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      fadeAnim.setValue(0);
-    }
-  }, [visible, fadeAnim]);
 
-  if (!project) return null;
+  if (!project || !visible) return null;
   
   const typeConfig = TYPE_CONFIG[project.type] || TYPE_CONFIG['古风场景'];
   const imageUrl = PROJECT_IMAGES[project.id] || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop';
@@ -223,16 +207,16 @@ function ProjectDetailModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
-      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+      <View style={styles.modalOverlay}>
         <TouchableOpacity 
           style={styles.modalBackdrop} 
           activeOpacity={1} 
           onPress={onClose}
         />
-        <Animated.View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
           {/* 封面图片 */}
           <Image 
             source={{ uri: imageUrl }}
@@ -306,8 +290,8 @@ function ProjectDetailModal({
               ))}
             </View>
           </View>
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -608,15 +592,20 @@ const styles = {
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end' as const,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalBackdrop: {
-    ...{ position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0 },
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalContent: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     maxHeight: '85%' as const,
+    minHeight: 400,
     overflow: 'hidden' as const,
   },
   modalImage: {

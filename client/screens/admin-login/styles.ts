@@ -9,7 +9,7 @@ export const createStyles = (theme: Theme) => {
     container: {
       flex: 1,
       paddingHorizontal: Spacing['2xl'],
-      paddingTop: Spacing['4xl'],
+      paddingTop: Spacing.md,
       paddingBottom: Spacing['2xl'],
       justifyContent: 'center',
     },

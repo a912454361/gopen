@@ -597,7 +597,7 @@ export default function PromoAutoScreen() {
 const styles = {
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing['2xl'],
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
     alignItems: 'center' as const,
   },

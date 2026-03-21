@@ -8,7 +8,7 @@ export const createStyles = (theme: Theme) => {
     },
     scrollContent: {
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing["2xl"],
+      paddingTop: Spacing.md,
       paddingBottom: Spacing["5xl"],
     },
     

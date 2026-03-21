@@ -9,7 +9,7 @@ export const createStyles = (theme: Theme) => {
     },
     header: {
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing['2xl'],
+      paddingTop: Spacing.md,
       paddingBottom: Spacing.lg,
       alignItems: 'center',
     },

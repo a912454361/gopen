@@ -223,7 +223,7 @@ const styles = {
   },
   header: {
     alignItems: 'center' as const,
-    paddingTop: Spacing['3xl'],
+    paddingTop: Spacing.md,
     paddingBottom: Spacing['2xl'],
     paddingHorizontal: Spacing.xl,
   },

@@ -11,7 +11,7 @@ export const createStyles = (theme: Theme) => {
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.xl,
+      paddingTop: Spacing.md,
       paddingBottom: Spacing['3xl'],
     },
 

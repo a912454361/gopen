@@ -1,5 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+import { getQRCodeSize, scaleSize, isSmallScreen } from '@/utils/responsive';
+
+// 屏幕宽度
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const qrSize = getQRCodeSize();
 
 export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
@@ -36,8 +41,8 @@ export const createStyles = (theme: Theme) => {
     },
 
     payMethodIcon: {
-      width: 48,
-      height: 48,
+      width: scaleSize(48),
+      height: scaleSize(48),
       borderRadius: BorderRadius.lg,
       justifyContent: 'center',
       alignItems: 'center',
@@ -48,9 +53,9 @@ export const createStyles = (theme: Theme) => {
       position: 'absolute',
       top: Spacing.sm,
       right: Spacing.sm,
-      width: 16,
-      height: 16,
-      borderRadius: 8,
+      width: scaleSize(16),
+      height: scaleSize(16),
+      borderRadius: scaleSize(8),
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -71,13 +76,13 @@ export const createStyles = (theme: Theme) => {
     },
 
     qrImage: {
-      width: 240,
-      height: 240,
+      width: qrSize,
+      height: qrSize,
     },
 
     qrPlaceholder: {
-      width: 240,
-      height: 240,
+      width: qrSize,
+      height: qrSize,
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: BorderRadius.lg,

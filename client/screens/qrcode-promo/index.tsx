@@ -14,6 +14,7 @@ import {
   Alert,
   Platform,
   Image,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -23,8 +24,12 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getQRCodeSize, scaleSize, isSmallScreen } from '@/utils/responsive';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+// 屏幕宽度
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 // 推广平台列表
 const PROMO_PLATFORMS = [
@@ -219,6 +224,9 @@ export default function QRCodePromoScreen() {
   };
 
   const currentQRCode = qrcodes?.[activePayType];
+  
+  // 响应式二维码尺寸
+  const qrSize = getQRCodeSize();
 
   const styles = useMemo(() => ({
     container: {
@@ -234,7 +242,7 @@ export default function QRCodePromoScreen() {
       height: 2,
       borderRadius: 1,
       marginTop: Spacing.lg,
-      width: 120,
+      width: scaleSize(120),
     },
     statsRow: {
       flexDirection: 'row' as const,
@@ -277,13 +285,13 @@ export default function QRCodePromoScreen() {
       alignItems: 'center' as const,
     },
     qrImage: {
-      width: 220,
-      height: 220,
+      width: qrSize,
+      height: qrSize,
       borderRadius: BorderRadius.lg,
     },
     qrPlaceholder: {
-      width: 220,
-      height: 220,
+      width: qrSize,
+      height: qrSize,
       borderRadius: BorderRadius.lg,
       justifyContent: 'center' as const,
       alignItems: 'center' as const,

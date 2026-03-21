@@ -18,6 +18,7 @@ import {
   Image,
   Platform,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -28,6 +29,7 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
 import { Spacing } from '@/constants/theme';
+import { getQRCodeSize, scaleSize, isSmallScreen } from '@/utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;

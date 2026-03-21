@@ -1,9 +1,10 @@
 /**
  * 收款码推广页面
  * 支持将会员付费二维码提交到各平台进行推广
+ * 注意：收款码为固定配置，仅管理员可更新
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -14,10 +15,11 @@ import {
   Alert,
   Platform,
   Image,
-  Dimensions,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -27,9 +29,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getQRCodeSize, scaleSize, isSmallScreen } from '@/utils/responsive';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-
-// 屏幕宽度
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 // 推广平台列表
 const PROMO_PLATFORMS = [
@@ -88,10 +87,6 @@ export default function QRCodePromoScreen() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [promoText, setPromoText] = useState('扫码开通G open会员，享受AI智能创作无限体验！');
   const [submitModalVisible, setSubmitModalVisible] = useState(false);
-  
-  // 刷新收款码
-  const [refreshModalVisible, setRefreshModalVisible] = useState(false);
-  const [newQrcodeUrl, setNewQrcodeUrl] = useState('');
 
   // 加载数据
   const fetchData = useCallback(async () => {
@@ -131,8 +126,6 @@ export default function QRCodePromoScreen() {
 
     setSubmitting(true);
     try {
-      const userId = await AsyncStorage.getItem('userId') || 'guest_user';
-      
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/qrcode/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -162,42 +155,6 @@ export default function QRCodePromoScreen() {
     }
   };
 
-  // 刷新收款码
-  const handleRefresh = async () => {
-    if (!newQrcodeUrl.trim()) {
-      Alert.alert('提示', '请输入新的收款码图片URL');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const response = await fetch(
-        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/qrcode/refresh?adminKey=gopen_admin_2024&payType=${activePayType}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ qrcode_url: newQrcodeUrl.trim() }),
-        }
-      );
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        Alert.alert('刷新成功', '收款码已更新');
-        setRefreshModalVisible(false);
-        setNewQrcodeUrl('');
-        fetchData();
-      } else {
-        Alert.alert('刷新失败', data.error || '请稍后重试');
-      }
-    } catch (error) {
-      console.error('Refresh error:', error);
-      Alert.alert('网络错误', '请检查网络连接');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // 同步收款码到推广系统
   const handleSync = async () => {
     try {
@@ -220,6 +177,51 @@ export default function QRCodePromoScreen() {
     } catch (error) {
       console.error('Sync error:', error);
       Alert.alert('网络错误', '请检查网络连接');
+    }
+  };
+
+  // 打开支付宝支付
+  const openAlipay = () => {
+    // 支付宝转账链接格式：alipays://platformapi/startapp?appId=20000067&url=xxx
+    // 或者直接打开支付宝扫码
+    const alipayUrl = 'alipays://platformapi/startapp?appId=20000067';
+    
+    Linking.canOpenURL(alipayUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(alipayUrl);
+      } else {
+        Alert.alert('提示', '请先安装支付宝APP');
+      }
+    }).catch(err => {
+      console.error('Open Alipay error:', err);
+      Alert.alert('提示', '无法打开支付宝，请确保已安装支付宝APP');
+    });
+  };
+
+  // 打开微信支付
+  const openWechat = () => {
+    // 微信支付链接格式：weixin://
+    const wechatUrl = 'weixin://';
+    
+    Linking.canOpenURL(wechatUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(wechatUrl);
+      } else {
+        Alert.alert('提示', '请先安装微信APP');
+      }
+    }).catch(err => {
+      console.error('Open WeChat error:', err);
+      Alert.alert('提示', '无法打开微信，请确保已安装微信APP');
+    });
+  };
+
+  // 复制收款账号
+  const copyAccount = async (account: string, label: string) => {
+    try {
+      await Clipboard.setStringAsync(account);
+      Alert.alert('复制成功', `${label}账号已复制: ${account}`);
+    } catch (error) {
+      console.error('Copy error:', error);
     }
   };
 
@@ -303,6 +305,18 @@ export default function QRCodePromoScreen() {
       borderRadius: BorderRadius.md,
       width: '100%' as const,
     },
+    accountInfo: {
+      marginTop: Spacing.lg,
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      width: '100%' as const,
+    },
+    accountRow: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      paddingVertical: Spacing.xs,
+    },
     actionRow: {
       flexDirection: 'row' as const,
       gap: Spacing.md,
@@ -370,7 +384,13 @@ export default function QRCodePromoScreen() {
       borderRadius: BorderRadius.md,
       borderWidth: 1,
     },
-  }), [theme]);
+    tipBox: {
+      marginTop: Spacing.lg,
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderLeftWidth: 3,
+    },
+  }), [theme, qrSize]);
 
   if (loading) {
     return (
@@ -468,38 +488,62 @@ export default function QRCodePromoScreen() {
             <ThemedText variant="label" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
               {currentQRCode?.name || '收款码'}
             </ThemedText>
-            {currentQRCode?.account && (
-              <ThemedText variant="caption" color={theme.textMuted}>
-                账号: {currentQRCode.account}
-              </ThemedText>
-            )}
             
             <View style={[styles.promoText, { backgroundColor: theme.backgroundTertiary }]}>
               <ThemedText variant="small" color={theme.textSecondary} style={{ textAlign: 'center' }}>
                 {currentQRCode?.promoText || '扫码开通会员'}
               </ThemedText>
             </View>
+
+            {/* 收款账户信息 */}
+            {currentQRCode?.account && (
+              <View style={[styles.accountInfo, { backgroundColor: theme.backgroundTertiary }]}>
+                <View style={styles.accountRow}>
+                  <ThemedText variant="caption" color={theme.textMuted}>收款账号</ThemedText>
+                  <TouchableOpacity onPress={() => copyAccount(currentQRCode.account!, '收款')}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                      <ThemedText variant="smallMedium" color={theme.textPrimary}>{currentQRCode.account}</ThemedText>
+                      <FontAwesome6 name="copy" size={12} color={theme.textMuted} />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.accountRow}>
+                  <ThemedText variant="caption" color={theme.textMuted}>收款人</ThemedText>
+                  <ThemedText variant="small" color={theme.textPrimary}>{currentQRCode.realName}</ThemedText>
+                </View>
+              </View>
+            )}
           </View>
 
-          {/* Action Buttons */}
+          {/* 快捷支付按钮 */}
           <View style={styles.actionRow}>
+            {activePayType === 'alipay' ? (
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: '#1677FF' }]}
+                onPress={openAlipay}
+              >
+                <FontAwesome6 name="alipay" size={18} color="#fff" />
+                <ThemedText variant="label" color="#fff">打开支付宝</ThemedText>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: '#07C160' }]}
+                onPress={openWechat}
+              >
+                <FontAwesome6 name="comment" size={18} color="#fff" />
+                <ThemedText variant="label" color="#fff">打开微信</ThemedText>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.primary }]}
               onPress={() => setSubmitModalVisible(true)}
             >
-              <FontAwesome6 name="paper-plane" size={16} color="#fff" />
+              <FontAwesome6 name="paper-plane" size={18} color="#fff" />
               <ThemedText variant="label" color="#fff">提交推广</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.accent }]}
-              onPress={() => setRefreshModalVisible(true)}
-            >
-              <FontAwesome6 name="rotate" size={16} color="#fff" />
-              <ThemedText variant="label" color="#fff">刷新收款码</ThemedText>
             </TouchableOpacity>
           </View>
 
-          {/* Sync Button */}
+          {/* 同步按钮 */}
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.backgroundDefault, borderColor: theme.border, borderWidth: 1, marginBottom: Spacing.lg }]}
             onPress={handleSync}
@@ -508,8 +552,15 @@ export default function QRCodePromoScreen() {
             <ThemedText variant="label" color={theme.primary}>同步到推广系统</ThemedText>
           </TouchableOpacity>
 
+          {/* 提示信息 */}
+          <View style={[styles.tipBox, { backgroundColor: theme.backgroundTertiary, borderLeftColor: theme.primary }]}>
+            <ThemedText variant="small" color={theme.textSecondary}>
+              提示：收款码为官方固定配置，如需更新请联系管理员。点击&quot;打开支付宝/微信&quot;可直接跳转到对应APP进行扫码支付。
+            </ThemedText>
+          </View>
+
           {/* Platform List */}
-          <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
+          <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginTop: Spacing.xl, marginBottom: Spacing.md }}>
             推广平台
           </ThemedText>
           
@@ -587,53 +638,6 @@ export default function QRCodePromoScreen() {
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <ThemedText variant="label" color="#fff">提交</ThemedText>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Refresh Modal */}
-        <Modal visible={refreshModalVisible} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
-              <ThemedText variant="h4" color={theme.textPrimary} style={styles.modalTitle}>
-                刷新收款码
-              </ThemedText>
-              
-              <ThemedText variant="small" color={theme.textSecondary} style={{ marginBottom: Spacing.md }}>
-                当前: {activePayType === 'alipay' ? '支付宝' : '微信'}收款码
-              </ThemedText>
-              
-              <ThemedText variant="caption" color={theme.textMuted} style={{ marginBottom: Spacing.xs }}>
-                新收款码图片URL
-              </ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.backgroundTertiary, color: theme.textPrimary }]}
-                value={newQrcodeUrl}
-                onChangeText={setNewQrcodeUrl}
-                placeholder="https://example.com/qrcode.png"
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize="none"
-              />
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, { borderColor: theme.border }]} 
-                  onPress={() => { setRefreshModalVisible(false); setNewQrcodeUrl(''); }}
-                >
-                  <ThemedText variant="label" color={theme.textSecondary}>取消</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, { backgroundColor: theme.accent }]} 
-                  onPress={handleRefresh}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <ThemedText variant="label" color="#fff">刷新</ThemedText>
                   )}
                 </TouchableOpacity>
               </View>

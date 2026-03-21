@@ -118,7 +118,7 @@ const PAYMENT_ACCOUNTS = {
   },
   wechat: {
     name: '微信收款',
-    account: '', // 微信号（可选）
+    account: 'GOpenOfficial', // 微信号
     qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/wechat-qrcode_c072ee41.png?sign=1805435684-13fd0778c0-0-d9cbf4d37cd37cba46a1bb9e0bc7981d07781fee239857e81b89d74bac7b76ae', // 微信商户收款码
     realName: 'G Open官方', // 收款人姓名
     desc: '请使用微信扫码支付',
@@ -964,6 +964,7 @@ router.get('/qrcode/promo', async (req: Request, res: Response) => {
       },
       wechat: {
         name: '微信收款码',
+        account: PAYMENT_ACCOUNTS.wechat.account,
         qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.wechat.qrcodeUrl, 'wechat'),
         realName: PAYMENT_ACCOUNTS.wechat.realName,
         promoText: '扫码开通G open会员，享受AI智能创作无限体验！',

@@ -89,6 +89,35 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       paddingVertical: Spacing.xs,
     },
+    shareCard: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+    },
+    shareHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    shareButtons: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    shareButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      gap: Spacing.xs,
+    },
+    linkBox: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.sm,
+    },
     actionRow: {
       flexDirection: 'row',
       gap: Spacing.md,

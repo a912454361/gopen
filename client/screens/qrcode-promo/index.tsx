@@ -16,10 +16,12 @@ import {
   Platform,
   Image,
   Linking,
+  Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -225,6 +227,34 @@ export default function QRCodePromoScreen() {
     }
   };
 
+  // 分享收款码
+  const handleShare = async () => {
+    if (!currentQRCode) return;
+    
+    try {
+      const shareMessage = `G Open 会员付费收款码\n\n${currentQRCode.promoText}\n\n收款账号：${currentQRCode.account || ''}\n收款人：${currentQRCode.realName}\n\n访问链接：${currentQRCode.promoUrl}`;
+      
+      await Share.share({
+        message: shareMessage,
+        title: 'G Open 会员收款码',
+      });
+    } catch (error) {
+      console.error('Share error:', error);
+    }
+  };
+
+  // 复制公开链接
+  const copyPublicLink = async () => {
+    if (!currentQRCode) return;
+    
+    try {
+      await Clipboard.setStringAsync(currentQRCode.promoUrl);
+      Alert.alert('复制成功', `公开链接已复制: ${currentQRCode.promoUrl}`);
+    } catch (error) {
+      console.error('Copy error:', error);
+    }
+  };
+
   const currentQRCode = qrcodes?.[activePayType];
   
   // 响应式二维码尺寸
@@ -316,6 +346,35 @@ export default function QRCodePromoScreen() {
       justifyContent: 'space-between' as const,
       alignItems: 'center' as const,
       paddingVertical: Spacing.xs,
+    },
+    shareCard: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.lg,
+    },
+    shareHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    shareButtons: {
+      flexDirection: 'row' as const,
+      gap: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    shareButton: {
+      flex: 1,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      gap: Spacing.xs,
+    },
+    linkBox: {
+      padding: Spacing.md,
+      borderRadius: BorderRadius.sm,
     },
     actionRow: {
       flexDirection: 'row' as const,
@@ -463,7 +522,7 @@ export default function QRCodePromoScreen() {
             ]}
             onPress={() => setActivePayType('wechat')}
           >
-            <FontAwesome6 name="comment" size={20} color={activePayType === 'wechat' ? '#07C160' : theme.textMuted} />
+            <FontAwesome6 name="weixin" size={20} color={activePayType === 'wechat' ? '#07C160' : theme.textMuted} brand />
             <ThemedText variant="label" color={activePayType === 'wechat' ? '#07C160' : theme.textPrimary}>
               微信支付
             </ThemedText>
@@ -515,6 +574,40 @@ export default function QRCodePromoScreen() {
             )}
           </View>
 
+          {/* 分享与公开链接 */}
+          <View style={[styles.shareCard, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={styles.shareHeader}>
+              <FontAwesome6 name="share-nodes" size={18} color={theme.primary} />
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>对公众开放</ThemedText>
+            </View>
+            
+            <View style={styles.shareButtons}>
+              <TouchableOpacity 
+                style={[styles.shareButton, { backgroundColor: theme.primary }]}
+                onPress={handleShare}
+              >
+                <FontAwesome6 name="share" size={16} color="#fff" />
+                <ThemedText variant="small" color="#fff">分享收款码</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.shareButton, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border, borderWidth: 1 }]}
+                onPress={copyPublicLink}
+              >
+                <FontAwesome6 name="link" size={16} color={theme.primary} />
+                <ThemedText variant="small" color={theme.primary}>复制公开链接</ThemedText>
+              </TouchableOpacity>
+            </View>
+            
+            {currentQRCode?.promoUrl && (
+              <View style={[styles.linkBox, { backgroundColor: theme.backgroundTertiary }]}>
+                <ThemedText variant="tiny" color={theme.textMuted} numberOfLines={1}>
+                  {currentQRCode.promoUrl}
+                </ThemedText>
+              </View>
+            )}
+          </View>
+
           {/* 快捷支付按钮 */}
           <View style={styles.actionRow}>
             {activePayType === 'alipay' ? (
@@ -530,7 +623,7 @@ export default function QRCodePromoScreen() {
                 style={[styles.actionButton, { backgroundColor: '#07C160' }]}
                 onPress={openWechat}
               >
-                <FontAwesome6 name="comment" size={18} color="#fff" />
+                <FontAwesome6 name="weixin" size={18} color="#fff" brand />
                 <ThemedText variant="label" color="#fff">打开微信</ThemedText>
               </TouchableOpacity>
             )}

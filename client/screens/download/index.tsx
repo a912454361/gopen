@@ -65,10 +65,10 @@ export default function DownloadScreen() {
 
   // 下载链接配置
   const downloadLinks = {
-    web: process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:5000',
+    web: Platform.OS === 'web' ? window.location.origin : 'http://localhost:5000',
     android: null, // 需要 EAS Build 后填写
     ios: null, // 需要 App Store 上架后填写
-    expo: 'exp://exp.host/@your-expo-username/gopen', // Expo Go 分享链接
+    expo: 'exp://localhost:8081', // Expo Go 开发链接
   };
 
   // 处理下载

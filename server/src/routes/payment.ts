@@ -131,7 +131,7 @@ const PAYMENT_ACCOUNTS = {
   unionpay: {
     name: '银联收款',
     account: '6216****7932', // 银联卡号后四位
-    qrcodeUrl: '', // 银联收款码图片
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/unionpay-qrcode_e1c61a35.png?sign=1805653583-2d0669e23c-0-39f08b1673e207d6461e0a60acc8404d0fc600012a5216924634610aa28e8283', // 银联收款码
     realName: '郭涛',
     desc: '请使用云闪付扫码支付',
     color: '#E60012',

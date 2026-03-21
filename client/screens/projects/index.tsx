@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,14 +6,17 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, BorderRadius } from '@/constants/theme';
+// @ts-ignore - react-native-sse lacks proper type definitions
+import RNSSE from 'react-native-sse';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH * 0.42;
@@ -115,6 +118,91 @@ interface Project {
   lastUpdated: string;
 }
 
+// 根据项目类型和服务类型生成创作提示词
+const generateProjectPrompt = (title: string, type: string, serviceType?: string): string => {
+  const serviceNames: Record<string, string> = {
+    'scene': '场景创作',
+    'character': '角色设计',
+    'story': '剧情编写',
+    'music': '配乐推荐',
+  };
+  
+  const serviceName = serviceType ? serviceNames[serviceType] : '创作';
+  
+  if (serviceType === 'scene') {
+    return `请为《${title}》项目创作一个${type.replace(/角色|剧情/g, '场景')}设计方案。
+
+要求：
+1. 场景氛围：根据${type}风格设定
+2. 色调：与风格匹配的配色方案
+3. 元素：场景中的主要构成元素
+4. 光影：光线和阴影的处理
+5. 风格：整体艺术风格把控
+
+请输出：
+- 场景描述（200字）
+- 主要元素清单
+- 色彩搭配方案
+- 氛围营造建议`;
+  }
+  
+  if (serviceType === 'character') {
+    return `请为《${title}》项目设计一个${type.replace(/场景|剧情/g, '角色')}。
+
+要求：
+1. 造型：符合${type}风格，细节精致
+2. 配色：与主题相符的配色
+3. 配饰：标志性装饰和道具
+4. 气质：角色的性格特点
+5. 背景：与角色相关的背景暗示
+
+请输出：
+- 角色设定（姓名、性格、背景）
+- 外貌描述
+- 服装设计方案
+- 标志性特征`;
+  }
+  
+  if (serviceType === 'story') {
+    return `请为《${title}》项目构思一段${type.replace(/场景|角色/g, '剧情')}。
+
+要求：
+1. 背景：符合${type}的世界观设定
+2. 人物：角色鲜活，性格鲜明
+3. 情节：曲折动人，情感真挚
+4. 语言：风格化的叙事语言
+5. 主题：核心情感表达
+
+请输出：
+- 故事梗概
+- 主要人物设定
+- 关键情节设计
+- 情感线索`;
+  }
+  
+  if (serviceType === 'music') {
+    return `请为《${title}》项目推荐合适的配乐。
+
+项目类型：${type}
+
+请推荐：
+1. 主旋律风格建议（乐器、节奏、情绪）
+2. 场景配乐清单（3-5首参考曲目风格）
+3. 音效设计建议（环境音、特效音）
+4. 整体音乐风格定位`;
+  }
+  
+  return `请为《${title}》项目进行${serviceName}设计。
+
+项目类型：${type}
+
+请输出：
+- 项目概述
+- 设计理念
+- 主要元素
+- 实施方案`;
+};
+
 // 项目卡片组件
 function ProjectCard({ 
   project, 
@@ -176,19 +264,70 @@ function ProjectCard({
   );
 }
 
+// Modal阶段类型
+type ModalStage = 'services' | 'confirm' | 'creating' | 'result';
+
 // 项目详情Modal组件
 function ProjectDetailModal({
   visible,
   project,
   onClose,
-  onStartCreate,
 }: {
   visible: boolean;
   project: Project | null;
   onClose: () => void;
-  onStartCreate: (serviceType: string) => void;
 }) {
   const { theme } = useTheme();
+  const [stage, setStage] = useState<ModalStage>('services');
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [createdContent, setCreatedContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sseRef = useRef<any>(null);
+  const typingAnim = useMemo(() => new Animated.Value(1), []);
+
+  // 重置状态
+  React.useEffect(() => {
+    if (!visible) {
+      setStage('services');
+      setSelectedService(null);
+      setPrompt('');
+      setCreatedContent('');
+      setIsLoading(false);
+    }
+  }, [visible]);
+
+  // 打字动画
+  React.useEffect(() => {
+    if (isLoading) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(typingAnim, {
+            toValue: 0.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(typingAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      typingAnim.setValue(1);
+    }
+  }, [isLoading, typingAnim]);
+
+  // 清理SSE连接
+  React.useEffect(() => {
+    return () => {
+      if (sseRef.current) {
+        sseRef.current.close();
+      }
+    };
+  }, []);
 
   if (!project || !visible) return null;
   
@@ -202,6 +341,229 @@ function ProjectDetailModal({
     { id: 'story', icon: 'book-open', title: '剧情编写', desc: '生成故事情节内容', color: '#06B6D4' },
     { id: 'music', icon: 'music', title: '配乐推荐', desc: '匹配氛围音乐', color: '#F59E0B' },
   ];
+
+  // 选择服务 - 进入确认阶段
+  const handleSelectService = (serviceId: string) => {
+    const generatedPrompt = generateProjectPrompt(project.title, project.type, serviceId);
+    setSelectedService(serviceId);
+    setPrompt(generatedPrompt);
+    setStage('confirm');
+  };
+
+  // 返回服务选择
+  const handleBackToServices = () => {
+    setStage('services');
+    setSelectedService(null);
+    setPrompt('');
+  };
+
+  // 确认创作 - 开始AI生成
+  const handleConfirmCreate = async () => {
+    setStage('creating');
+    setIsLoading(true);
+    setCreatedContent('');
+
+    try {
+      const url = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/chat/stream`;
+      const sse = new RNSSE(url, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: prompt }),
+        method: 'POST',
+      });
+
+      sseRef.current = sse;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sse.addEventListener('message', (event: any) => {
+        const data = event.data;
+        
+        if (data === '[DONE]') {
+          setIsLoading(false);
+          setStage('result');
+          sse.close();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.content) {
+            setCreatedContent(prev => prev + parsed.content);
+          }
+        } catch {
+          if (data && data !== '[DONE]') {
+            setCreatedContent(prev => prev + data);
+          }
+        }
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sse.addEventListener('error', (_event: any) => {
+        setCreatedContent('连接错误，请重试');
+        setIsLoading(false);
+      });
+
+    } catch (error) {
+      console.error('Create error:', error);
+      setCreatedContent('连接错误，请重试');
+      setIsLoading(false);
+    }
+  };
+
+  // 重新创作
+  const handleRecreate = () => {
+    setStage('confirm');
+    setCreatedContent('');
+  };
+
+  // 渲染不同阶段的内容
+  const renderContent = () => {
+    switch (stage) {
+      case 'services':
+        return (
+          <>
+            {/* 项目信息 */}
+            <View style={styles.modalInfo}>
+              <View style={[styles.modalTypeTag, { backgroundColor: typeConfig.gradient[0] }]}>
+                <FontAwesome6 name={typeConfig.icon as any} size={12} color="#fff" />
+                <ThemedText variant="labelSmall" color="#fff">{project.type}</ThemedText>
+              </View>
+              <ThemedText variant="h2" color={theme.textPrimary}>{project.title}</ThemedText>
+              
+              {/* 统计信息 */}
+              <View style={styles.modalStats}>
+                <View style={styles.modalStatItem}>
+                  <FontAwesome6 name="cube" size={14} color={theme.primary} />
+                  <ThemedText variant="label" color={theme.textSecondary}>{project.assets} 资源</ThemedText>
+                </View>
+                <View style={styles.modalStatItem}>
+                  <FontAwesome6 name="clock" size={14} color={theme.accent} />
+                  <ThemedText variant="label" color={theme.textSecondary}>{project.lastUpdated}</ThemedText>
+                </View>
+                <View style={styles.modalStatItem}>
+                  <FontAwesome6 name="chart-line" size={14} color={theme.success} />
+                  <ThemedText variant="label" color={theme.textSecondary}>{project.progress}%</ThemedText>
+                </View>
+              </View>
+            </View>
+            
+            {/* 创作服务 */}
+            <View style={styles.modalServices}>
+              <ThemedText variant="label" color={theme.textPrimary}>选择创作服务</ThemedText>
+              <View style={styles.servicesGrid}>
+                {createServices.map((service) => (
+                  <TouchableOpacity
+                    key={service.id}
+                    style={[styles.serviceCard, { backgroundColor: theme.backgroundTertiary }]}
+                    activeOpacity={0.7}
+                    onPress={() => handleSelectService(service.id)}
+                  >
+                    <View style={[styles.serviceIcon, { backgroundColor: `${service.color}20` }]}>
+                      <FontAwesome6 name={service.icon as any} size={20} color={service.color} />
+                    </View>
+                    <ThemedText variant="labelSmall" color={theme.textPrimary}>{service.title}</ThemedText>
+                    <ThemedText variant="tiny" color={theme.textMuted}>{service.desc}</ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        );
+
+      case 'confirm':
+        return (
+          <>
+            {/* 项目信息 */}
+            <View style={styles.modalInfo}>
+              <View style={[styles.modalTypeTag, { backgroundColor: typeConfig.gradient[0] }]}>
+                <FontAwesome6 name={typeConfig.icon as any} size={12} color="#fff" />
+                <ThemedText variant="labelSmall" color="#fff">{project.type}</ThemedText>
+              </View>
+              <ThemedText variant="h2" color={theme.textPrimary}>{project.title}</ThemedText>
+            </View>
+            
+            {/* 提示词预览 */}
+            <View style={styles.promptPreview}>
+              <View style={styles.promptHeader}>
+                <FontAwesome6 name="wand-magic-sparkles" size={16} color={theme.primary} />
+                <ThemedText variant="label" color={theme.textPrimary}>创作提示</ThemedText>
+              </View>
+              <ScrollView style={styles.promptScroll} nestedScrollEnabled>
+                <ThemedText variant="body" color={theme.textSecondary}>{prompt}</ThemedText>
+              </ScrollView>
+            </View>
+            
+            {/* 操作按钮 */}
+            <View style={styles.confirmActions}>
+              <TouchableOpacity 
+                style={[styles.confirmButton, { borderColor: theme.border }]}
+                onPress={handleBackToServices}
+              >
+                <ThemedText variant="label" color={theme.textSecondary}>返回</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmButton, styles.confirmPrimary, { backgroundColor: theme.primary }]}
+                onPress={handleConfirmCreate}
+              >
+                <FontAwesome6 name="paper-plane" size={14} color="#fff" style={{ marginRight: 8 }} />
+                <ThemedText variant="label" color="#fff">开始创作</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </>
+        );
+
+      case 'creating':
+      case 'result':
+        return (
+          <>
+            {/* 项目标题 */}
+            <View style={styles.modalInfo}>
+              <ThemedText variant="h3" color={theme.textPrimary}>{project.title}</ThemedText>
+              <ThemedText variant="label" color={theme.textMuted}>
+                {createServices.find(s => s.id === selectedService)?.title}
+              </ThemedText>
+            </View>
+            
+            {/* 创作结果 */}
+            <ScrollView style={styles.resultScroll} nestedScrollEnabled>
+              {createdContent ? (
+                <View style={[styles.resultContent, { backgroundColor: theme.backgroundTertiary }]}>
+                  <ThemedText variant="body" color={theme.textPrimary}>{createdContent}</ThemedText>
+                </View>
+              ) : isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <Animated.View style={{ opacity: typingAnim }}>
+                    <View style={[styles.loadingDots, { backgroundColor: theme.primary }]}>
+                      <ThemedText variant="body" color={theme.textSecondary}>AI 正在创作中</ThemedText>
+                    </View>
+                  </Animated.View>
+                </View>
+              ) : null}
+              {isLoading && createdContent && (
+                <ThemedText variant="body" color={theme.textMuted}>▌</ThemedText>
+              )}
+            </ScrollView>
+            
+            {/* 操作按钮 */}
+            <View style={styles.confirmActions}>
+              <TouchableOpacity 
+                style={[styles.confirmButton, { borderColor: theme.border }]}
+                onPress={handleRecreate}
+                disabled={isLoading}
+              >
+                <FontAwesome6 name="rotate" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
+                <ThemedText variant="label" color={theme.textSecondary}>重新创作</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmButton, styles.confirmPrimary, { backgroundColor: theme.primary }]}
+                onPress={onClose}
+              >
+                <ThemedText variant="label" color="#fff">完成</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </>
+        );
+    }
+  };
 
   return (
     <Modal
@@ -217,79 +579,27 @@ function ProjectDetailModal({
           onPress={onClose}
         />
         <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
-          {/* 封面图片 */}
-          <Image 
-            source={{ uri: imageUrl }}
-            style={styles.modalImage}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={['transparent', theme.backgroundDefault]}
-            style={styles.modalImageGradient}
-          />
+          {/* 封面图片 - 仅服务选择阶段显示 */}
+          {stage === 'services' && (
+            <>
+              <Image 
+                source={{ uri: imageUrl }}
+                style={styles.modalImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['transparent', theme.backgroundDefault]}
+                style={styles.modalImageGradient}
+              />
+            </>
+          )}
           
           {/* 关闭按钮 */}
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <FontAwesome6 name="xmark" size={20} color="#fff" />
+            <FontAwesome6 name="xmark" size={20} color={stage === 'services' ? '#fff' : theme.textPrimary} />
           </TouchableOpacity>
           
-          {/* 项目信息 */}
-          <View style={styles.modalInfo}>
-            <View style={[styles.modalTypeTag, { backgroundColor: typeConfig.gradient[0] }]}>
-              <FontAwesome6 name={typeConfig.icon as any} size={12} color="#fff" />
-              <ThemedText variant="labelSmall" color="#fff">{project.type}</ThemedText>
-            </View>
-            <ThemedText variant="h2" color={theme.textPrimary}>{project.title}</ThemedText>
-            
-            {/* 统计信息 */}
-            <View style={styles.modalStats}>
-              <View style={styles.modalStatItem}>
-                <FontAwesome6 name="cube" size={14} color={theme.primary} />
-                <ThemedText variant="label" color={theme.textSecondary}>{project.assets} 资源</ThemedText>
-              </View>
-              <View style={styles.modalStatItem}>
-                <FontAwesome6 name="clock" size={14} color={theme.accent} />
-                <ThemedText variant="label" color={theme.textSecondary}>{project.lastUpdated}</ThemedText>
-              </View>
-              <View style={styles.modalStatItem}>
-                <FontAwesome6 name="chart-line" size={14} color={theme.success} />
-                <ThemedText variant="label" color={theme.textSecondary}>{project.progress}% 完成</ThemedText>
-              </View>
-            </View>
-            
-            {/* 进度条 */}
-            <View style={styles.modalProgressWrap}>
-              <View style={[styles.modalProgressBar, { backgroundColor: theme.backgroundTertiary }]}>
-                <LinearGradient
-                  colors={typeConfig.gradient as [string, string]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.modalProgressFill, { width: `${project.progress}%` }]}
-                />
-              </View>
-            </View>
-          </View>
-          
-          {/* 创作服务 */}
-          <View style={styles.modalServices}>
-            <ThemedText variant="label" color={theme.textPrimary}>选择创作服务</ThemedText>
-            <View style={styles.servicesGrid}>
-              {createServices.map((service) => (
-                <TouchableOpacity
-                  key={service.id}
-                  style={[styles.serviceCard, { backgroundColor: theme.backgroundTertiary }]}
-                  activeOpacity={0.7}
-                  onPress={() => onStartCreate(service.id)}
-                >
-                  <View style={[styles.serviceIcon, { backgroundColor: `${service.color}20` }]}>
-                    <FontAwesome6 name={service.icon as any} size={20} color={service.color} />
-                  </View>
-                  <ThemedText variant="labelSmall" color={theme.textPrimary}>{service.title}</ThemedText>
-                  <ThemedText variant="tiny" color={theme.textMuted}>{service.desc}</ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          {renderContent()}
         </View>
       </View>
     </Modal>
@@ -298,7 +608,6 @@ function ProjectDetailModal({
 
 export default function ProjectsScreen() {
   const { theme } = useTheme();
-  const router = useSafeRouter();
   
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'pending'>('all');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -334,20 +643,6 @@ export default function ProjectsScreen() {
   const handleProjectPress = (project: Project) => {
     setSelectedProject(project);
     setModalVisible(true);
-  };
-
-  const handleStartCreate = (serviceType: string) => {
-    if (selectedProject) {
-      setModalVisible(false);
-      // 跳转到聊天页面，传递项目信息和服务类型
-      router.push('/', { 
-        projectId: selectedProject.id, 
-        projectTitle: selectedProject.title,
-        projectType: selectedProject.type,
-        serviceType,
-        autoCreate: 'true'
-      });
-    }
   };
 
   const tabs = [
@@ -462,7 +757,6 @@ export default function ProjectsScreen() {
         visible={modalVisible}
         project={selectedProject}
         onClose={() => setModalVisible(false)}
-        onStartCreate={handleStartCreate}
       />
     </Screen>
   );
@@ -689,5 +983,60 @@ const styles = {
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
     marginBottom: Spacing.sm,
+  },
+  // 新阶段样式
+  promptPreview: {
+    margin: Spacing.lg,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    maxHeight: 200,
+  },
+  promptHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  promptScroll: {
+    maxHeight: 150,
+  },
+  confirmActions: {
+    flexDirection: 'row' as const,
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  confirmButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  confirmPrimary: {
+    borderWidth: 0,
+  },
+  resultScroll: {
+    flex: 1,
+    padding: Spacing.lg,
+  },
+  resultContent: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    minHeight: 200,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingVertical: Spacing['3xl'],
+  },
+  loadingDots: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
   },
 };

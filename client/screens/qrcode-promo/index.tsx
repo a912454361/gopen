@@ -184,10 +184,26 @@ export default function QRCodePromoScreen() {
     }
   };
 
-  // 打开支付宝支付
-  const openAlipay = () => {
-    // 支付宝转账链接格式：alipays://platformapi/startapp?appId=20000067&url=xxx
-    // 或者直接打开支付宝扫码
+  // 打开支付宝扫一扫
+  const openAlipayScan = () => {
+    // 支付宝扫一扫：alipays://platformapi/startapp?appId=10000007
+    const alipayUrl = 'alipays://platformapi/startapp?appId=10000007';
+    
+    Linking.canOpenURL(alipayUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(alipayUrl);
+      } else {
+        Alert.alert('提示', '请先安装支付宝APP');
+      }
+    }).catch(err => {
+      console.error('Open Alipay error:', err);
+      Alert.alert('提示', '无法打开支付宝，请确保已安装支付宝APP');
+    });
+  };
+
+  // 打开支付宝转账
+  const openAlipayTransfer = () => {
+    // 支付宝转账：alipays://platformapi/startapp?appId=20000067
     const alipayUrl = 'alipays://platformapi/startapp?appId=20000067';
     
     Linking.canOpenURL(alipayUrl).then(supported => {
@@ -202,9 +218,41 @@ export default function QRCodePromoScreen() {
     });
   };
 
-  // 打开微信支付
-  const openWechat = () => {
-    // 微信支付链接格式：weixin://
+  // 打开支付宝APP首页
+  const openAlipayHome = () => {
+    const alipayUrl = 'alipays://';
+    
+    Linking.canOpenURL(alipayUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(alipayUrl);
+      } else {
+        Alert.alert('提示', '请先安装支付宝APP');
+      }
+    }).catch(err => {
+      console.error('Open Alipay error:', err);
+      Alert.alert('提示', '无法打开支付宝，请确保已安装支付宝APP');
+    });
+  };
+
+  // 打开微信扫一扫
+  const openWechatScan = () => {
+    // 微信扫一扫：weixin://scanqrcode
+    const wechatUrl = 'weixin://scanqrcode';
+    
+    Linking.canOpenURL(wechatUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(wechatUrl);
+      } else {
+        Alert.alert('提示', '请先安装微信APP');
+      }
+    }).catch(err => {
+      console.error('Open WeChat error:', err);
+      Alert.alert('提示', '无法打开微信，请确保已安装微信APP');
+    });
+  };
+
+  // 打开微信APP首页
+  const openWechatHome = () => {
     const wechatUrl = 'weixin://';
     
     Linking.canOpenURL(wechatUrl).then(supported => {
@@ -217,6 +265,45 @@ export default function QRCodePromoScreen() {
       console.error('Open WeChat error:', err);
       Alert.alert('提示', '无法打开微信，请确保已安装微信APP');
     });
+  };
+
+  // 显示支付宝操作选项
+  const showAlipayOptions = () => {
+    if (Platform.OS === 'web') {
+      // Web端直接打开转账
+      openAlipayTransfer();
+      return;
+    }
+    
+    Alert.alert(
+      '选择操作',
+      '请选择要执行的操作',
+      [
+        { text: '扫一扫', onPress: openAlipayScan },
+        { text: '转账', onPress: openAlipayTransfer },
+        { text: '打开支付宝', onPress: openAlipayHome },
+        { text: '取消', style: 'cancel' },
+      ]
+    );
+  };
+
+  // 显示微信操作选项
+  const showWechatOptions = () => {
+    if (Platform.OS === 'web') {
+      // Web端直接打开微信
+      openWechatHome();
+      return;
+    }
+    
+    Alert.alert(
+      '选择操作',
+      '请选择要执行的操作',
+      [
+        { text: '扫一扫', onPress: openWechatScan },
+        { text: '打开微信', onPress: openWechatHome },
+        { text: '取消', style: 'cancel' },
+      ]
+    );
   };
 
   // 复制收款账号
@@ -615,18 +702,18 @@ export default function QRCodePromoScreen() {
             {activePayType === 'alipay' ? (
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: '#1677FF' }]}
-                onPress={openAlipay}
+                onPress={showAlipayOptions}
               >
                 <FontAwesome6 name="alipay" size={18} color="#fff" />
-                <ThemedText variant="label" color="#fff">打开支付宝</ThemedText>
+                <ThemedText variant="label" color="#fff">支付宝支付</ThemedText>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: '#07C160' }]}
-                onPress={openWechat}
+                onPress={showWechatOptions}
               >
                 <FontAwesome6 name="weixin" size={18} color="#fff" brand />
-                <ThemedText variant="label" color="#fff">打开微信</ThemedText>
+                <ThemedText variant="label" color="#fff">微信支付</ThemedText>
               </TouchableOpacity>
             )}
             <TouchableOpacity

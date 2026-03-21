@@ -751,3 +751,153 @@ export type InsertInviteCode = typeof inviteCodes.$inferInsert;
 
 export type InviteRecord = typeof inviteRecords.$inferSelect;
 export type InsertInviteRecord = typeof inviteRecords.$inferInsert;
+
+// ==================== 自动推广系统表 ====================
+
+// 推广链接表
+export const promoLinks = pgTable(
+  "promo_links",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: varchar("name", { length: 128 }).notNull(),
+    code: varchar("code", { length: 20 }).notNull().unique(),
+    platform: varchar("platform", { length: 50 }).notNull(),
+    targetUrl: varchar("target_url", { length: 512 }).notNull(),
+    promoUrl: varchar("promo_url", { length: 1024 }).notNull(),
+    utmSource: varchar("utm_source", { length: 64 }),
+    utmMedium: varchar("utm_medium", { length: 64 }),
+    utmCampaign: varchar("utm_campaign", { length: 64 }),
+    utmContent: varchar("utm_content", { length: 128 }),
+    utmTerm: varchar("utm_term", { length: 128 }),
+    keywords: text("keywords"),
+    description: text("description"),
+    status: varchar("status", { length: 20 }).default("active"),
+    clicks: integer("clicks").default(0),
+    conversions: integer("conversions").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("promo_links_code_idx").on(table.code),
+    index("promo_links_platform_idx").on(table.platform),
+    index("promo_links_status_idx").on(table.status),
+  ]
+);
+
+// 推广任务表
+export const promoTasks = pgTable(
+  "promo_tasks",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: varchar("name", { length: 128 }).notNull(),
+    type: varchar("type", { length: 50 }).notNull(), // auto_post, seo_submit, social_share, forum_post
+    platforms: text("platforms"), // JSON数组
+    contentTemplate: text("content_template"),
+    linkIds: text("link_ids"), // JSON数组
+    scheduleType: varchar("schedule_type", { length: 20 }).default("once"), // once, daily, weekly, custom
+    scheduleConfig: text("schedule_config"), // JSON配置
+    riskControl: text("risk_control"), // 风控配置JSON
+    status: varchar("status", { length: 20 }).default("pending"),
+    runCount: integer("run_count").default(0),
+    successCount: integer("success_count").default(0),
+    failCount: integer("fail_count").default(0),
+    lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+    nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("promo_tasks_type_idx").on(table.type),
+    index("promo_tasks_status_idx").on(table.status),
+  ]
+);
+
+// 推广执行记录表
+export const promoExecutions = pgTable(
+  "promo_executions",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    taskId: varchar("task_id", { length: 36 }).notNull(),
+    status: varchar("status", { length: 20 }).default("pending"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    successCount: integer("success_count").default(0),
+    failCount: integer("fail_count").default(0),
+    logs: text("logs"), // JSON日志
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("promo_executions_task_id_idx").on(table.taskId),
+    index("promo_executions_status_idx").on(table.status),
+  ]
+);
+
+// 推广访问记录表
+export const promoVisits = pgTable(
+  "promo_visits",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    linkId: varchar("link_id", { length: 36 }).notNull(),
+    code: varchar("code", { length: 20 }).notNull(),
+    ip: varchar("ip", { length: 64 }),
+    userAgent: text("user_agent"),
+    referer: text("referer"),
+    device: varchar("device", { length: 50 }),
+    browser: varchar("browser", { length: 50 }),
+    os: varchar("os", { length: 50 }),
+    country: varchar("country", { length: 64 }),
+    city: varchar("city", { length: 64 }),
+    converted: boolean("converted").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("promo_visits_link_id_idx").on(table.linkId),
+    index("promo_visits_code_idx").on(table.code),
+    index("promo_visits_created_at_idx").on(table.createdAt),
+  ]
+);
+
+// SEO提交记录表
+export const seoSubmissions = pgTable(
+  "seo_submissions",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    url: varchar("url", { length: 1024 }).notNull(),
+    status: varchar("status", { length: 20 }).default("pending"),
+    baiduStatus: varchar("baidu_status", { length: 20 }),
+    googleStatus: varchar("google_status", { length: 20 }),
+    bingStatus: varchar("bing_status", { length: 20 }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    indexedAt: timestamp("indexed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("seo_submissions_url_idx").on(table.url),
+  ]
+);
+
+// 推广系统类型导出
+export type PromoLink = typeof promoLinks.$inferSelect;
+export type InsertPromoLink = typeof promoLinks.$inferInsert;
+
+export type PromoTask = typeof promoTasks.$inferSelect;
+export type InsertPromoTask = typeof promoTasks.$inferInsert;
+
+export type PromoExecution = typeof promoExecutions.$inferSelect;
+export type InsertPromoExecution = typeof promoExecutions.$inferInsert;
+
+export type PromoVisit = typeof promoVisits.$inferSelect;
+export type InsertPromoVisit = typeof promoVisits.$inferInsert;
+
+export type SeoSubmission = typeof seoSubmissions.$inferSelect;
+export type InsertSeoSubmission = typeof seoSubmissions.$inferInsert;

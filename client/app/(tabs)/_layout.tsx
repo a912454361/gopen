@@ -68,6 +68,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="promo-auto"
+        options={{
+          title: '推广',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="rocket" size={20} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

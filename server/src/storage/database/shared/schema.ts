@@ -704,3 +704,50 @@ export type InsertGpuTask = typeof gpuTasks.$inferInsert;
 
 export type OllamaService = typeof ollamaServices.$inferSelect;
 export type InsertOllamaService = typeof ollamaServices.$inferInsert;
+
+// ==================== 邀请系统表 ====================
+
+// 邀请码表
+export const inviteCodes = pgTable(
+  "invite_codes",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    code: varchar("code", { length: 20 }).notNull().unique(),
+    usedCount: integer("used_count").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("invite_codes_user_id_idx").on(table.userId),
+    index("invite_codes_code_idx").on(table.code),
+  ]
+);
+
+// 邀请记录表
+export const inviteRecords = pgTable(
+  "invite_records",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    inviterId: varchar("inviter_id", { length: 36 }).notNull(), // 邀请人
+    inviteeId: varchar("invitee_id", { length: 36 }).notNull(), // 被邀请人
+    code: varchar("code", { length: 20 }).notNull(),
+    rewardGiven: boolean("reward_given").default(false), // 是否已发放奖励
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("invite_records_inviter_id_idx").on(table.inviterId),
+    index("invite_records_invitee_id_idx").on(table.inviteeId),
+  ]
+);
+
+// 邀请类型导出
+export type InviteCode = typeof inviteCodes.$inferSelect;
+export type InsertInviteCode = typeof inviteCodes.$inferInsert;
+
+export type InviteRecord = typeof inviteRecords.$inferSelect;
+export type InsertInviteRecord = typeof inviteRecords.$inferInsert;

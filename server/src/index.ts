@@ -24,6 +24,7 @@ import templatesRouter from "./routes/templates.js";
 import communityRouter from "./routes/community.js";
 import statsRouter from "./routes/stats.js";
 import imageRouter from "./routes/image.js";
+import inviteRouter from "./routes/invite.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -65,6 +66,7 @@ app.use('/api/v1/templates', templatesRouter);
 app.use('/api/v1/community', communityRouter);
 app.use('/api/v1/stats', statsRouter);
 app.use('/api/v1/image', imageRouter);
+app.use('/api/v1/invite', inviteRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

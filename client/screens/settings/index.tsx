@@ -91,6 +91,22 @@ export default function SettingsScreen() {
     },
   ];
 
+  // 分享推荐菜单
+  const shareMenuItems: MenuItem[] = [
+    {
+      icon: 'gift',
+      title: '邀请好友',
+      subtitle: '邀请好友，双方各得奖励',
+      onPress: () => router.push('/invite'),
+    },
+    {
+      icon: 'download',
+      title: '分享应用',
+      subtitle: '分享给朋友下载',
+      onPress: () => router.push('/download'),
+    },
+  ];
+
   const aiMenuItems: MenuItem[] = [
     {
       icon: 'microchip',
@@ -314,6 +330,18 @@ export default function SettingsScreen() {
           <View style={styles.menuList}>
             {accountMenuItems.map((item, index) =>
               renderMenuItem(item, index, accountMenuItems.length)
+            )}
+          </View>
+        </View>
+
+        {/* Share & Invite */}
+        <View style={styles.section}>
+          <ThemedText variant="label" color={theme.textMuted}>
+            分享推荐
+          </ThemedText>
+          <View style={styles.menuList}>
+            {shareMenuItems.map((item, index) =>
+              renderMenuItem(item, index, shareMenuItems.length)
             )}
           </View>
         </View>

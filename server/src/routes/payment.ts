@@ -113,26 +113,26 @@ const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
     account: '18321337942', // 支付宝账号（手机号）
-    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/alipay-qrcode_fea69237.png?sign=1805436367-d91c235771-0-f4f506bd6dc6a7dd8461776b01138ce542579dcc6cc82f22fb7c7eb04089e51c', // 支付宝商户收款码图片
-    realName: 'G Open官方', // 收款人姓名
+    qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=HTTPS://QR.ALIPAY.COM/18321337942', // 支付宝收款码
+    realName: '郭涛', // 收款人姓名
     desc: '请使用支付宝扫码支付',
     color: '#1677FF',
     icon: 'alipay',
   },
   wechat: {
     name: '微信收款',
-    account: 'GOpenOfficial', // 微信号
-    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/wechat-qrcode_c072ee41.png?sign=1805435684-13fd0778c0-0-d9cbf4d37cd37cba46a1bb9e0bc7981d07781fee239857e81b89d74bac7b76ae', // 微信商户收款码
-    realName: 'G Open官方', // 收款人姓名
+    account: 'a912454361', // 微信号
+    qrcodeUrl: '', // 微信收款码（需上传）
+    realName: '郭涛', // 收款人姓名
     desc: '请使用微信扫码支付',
     color: '#07C160',
     icon: 'weixin',
   },
   unionpay: {
     name: '银联收款',
-    account: '6214****8888', // 银联卡号后四位
+    account: '6216****7932', // 银联卡号后四位
     qrcodeUrl: '', // 银联收款码图片
-    realName: 'G Open官方',
+    realName: '郭涛',
     desc: '请使用云闪付扫码支付',
     color: '#E60012',
     icon: 'credit-card',
@@ -141,18 +141,18 @@ const PAYMENT_ACCOUNTS = {
     name: '京东支付',
     account: '', // 京东账号
     qrcodeUrl: '', // 京东收款码图片
-    realName: 'G Open官方',
+    realName: '郭涛',
     desc: '请使用京东APP扫码支付',
     color: '#E1251B',
     icon: 'wallet',
   },
   bank: {
     name: '银行转账',
-    account: '6214********8888', // 银行卡号
-    bankName: '中国工商银行',
-    bankBranch: '上海市浦东新区支行',
+    account: '6216600800003247932', // 银行卡号
+    bankName: '中国银行',
+    bankBranch: '上海市黄渡支行',
     qrcodeUrl: '',
-    realName: 'G Open官方',
+    realName: '郭涛',
     desc: '请使用网银或柜台转账',
     color: '#C41230',
     icon: 'building-columns',
@@ -195,6 +195,29 @@ router.get('/accounts', async (req: Request, res: Response) => {
         qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.wechat.qrcodeUrl, 'wechat'),
         realName: PAYMENT_ACCOUNTS.wechat.realName,
         desc: PAYMENT_ACCOUNTS.wechat.desc,
+      },
+      unionpay: {
+        name: PAYMENT_ACCOUNTS.unionpay.name,
+        account: PAYMENT_ACCOUNTS.unionpay.account,
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.unionpay.qrcodeUrl, 'unionpay'),
+        realName: PAYMENT_ACCOUNTS.unionpay.realName,
+        desc: PAYMENT_ACCOUNTS.unionpay.desc,
+      },
+      jdpay: {
+        name: PAYMENT_ACCOUNTS.jdpay.name,
+        account: PAYMENT_ACCOUNTS.jdpay.account,
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.jdpay.qrcodeUrl, 'jdpay'),
+        realName: PAYMENT_ACCOUNTS.jdpay.realName,
+        desc: PAYMENT_ACCOUNTS.jdpay.desc,
+      },
+      bank: {
+        name: PAYMENT_ACCOUNTS.bank.name,
+        account: PAYMENT_ACCOUNTS.bank.account,
+        bankName: PAYMENT_ACCOUNTS.bank.bankName,
+        bankBranch: PAYMENT_ACCOUNTS.bank.bankBranch,
+        qrcodeUrl: getQRCodeImageUrl(PAYMENT_ACCOUNTS.bank.qrcodeUrl, 'bank'),
+        realName: PAYMENT_ACCOUNTS.bank.realName,
+        desc: PAYMENT_ACCOUNTS.bank.desc,
       },
     };
     
@@ -771,6 +794,8 @@ router.post('/admin/accounts', async (req: Request, res: Response) => {
       qrcodeUrl: body.qrcodeUrl,
       realName: body.realName || PAYMENT_ACCOUNTS[body.payType].realName,
       desc: body.desc || `请使用${body.payType === 'alipay' ? '支付宝' : '微信'}扫码支付`,
+      color: PAYMENT_ACCOUNTS[body.payType].color,
+      icon: PAYMENT_ACCOUNTS[body.payType].icon,
     };
     
     res.json({
@@ -825,6 +850,8 @@ router.post('/admin/qrcode/refresh', async (req: Request, res: Response) => {
         qrcodeUrl: config.qrcode_url || PAYMENT_ACCOUNTS[payType].qrcodeUrl,
         realName: config.real_name || PAYMENT_ACCOUNTS[payType].realName,
         desc: config.desc || PAYMENT_ACCOUNTS[payType].desc,
+        color: PAYMENT_ACCOUNTS[payType].color,
+        icon: PAYMENT_ACCOUNTS[payType].icon,
       };
     }
     

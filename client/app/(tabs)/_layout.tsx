@@ -77,6 +77,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="qrcode-promo"
+        options={{
+          title: '收款码',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="qrcode" size={20} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

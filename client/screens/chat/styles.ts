@@ -16,6 +16,22 @@ export const createStyles = (theme: Theme) => {
     header: {
       marginBottom: Spacing.xl,
     },
+    headerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: Spacing.xs,
+    },
+    newChatButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+      backgroundColor: 'rgba(0,240,255,0.05)',
+    },
     headerTitle: {
       color: theme.textPrimary,
       fontSize: 24,

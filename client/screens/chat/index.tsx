@@ -363,9 +363,39 @@ export default function ChatScreen() {
     setGuidePrompt('');
   };
 
+  // 新对话 - 清空历史记录
+  const handleNewChat = () => {
+    if (messages.length === 0) return;
+    
+    Alert.alert(
+      '开始新对话',
+      '确定要清空当前对话记录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        { 
+          text: '确定', 
+          style: 'destructive',
+          onPress: () => {
+            // 关闭可能存在的SSE连接
+            if (sseRef.current) {
+              sseRef.current.close();
+            }
+            // 清空消息和状态
+            setMessages([]);
+            setInputText('');
+            setIsLoading(false);
+            setCurrentProject(null);
+            setGuidePrompt('');
+            setShowGuide(false);
+          }
+        },
+      ]
+    );
+  };
+
   // 带文本参数的发送函数
   const handleSendWithText = async (text: string) => {
-    if (!inputText.trim() || isLoading) return;
+    if (!text.trim() || isLoading) return;
 
     // Check if user can chat (member or has free chats left)
     const allowed = await incrementChatCount();
@@ -565,9 +595,23 @@ export default function ChatScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <ThemedText variant="h4" color={theme.textPrimary}>
-              G open AI 创作助手
-            </ThemedText>
+            <View style={styles.headerTop}>
+              <View style={{ flex: 1 }}>
+                <ThemedText variant="h4" color={theme.textPrimary}>
+                  G open AI 创作助手
+                </ThemedText>
+              </View>
+              {/* 新对话按钮 */}
+              {messages.length > 0 && (
+                <TouchableOpacity 
+                  style={[styles.newChatButton, { borderColor: theme.border }]}
+                  onPress={handleNewChat}
+                >
+                  <FontAwesome6 name="plus" size={12} color={theme.primary} />
+                  <ThemedText variant="captionMedium" color={theme.primary}>新对话</ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <ThemedText variant="label" color={theme.textMuted}>
                 由 OPENCLAW 引擎驱动

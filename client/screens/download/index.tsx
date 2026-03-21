@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -9,6 +9,7 @@ import {
   Linking,
   Share,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -16,6 +17,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, BorderRadius } from '@/constants/theme';
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,12 +36,14 @@ const APP_INFO = {
     { icon: 'palette', title: '模板市场', desc: '精选创作模板，快速开始你的创作之旅' },
     { icon: 'crown', title: '会员特权', desc: '解锁更多创作次数和高级功能' },
   ],
-  stats: {
-    users: '10万+',
-    works: '50万+',
-    rating: '4.9',
-  },
 };
+
+interface AppStats {
+  total_users: number;
+  total_works: number;
+  today_works: number;
+  weekly_works: number;
+}
 
 // 功能特色卡片
 function FeatureCard({ feature, index }: { feature: typeof APP_INFO.features[0]; index: number }) {
@@ -62,6 +67,41 @@ function FeatureCard({ feature, index }: { feature: typeof APP_INFO.features[0];
 export default function DownloadScreen() {
   const { theme } = useTheme();
   const [activeSlide, setActiveSlide] = useState(0);
+  const [stats, setStats] = useState<AppStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // 获取真实统计数据
+  const fetchStats = useCallback(async () => {
+    try {
+      /**
+       * 服务端文件：server/src/routes/stats.ts
+       * 接口：GET /api/v1/stats/admin
+       */
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/stats/admin`);
+      const result = await response.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error('Fetch stats error:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // 格式化数字显示
+  const formatNumber = (num: number): string => {
+    if (num >= 10000) {
+      return `${(num / 10000).toFixed(1)}万+`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k+`;
+    }
+    return `${num}+`;
+  };
 
   // 下载链接配置
   const downloadLinks = {
@@ -163,19 +203,31 @@ export default function DownloadScreen() {
         {/* Stats Section */}
         <View style={[styles.statsSection, { backgroundColor: theme.backgroundDefault }]}>
           <View style={styles.statItem}>
-            <ThemedText variant="h2" color={theme.primary}>{APP_INFO.stats.users}</ThemedText>
+            {loadingStats ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : (
+              <ThemedText variant="h2" color={theme.primary}>
+                {formatNumber(stats?.total_users || 0)}
+              </ThemedText>
+            )}
             <ThemedText variant="caption" color={theme.textMuted}>创作者</ThemedText>
           </View>
           <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
           <View style={styles.statItem}>
-            <ThemedText variant="h2" color={theme.accent}>{APP_INFO.stats.works}</ThemedText>
+            {loadingStats ? (
+              <ActivityIndicator size="small" color={theme.accent} />
+            ) : (
+              <ThemedText variant="h2" color={theme.accent}>
+                {formatNumber(stats?.total_works || 0)}
+              </ThemedText>
+            )}
             <ThemedText variant="caption" color={theme.textMuted}>作品</ThemedText>
           </View>
           <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
           <View style={styles.statItem}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <FontAwesome6 name="star" size={16} color="#FCD34D" solid />
-              <ThemedText variant="h2" color="#FCD34D" style={{ marginLeft: 4 }}>{APP_INFO.stats.rating}</ThemedText>
+              <ThemedText variant="h2" color="#FCD34D" style={{ marginLeft: 4 }}>4.9</ThemedText>
             </View>
             <ThemedText variant="caption" color={theme.textMuted}>评分</ThemedText>
           </View>

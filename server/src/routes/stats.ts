@@ -119,7 +119,7 @@ router.get('/admin', async (req: Request, res: Response) => {
   try {
     // 总用户数
     const { count: totalUsers } = await db
-      .from('user_stats')
+      .from('users')
       .select('*', { count: 'exact', head: true });
 
     // 总作品数

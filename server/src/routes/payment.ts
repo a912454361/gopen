@@ -122,7 +122,7 @@ const PAYMENT_ACCOUNTS = {
   wechat: {
     name: '微信收款',
     account: 'a912454361', // 微信号
-    qrcodeUrl: '', // 微信收款码（需上传）
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/wechat-qrcode_ea8df637.png?sign=1805653498-44ee782e41-0-6bde1ac4211ab525a9419f80135ce7deb9250047907fdd28ddcd8d8d43dd7d93', // 微信收款码
     realName: '郭涛', // 收款人姓名
     desc: '请使用微信扫码支付',
     color: '#07C160',

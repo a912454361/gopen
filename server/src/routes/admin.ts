@@ -379,11 +379,13 @@ const PAYMENT_ACCOUNTS = {
     name: '支付宝收款',
     account: '18321337942',
     realName: '郭涛',
+    qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=HTTPS://QR.ALIPAY.COM/18321337942',
   },
   wechat: {
     name: '微信收款',
     account: 'a912454361',
     realName: '郭涛',
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/wechat-qrcode_ea8df637.png?sign=1805653498-44ee782e41-0-6bde1ac4211ab525a9419f80135ce7deb9250047907fdd28ddcd8d8d43dd7d93',
   },
   unionpay: {
     name: '银联收款',

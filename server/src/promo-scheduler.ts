@@ -126,15 +126,80 @@ async function executePlatformPromotion(platform: string, links: any[], contentT
   const link = links.length > 0 ? links[Math.floor(Math.random() * links.length)] : null;
   const promoUrl = link?.promo_url || 'https://guotao.netlify.app';
   
-  // 实际推广逻辑 - 目前为模拟
-  // TODO: 接入真实平台 API
-  const platformConfigs: Record<string, { name: string; apiEndpoint?: string }> = {
-    weibo: { name: '微博' },
-    wechat: { name: '微信' },
-    douyin: { name: '抖音' },
-    xiaohongshu: { name: '小红书' },
-    zhihu: { name: '知乎' },
-    bilibili: { name: 'B站' },
+  // 平台配置 - 全面支持国内外主流平台
+  const platformConfigs: Record<string, { 
+    name: string; 
+    category: string;
+    icon?: string;
+    color?: string;
+    apiEndpoint?: string;
+    requiresAuth?: boolean;
+  }> = {
+    // ========== 国内社交平台 ==========
+    weibo: { name: '微博', category: 'social', icon: 'weibo', color: '#E6162D' },
+    wechat: { name: '微信', category: 'social', icon: 'wechat', color: '#07C160' },
+    wechat_moments: { name: '朋友圈', category: 'social', icon: 'comments', color: '#07C160' },
+    wechat_mp: { name: '公众号', category: 'social', icon: 'newspaper', color: '#07C160' },
+    
+    // ========== 国内短视频/直播 ==========
+    douyin: { name: '抖音', category: 'video', icon: 'tiktok', color: '#000000' },
+    kuaishou: { name: '快手', category: 'video', icon: 'video', color: '#FF4906' },
+    bilibili: { name: 'B站', category: 'video', icon: 'tv', color: '#FB7299' },
+    shipinhao: { name: '视频号', category: 'video', icon: 'video', color: '#07C160' },
+    
+    // ========== 国内内容社区 ==========
+    xiaohongshu: { name: '小红书', category: 'community', icon: 'book', color: '#FE2C55' },
+    zhihu: { name: '知乎', category: 'community', icon: 'zhihu', color: '#0084FF' },
+    tieba: { name: '贴吧', category: 'community', icon: 'users', color: '#4879BD' },
+    douban: { name: '豆瓣', category: 'community', icon: 'leaf', color: '#00B51D' },
+    
+    // ========== 国内自媒体平台 ==========
+    toutiao: { name: '今日头条', category: 'media', icon: 'newspaper', color: '#F85959' },
+    baijiahao: { name: '百家号', category: 'media', icon: 'pen', color: '#2932E1' },
+    dayuhao: { name: '大鱼号', category: 'media', icon: 'fish', color: '#FF6A00' },
+    souhuhao: { name: '搜狐号', category: 'media', icon: 'newspaper', color: '#FF6600' },
+    wangyihao: { name: '网易号', category: 'media', icon: 'newspaper', color: '#D43C33' },
+    qiehao: { name: '企鹅号', category: 'media', icon: 'qq', color: '#12B7F5' },
+    yidianzixun: { name: '一点资讯', category: 'media', icon: 'circle-info', color: '#FF0000' },
+    
+    // ========== 国内电商/生活平台 ==========
+    xianyu: { name: '闲鱼', category: 'ecommerce', icon: 'shopping-bag', color: '#FFE14D' },
+    zhuanzhuan: { name: '转转', category: 'ecommerce', icon: 'recycle', color: '#FFC800' },
+    meituan: { name: '美团', category: 'lifestyle', icon: 'shop', color: '#FFD000' },
+    dianping: { name: '大众点评', category: 'lifestyle', icon: 'star', color: '#FF6633' },
+    xiecheng: { name: '携程', category: 'travel', icon: 'plane', color: '#2577E3' },
+    mafengwo: { name: '马蜂窝', category: 'travel', icon: 'location-dot', color: '#FF9900' },
+    
+    // ========== 国内财经/专业平台 ==========
+    xueqiu: { name: '雪球', category: 'finance', icon: 'chart-line', color: '#0078FF' },
+    eastmoney: { name: '东方财富', category: 'finance', icon: 'coins', color: '#FF6600' },
+    jianshu: { name: '简书', category: 'community', icon: 'pen', color: '#EA6F5A' },
+    
+    // ========== 国际社交平台 ==========
+    twitter: { name: 'Twitter/X', category: 'international', icon: 'x-twitter', color: '#000000' },
+    facebook: { name: 'Facebook', category: 'international', icon: 'facebook', color: '#1877F2' },
+    instagram: { name: 'Instagram', category: 'international', icon: 'instagram', color: '#E4405F' },
+    tiktok_global: { name: 'TikTok', category: 'international', icon: 'tiktok', color: '#000000' },
+    youtube: { name: 'YouTube', category: 'international', icon: 'youtube', color: '#FF0000' },
+    linkedin: { name: 'LinkedIn', category: 'international', icon: 'linkedin', color: '#0A66C2' },
+    pinterest: { name: 'Pinterest', category: 'international', icon: 'pinterest', color: '#BD081C' },
+    reddit: { name: 'Reddit', category: 'international', icon: 'reddit', color: '#FF4500' },
+    medium: { name: 'Medium', category: 'international', icon: 'medium', color: '#000000' },
+    quora: { name: 'Quora', category: 'international', icon: 'quora', color: '#B92B27' },
+    discord: { name: 'Discord', category: 'international', icon: 'discord', color: '#5865F2' },
+    telegram: { name: 'Telegram', category: 'international', icon: 'telegram', color: '#26A5E4' },
+    
+    // ========== SEO/搜索引擎 ==========
+    baidu_seo: { name: '百度收录', category: 'seo', icon: 'magnifying-glass', color: '#2932E1' },
+    google_seo: { name: 'Google收录', category: 'seo', icon: 'google', color: '#4285F4' },
+    bing_seo: { name: 'Bing收录', category: 'seo', icon: 'microsoft', color: '#00809D' },
+    sogou_seo: { name: '搜狗收录', category: 'seo', icon: 'magnifying-glass', color: '#FF6600' },
+    so_seo: { name: '360搜索收录', category: 'seo', icon: 'magnifying-glass', color: '#19B955' },
+    
+    // ========== 论坛/社区 ==========
+    forum: { name: '论坛', category: 'forum', icon: 'comments', color: '#6B7280' },
+    community: { name: '社区', category: 'forum', icon: 'users', color: '#8B5CF6' },
+    blog: { name: '博客', category: 'forum', icon: 'pen', color: '#F59E0B' },
   };
 
   const config = platformConfigs[platform];
@@ -142,10 +207,10 @@ async function executePlatformPromotion(platform: string, links: any[], contentT
     return { success: false, message: `未知平台: ${platform}` };
   }
 
-  // 模拟推广成功
+  // 模拟推广成功 - TODO: 接入真实平台 API
   return { 
     success: true, 
-    message: `${config.name}推广成功，链接: ${promoUrl}` 
+    message: `[${config.category}] ${config.name}推广成功，链接: ${promoUrl}` 
   };
 }
 

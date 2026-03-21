@@ -19,17 +19,105 @@ import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
-// 平台配置
-const PLATFORMS = [
-  { id: 'weibo', name: '微博', icon: 'weibo', color: '#E6162D' },
-  { id: 'wechat', name: '微信', icon: 'weixin', color: '#07C160' },
-  { id: 'douyin', name: '抖音', icon: 'tiktok', color: '#000000' },
-  { id: 'xiaohongshu', name: '小红书', icon: 'book', color: '#FE2C55' },
-  { id: 'zhihu', name: '知乎', icon: 'zhihu', color: '#0084FF' },
-  { id: 'bilibili', name: 'B站', icon: 'bilibili', color: '#FB7299' },
-  { id: 'seo', name: 'SEO提交', icon: 'magnifying-glass', color: '#4285F4' },
-  { id: 'forum', name: '论坛', icon: 'comments', color: '#6B7280' },
+// 平台配置 - 全面支持国内外主流平台
+const PLATFORM_CATEGORIES = [
+  {
+    category: '国内社交',
+    platforms: [
+      { id: 'weibo', name: '微博', icon: 'weibo', color: '#E6162D' },
+      { id: 'wechat', name: '微信', icon: 'weixin', color: '#07C160' },
+      { id: 'wechat_moments', name: '朋友圈', icon: 'comments', color: '#07C160' },
+      { id: 'wechat_mp', name: '公众号', icon: 'newspaper', color: '#07C160' },
+    ],
+  },
+  {
+    category: '短视频/直播',
+    platforms: [
+      { id: 'douyin', name: '抖音', icon: 'tiktok', color: '#000000' },
+      { id: 'kuaishou', name: '快手', icon: 'video', color: '#FF4906' },
+      { id: 'bilibili', name: 'B站', icon: 'bilibili', color: '#FB7299' },
+      { id: 'shipinhao', name: '视频号', icon: 'video', color: '#07C160' },
+    ],
+  },
+  {
+    category: '内容社区',
+    platforms: [
+      { id: 'xiaohongshu', name: '小红书', icon: 'book', color: '#FE2C55' },
+      { id: 'zhihu', name: '知乎', icon: 'zhihu', color: '#0084FF' },
+      { id: 'tieba', name: '贴吧', icon: 'users', color: '#4879BD' },
+      { id: 'douban', name: '豆瓣', icon: 'leaf', color: '#00B51D' },
+      { id: 'jianshu', name: '简书', icon: 'pen', color: '#EA6F5A' },
+    ],
+  },
+  {
+    category: '自媒体平台',
+    platforms: [
+      { id: 'toutiao', name: '今日头条', icon: 'newspaper', color: '#F85959' },
+      { id: 'baijiahao', name: '百家号', icon: 'pen', color: '#2932E1' },
+      { id: 'dayuhao', name: '大鱼号', icon: 'fish', color: '#FF6A00' },
+      { id: 'souhuhao', name: '搜狐号', icon: 'newspaper', color: '#FF6600' },
+      { id: 'wangyihao', name: '网易号', icon: 'newspaper', color: '#D43C33' },
+      { id: 'qiehao', name: '企鹅号', icon: 'qq', color: '#12B7F5' },
+      { id: 'yidianzixun', name: '一点资讯', icon: 'circle-info', color: '#FF0000' },
+    ],
+  },
+  {
+    category: '电商/生活',
+    platforms: [
+      { id: 'xianyu', name: '闲鱼', icon: 'shopping-bag', color: '#FFE14D' },
+      { id: 'zhuanzhuan', name: '转转', icon: 'recycle', color: '#FFC800' },
+      { id: 'meituan', name: '美团', icon: 'shop', color: '#FFD000' },
+      { id: 'dianping', name: '大众点评', icon: 'star', color: '#FF6633' },
+      { id: 'xiecheng', name: '携程', icon: 'plane', color: '#2577E3' },
+      { id: 'mafengwo', name: '马蜂窝', icon: 'location-dot', color: '#FF9900' },
+    ],
+  },
+  {
+    category: '财经/专业',
+    platforms: [
+      { id: 'xueqiu', name: '雪球', icon: 'chart-line', color: '#0078FF' },
+      { id: 'eastmoney', name: '东方财富', icon: 'coins', color: '#FF6600' },
+    ],
+  },
+  {
+    category: '国际平台',
+    platforms: [
+      { id: 'twitter', name: 'Twitter/X', icon: 'x-twitter', color: '#000000' },
+      { id: 'facebook', name: 'Facebook', icon: 'facebook', color: '#1877F2' },
+      { id: 'instagram', name: 'Instagram', icon: 'instagram', color: '#E4405F' },
+      { id: 'tiktok_global', name: 'TikTok', icon: 'tiktok', color: '#000000' },
+      { id: 'youtube', name: 'YouTube', icon: 'youtube', color: '#FF0000' },
+      { id: 'linkedin', name: 'LinkedIn', icon: 'linkedin', color: '#0A66C2' },
+      { id: 'pinterest', name: 'Pinterest', icon: 'pinterest', color: '#BD081C' },
+      { id: 'reddit', name: 'Reddit', icon: 'reddit', color: '#FF4500' },
+      { id: 'medium', name: 'Medium', icon: 'medium', color: '#000000' },
+      { id: 'quora', name: 'Quora', icon: 'quora', color: '#B92B27' },
+      { id: 'discord', name: 'Discord', icon: 'discord', color: '#5865F2' },
+      { id: 'telegram', name: 'Telegram', icon: 'telegram', color: '#26A5E4' },
+    ],
+  },
+  {
+    category: 'SEO/搜索',
+    platforms: [
+      { id: 'baidu_seo', name: '百度收录', icon: 'magnifying-glass', color: '#2932E1' },
+      { id: 'google_seo', name: 'Google收录', icon: 'google', color: '#4285F4' },
+      { id: 'bing_seo', name: 'Bing收录', icon: 'microsoft', color: '#00809D' },
+      { id: 'sogou_seo', name: '搜狗收录', icon: 'magnifying-glass', color: '#FF6600' },
+      { id: 'so_seo', name: '360搜索', icon: 'magnifying-glass', color: '#19B955' },
+    ],
+  },
+  {
+    category: '其他',
+    platforms: [
+      { id: 'forum', name: '论坛', icon: 'comments', color: '#6B7280' },
+      { id: 'community', name: '社区', icon: 'users', color: '#8B5CF6' },
+      { id: 'blog', name: '博客', icon: 'pen', color: '#F59E0B' },
+    ],
+  },
 ];
+
+// 扁平化平台列表（用于快速查找）
+const PLATFORMS = PLATFORM_CATEGORIES.flatMap(cat => cat.platforms);
 
 interface PromoLink {
   id: string;
@@ -452,25 +540,34 @@ export default function PromoAutoScreen() {
               onChangeText={text => setTaskForm(prev => ({ ...prev, name: text }))}
             />
 
-            <ThemedText variant="labelSmall" color={theme.textSecondary} style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>选择推广平台</ThemedText>
-            <View style={styles.platformGrid}>
-              {PLATFORMS.map(platform => (
-                <TouchableOpacity
-                  key={platform.id}
-                  style={[
-                    styles.platformButton,
-                    { borderColor: taskForm.platforms.includes(platform.id) ? theme.primary : theme.border },
-                    taskForm.platforms.includes(platform.id) && { backgroundColor: theme.primary + '20' },
-                  ]}
-                  onPress={() => togglePlatform(platform.id)}
-                >
-                  <FontAwesome6 name={platform.icon as any} size={16} color={taskForm.platforms.includes(platform.id) ? theme.primary : theme.textMuted} />
-                  <ThemedText variant="caption" color={taskForm.platforms.includes(platform.id) ? theme.primary : theme.textMuted}>
-                    {platform.name}
+            <ThemedText variant="labelSmall" color={theme.textSecondary} style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>选择推广平台（按类别）</ThemedText>
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              {PLATFORM_CATEGORIES.map(category => (
+                <View key={category.category} style={{ marginBottom: Spacing.md }}>
+                  <ThemedText variant="tiny" color={theme.textMuted} style={{ marginBottom: Spacing.xs }}>
+                    {category.category}
                   </ThemedText>
-                </TouchableOpacity>
+                  <View style={styles.platformGrid}>
+                    {category.platforms.map(platform => (
+                      <TouchableOpacity
+                        key={platform.id}
+                        style={[
+                          styles.platformButton,
+                          { borderColor: taskForm.platforms.includes(platform.id) ? theme.primary : theme.border },
+                          taskForm.platforms.includes(platform.id) && { backgroundColor: theme.primary + '20' },
+                        ]}
+                        onPress={() => togglePlatform(platform.id)}
+                      >
+                        <FontAwesome6 name={platform.icon as any} size={14} color={taskForm.platforms.includes(platform.id) ? theme.primary : theme.textMuted} />
+                        <ThemedText variant="tiny" color={taskForm.platforms.includes(platform.id) ? theme.primary : theme.textMuted}>
+                          {platform.name}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               ))}
-            </View>
+            </ScrollView>
 
             <ThemedText variant="labelSmall" color={theme.textSecondary} style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>风控配置</ThemedText>
             <View style={[styles.riskConfig, { backgroundColor: theme.backgroundTertiary }]}>

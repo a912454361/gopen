@@ -36,10 +36,23 @@ const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 // 推广平台列表
 const PROMO_PLATFORMS = [
+  { category: '支付平台', platforms: [
+    { id: 'alipay', name: '支付宝', icon: 'alipay', color: '#1677FF' },
+    { id: 'wechat_pay', name: '微信支付', icon: 'weixin', color: '#07C160', brand: true },
+    { id: 'unionpay', name: '银联', icon: 'credit-card', color: '#E60012' },
+    { id: 'jd_pay', name: '京东支付', icon: 'wallet', color: '#E1251B' },
+  ]},
+  { category: '电商平台', platforms: [
+    { id: 'taobao', name: '淘宝', icon: 'shopping-bag', color: '#FF5000' },
+    { id: 'jd', name: '京东', icon: 'shopping-cart', color: '#E1251B' },
+    { id: 'pdd', name: '拼多多', icon: 'store', color: '#E02E24' },
+    { id: 'meituan', name: '美团', icon: 'utensils', color: '#FFD100' },
+  ]},
   { category: '国内社交', platforms: [
     { id: 'weibo', name: '微博', icon: 'weibo', color: '#E6162D' },
     { id: 'wechat_moments', name: '朋友圈', icon: 'comments', color: '#07C160' },
     { id: 'wechat_mp', name: '公众号', icon: 'newspaper', color: '#07C160' },
+    { id: 'qq', name: 'QQ', icon: 'qq', color: '#12B7F5' },
   ]},
   { category: '短视频/直播', platforms: [
     { id: 'douyin', name: '抖音', icon: 'tiktok', color: '#000000' },
@@ -56,11 +69,14 @@ const PROMO_PLATFORMS = [
   { category: '自媒体平台', platforms: [
     { id: 'toutiao', name: '今日头条', icon: 'newspaper', color: '#F85959' },
     { id: 'baijiahao', name: '百家号', icon: 'pen', color: '#2932E1' },
+    { id: 'dayuhao', name: '大鱼号', icon: 'fish', color: '#FF6600' },
+    { id: 'souhu', name: '搜狐号', icon: 'newspaper', color: '#FF6600' },
   ]},
-  { category: '其他', platforms: [
+  { category: '其他渠道', platforms: [
     { id: 'forum', name: '论坛', icon: 'comments', color: '#6B7280' },
     { id: 'blog', name: '博客', icon: 'pen', color: '#F59E0B' },
     { id: 'community', name: '社区', icon: 'users', color: '#8B5CF6' },
+    { id: 'offline', name: '线下推广', icon: 'store', color: '#10B981' },
   ]},
 ];
 
@@ -819,7 +835,8 @@ export default function QRCodePromoScreen() {
                     <FontAwesome6 
                       name={platform.icon as any} 
                       size={14} 
-                      color={selectedPlatforms.includes(platform.id) ? theme.primary : theme.textMuted} 
+                      color={selectedPlatforms.includes(platform.id) ? theme.primary : theme.textMuted}
+                      brand={(platform as any).brand}
                     />
                     <ThemedText variant="tiny" color={selectedPlatforms.includes(platform.id) ? theme.primary : theme.textMuted}>
                       {platform.name}

@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
@@ -202,9 +203,66 @@ export default function QRCodePromoScreen() {
     }
   };
 
+  // 保存二维码到相册
+  const saveQRCodeToGallery = async () => {
+    if (!currentQRCode?.qrcodeUrl) {
+      Alert.alert('提示', '暂无收款码可保存');
+      return;
+    }
+
+    try {
+      // 请求相册权限
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('提示', '需要相册权限才能保存收款码');
+        return;
+      }
+
+      // 下载图片
+      const downloadResult = await (FileSystem as any).downloadAsync(
+        currentQRCode.qrcodeUrl,
+        (FileSystem as any).documentDirectory + `qrcode_${Date.now()}.png`
+      );
+
+      if (downloadResult.uri) {
+        // 保存到相册
+        await MediaLibrary.createAssetAsync(downloadResult.uri);
+        Alert.alert('保存成功', '收款码已保存到相册，您可以使用支付宝/微信扫一扫选择相册图片支付');
+      }
+    } catch (error) {
+      console.error('Save QR code error:', error);
+      Alert.alert('保存失败', '请稍后重试');
+    }
+  };
+
+  // 复制收款账号
+  const copyPaymentAccount = async () => {
+    if (!currentQRCode?.account) {
+      Alert.alert('提示', '暂无收款账号');
+      return;
+    }
+
+    try {
+      await Clipboard.setStringAsync(currentQRCode.account);
+      const payAppName = activePayType === 'alipay' ? '支付宝' : '微信';
+      Alert.alert(
+        '复制成功', 
+        `${payAppName}收款账号已复制：${currentQRCode.account}\n\n请打开${payAppName}搜索该账号进行转账`,
+        [
+          { text: '取消', style: 'cancel' },
+          { 
+            text: `打开${payAppName}`, 
+            onPress: activePayType === 'alipay' ? openAlipayHome : openWechatHome 
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Copy error:', error);
+    }
+  };
+
   // 打开支付宝扫一扫
   const openAlipayScan = () => {
-    // 支付宝扫一扫：alipays://platformapi/startapp?appId=10000007
     const alipayUrl = 'alipays://platformapi/startapp?appId=10000007';
     
     Linking.canOpenURL(alipayUrl).then(supported => {
@@ -221,7 +279,7 @@ export default function QRCodePromoScreen() {
 
   // 打开支付宝转账
   const openAlipayTransfer = () => {
-    // 支付宝转账：alipays://platformapi/startapp?appId=20000067
+    // 支付宝转账页面
     const alipayUrl = 'alipays://platformapi/startapp?appId=20000067';
     
     Linking.canOpenURL(alipayUrl).then(supported => {
@@ -254,7 +312,6 @@ export default function QRCodePromoScreen() {
 
   // 打开微信扫一扫
   const openWechatScan = () => {
-    // 微信扫一扫：weixin://scanqrcode
     const wechatUrl = 'weixin://scanqrcode';
     
     Linking.canOpenURL(wechatUrl).then(supported => {
@@ -282,24 +339,19 @@ export default function QRCodePromoScreen() {
     }).catch(err => {
       console.error('Open WeChat error:', err);
       Alert.alert('提示', '无法打开微信，请确保已安装微信APP');
-    });
+      });
   };
 
   // 显示支付宝操作选项
   const showAlipayOptions = () => {
-    if (Platform.OS === 'web') {
-      // Web端直接打开转账
-      openAlipayTransfer();
-      return;
-    }
-    
     Alert.alert(
-      '选择操作',
-      '请选择要执行的操作',
+      '支付宝支付',
+      '请选择支付方式',
       [
-        { text: '扫一扫', onPress: openAlipayScan },
-        { text: '转账', onPress: openAlipayTransfer },
-        { text: '打开支付宝', onPress: openAlipayHome },
+        { text: '扫一扫支付', onPress: openAlipayScan },
+        { text: '转账支付', onPress: openAlipayTransfer },
+        { text: '复制账号', onPress: copyPaymentAccount },
+        { text: '保存收款码', onPress: saveQRCodeToGallery },
         { text: '取消', style: 'cancel' },
       ]
     );
@@ -307,18 +359,13 @@ export default function QRCodePromoScreen() {
 
   // 显示微信操作选项
   const showWechatOptions = () => {
-    if (Platform.OS === 'web') {
-      // Web端直接打开微信
-      openWechatHome();
-      return;
-    }
-    
     Alert.alert(
-      '选择操作',
-      '请选择要执行的操作',
+      '微信支付',
+      '请选择支付方式',
       [
-        { text: '扫一扫', onPress: openWechatScan },
-        { text: '打开微信', onPress: openWechatHome },
+        { text: '扫一扫支付', onPress: openWechatScan },
+        { text: '复制账号', onPress: copyPaymentAccount },
+        { text: '保存收款码', onPress: saveQRCodeToGallery },
         { text: '取消', style: 'cancel' },
       ]
     );

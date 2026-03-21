@@ -73,6 +73,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           "faceIDPermission": "允许 G open 使用 Face ID 进行快速身份验证。"
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "允许 G open 访问您的相册，以便保存收款码图片。",
+          "saveToLibraryPermission": "允许 G open 保存图片到相册。"
+        }
       ]
     ],
     "experiments": {

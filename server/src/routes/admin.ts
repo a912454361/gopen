@@ -378,12 +378,29 @@ const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
     account: '18321337942',
-    realName: 'G Open官方',
+    realName: '郭涛',
   },
   wechat: {
     name: '微信收款',
-    account: 'G Open官方',
-    realName: 'G Open官方',
+    account: 'a912454361',
+    realName: '郭涛',
+  },
+  unionpay: {
+    name: '银联收款',
+    account: '6216****7932',
+    realName: '郭涛',
+  },
+  jdpay: {
+    name: '京东支付',
+    account: '',
+    realName: '郭涛',
+  },
+  bank: {
+    name: '银行转账',
+    account: '6216600800003247932',
+    realName: '郭涛',
+    bankName: '中国银行',
+    bankBranch: '上海市黄渡支行',
   },
 };
 

@@ -112,17 +112,39 @@ export function StatsPanel({ stats, adminKey, onRefresh }: StatsPanelProps) {
       label: '支付宝收款',
       amount: formatAmount(stats.totalAlipayRevenue || 0),
       today: formatAmount(stats.todayAlipayAmount || 0),
-      icon: 'wallet',
+      icon: 'alipay',
       color: '#1677FF',
       account: stats.paymentAccounts?.alipay?.account || '-',
+      realName: stats.paymentAccounts?.alipay?.realName || '-',
     },
     {
       label: '微信收款',
       amount: formatAmount(stats.totalWechatRevenue || 0),
       today: formatAmount(stats.todayWechatAmount || 0),
-      icon: 'message',
+      icon: 'weixin',
       color: '#07C160',
       account: stats.paymentAccounts?.wechat?.account || '-',
+      realName: stats.paymentAccounts?.wechat?.realName || '-',
+    },
+    {
+      label: '银联收款',
+      amount: formatAmount(stats.totalUnionpayRevenue || 0),
+      today: formatAmount(stats.todayUnionpayAmount || 0),
+      icon: 'credit-card',
+      color: '#E60012',
+      account: stats.paymentAccounts?.unionpay?.account || '-',
+      realName: stats.paymentAccounts?.unionpay?.realName || '-',
+    },
+    {
+      label: '银行转账',
+      amount: formatAmount(stats.totalBankRevenue || 0),
+      today: formatAmount(stats.todayBankAmount || 0),
+      icon: 'building-columns',
+      color: '#C41230',
+      account: stats.paymentAccounts?.bank?.account || '-',
+      realName: stats.paymentAccounts?.bank?.realName || '-',
+      bankName: stats.paymentAccounts?.bank?.bankName,
+      bankBranch: stats.paymentAccounts?.bank?.bankBranch,
     },
   ];
 
@@ -202,46 +224,73 @@ export function StatsPanel({ stats, adminKey, onRefresh }: StatsPanelProps) {
             </TouchableOpacity>
           </View>
           
-          <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
-            {paymentStats.map((item, i) => (
-              <View 
-                key={i}
-                style={{ 
-                  flex: 1,
-                  padding: Spacing.lg,
-                  backgroundColor: theme.backgroundTertiary,
-                  borderRadius: BorderRadius.lg,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
-                  <FontAwesome6 name={item.icon as any} size={20} color={item.color} />
-                  <ThemedText variant="smallMedium" color={theme.textPrimary}>{item.label}</ThemedText>
-                </View>
-                
-                <View style={{ marginBottom: Spacing.md }}>
-                  <ThemedText variant="caption" color={theme.textMuted}>收款账号</ThemedText>
-                  <ThemedText variant="small" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
-                    {item.account}
-                  </ThemedText>
-                </View>
-                
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <View>
-                    <ThemedText variant="caption" color={theme.textMuted}>累计收款</ThemedText>
-                    <ThemedText variant="smallMedium" color={item.color} style={{ marginTop: Spacing.xs }}>
-                      {item.amount}
-                    </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
+              {paymentStats.map((item, i) => (
+                <View 
+                  key={i}
+                  style={{ 
+                    width: 220,
+                    padding: Spacing.lg,
+                    backgroundColor: theme.backgroundTertiary,
+                    borderRadius: BorderRadius.lg,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+                    <FontAwesome6 name={item.icon as any} size={20} color={item.color} brand={item.icon === 'weixin' || item.icon === 'alipay'} />
+                    <ThemedText variant="smallMedium" color={theme.textPrimary}>{item.label}</ThemedText>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <ThemedText variant="caption" color={theme.textMuted}>今日收款</ThemedText>
+                  
+                  <View style={{ marginBottom: Spacing.sm }}>
+                    <ThemedText variant="caption" color={theme.textMuted}>收款账号</ThemedText>
                     <ThemedText variant="small" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
-                      {item.today}
+                      {item.account || '-'}
                     </ThemedText>
                   </View>
+                  
+                  <View style={{ marginBottom: Spacing.sm }}>
+                    <ThemedText variant="caption" color={theme.textMuted}>收款人</ThemedText>
+                    <ThemedText variant="small" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
+                      {item.realName || '-'}
+                    </ThemedText>
+                  </View>
+                  
+                  {item.bankName && (
+                    <View style={{ marginBottom: Spacing.sm }}>
+                      <ThemedText variant="caption" color={theme.textMuted}>开户银行</ThemedText>
+                      <ThemedText variant="small" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
+                        {item.bankName}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  {item.bankBranch && (
+                    <View style={{ marginBottom: Spacing.sm }}>
+                      <ThemedText variant="caption" color={theme.textMuted}>开户支行</ThemedText>
+                      <ThemedText variant="small" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
+                        {item.bankBranch}
+                      </ThemedText>
+                    </View>
+                  )}
+                  
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: theme.border }}>
+                    <View>
+                      <ThemedText variant="caption" color={theme.textMuted}>累计收款</ThemedText>
+                      <ThemedText variant="smallMedium" color={item.color} style={{ marginTop: Spacing.xs }}>
+                        {item.amount}
+                      </ThemedText>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <ThemedText variant="caption" color={theme.textMuted}>今日收款</ThemedText>
+                      <ThemedText variant="small" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
+                        {item.today}
+                      </ThemedText>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          </ScrollView>
         </View>
 
         {/* 收入趋势 */}

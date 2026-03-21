@@ -424,6 +424,22 @@ export default function QRCodePromoScreen() {
       marginBottom: Spacing.xs,
       alignItems: 'center' as const,
     },
+    logoContainer: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      marginBottom: Spacing.sm,
+      gap: Spacing.xs,
+    },
+    logoIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+    logoText: {
+      alignItems: 'flex-start' as const,
+    },
     qrImage: {
       width: qrSize,
       height: qrSize,
@@ -664,6 +680,18 @@ export default function QRCodePromoScreen() {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {/* QR Code Display */}
           <View style={[styles.qrCard, { backgroundColor: theme.backgroundDefault }]}>
+            {/* G Open Logo */}
+            <View style={styles.logoContainer}>
+              <View style={[styles.logoIcon, { backgroundColor: theme.primary }]}>
+                <FontAwesome6 name="gamepad" size={24} color="#fff" />
+              </View>
+              <View style={styles.logoText}>
+                <ThemedText variant="smallMedium" color={theme.textPrimary}>G Open</ThemedText>
+                <ThemedText variant="tiny" color={theme.textMuted}>智能创作助手</ThemedText>
+              </View>
+            </View>
+            
+            {/* 二维码图片 */}
             {currentQRCode?.qrcodeUrl ? (
               <Image
                 source={{ uri: currentQRCode.qrcodeUrl }}
@@ -676,7 +704,7 @@ export default function QRCodePromoScreen() {
               </View>
             )}
             
-            <ThemedText variant="label" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
+            <ThemedText variant="label" color={theme.textPrimary} style={{ marginTop: Spacing.xs }}>
               {currentQRCode?.name || '收款码'}
             </ThemedText>
             

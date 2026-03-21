@@ -1,0 +1,2462 @@
+第1页                                                                	G open V1.0
+
+/**
+ * G open 智能创作助手
+ * Copyright (C) 2025 G Open Team
+ * 
+ * 本软件为AI辅助创作工具，支持游戏、动漫内容创作
+ */
+
+import { Stack } from 'expo-router';
+import { MembershipProvider } from '@/contexts/MembershipContext';
+
+export default function RootLayout() {
+  return (
+    <MembershipProvider>
+      <Stack screenOptions={{
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        headerShown: false
+      }}>
+        <Stack.Screen name="(tabs)" options={{ title: "" }} />
+        <Stack.Screen name="workflow" options={{ title: "创作工作台" }} />
+        <Stack.Screen name="storage" options={{ title: "云端存储" }} />
+        <Stack.Screen name="payment" options={{ title: "支付中心" }} />
+        <Stack.Screen name="login" options={{ title: "账号登录" }} />
+        <Stack.Screen name="bill" options={{ title: "账单明细" }} />
+        <Stack.Screen name="cloud-storage" options={{ title: "云存储设置" }} />
+        <Stack.Screen name="wallet" options={{ title: "钱包" }} />
+        <Stack.Screen name="models" options={{ title: "模型市场" }} />
+        <Stack.Screen name="download" options={{ title: "下载应用" }} />
+        <Stack.Screen name="membership" options={{ title: "会员中心" }} />
+        <Stack.Screen name="payment-admin" options={{ title: "支付审核" }} />
+        <Stack.Screen name="admin" options={{ title: "管理后台" }} />
+        <Stack.Screen name="notification-settings" options={{ title: "通知设置" }} />
+        <Stack.Screen name="privacy" options={{ title: "隐私政策" }} />
+        <Stack.Screen name="terms" options={{ title: "用户协议" }} />
+        <Stack.Screen name="profit-panel" options={{ title: "利润统计" }} />
+        <Stack.Screen name="cloud-storage-setup" options={{ title: "云存储开通" }} />
+        <Stack.Screen name="privacy-settings" options={{ title: "隐私设置" }} />
+        <Stack.Screen name="privacy-policy" options={{ title: "隐私政策" }} />
+        <Stack.Screen name="terms-of-service" options={{ title: "服务条款" }} />
+        <Stack.Screen name="api-keys" options={{ title: "API密钥管理" }} />
+        <Stack.Screen name="promotion" options={{ title: "推广中心" }} />
+        <Stack.Screen name="admin-login" options={{ title: "管理员登录" }} />
+      </Stack>
+    </MembershipProvider>
+  );
+}
+
+第2页                                                                	G open V1.0
+
+/**
+ * 用户认证上下文
+ * 管理用户登录状态和认证信息
+ */
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../storage/database/supabase-client';
+
+interface User {
+  id: string;
+  phone: string;
+  nickname?: string;
+  avatar_url?: string;
+  membership_type: 'free' | 'normal' | 'super';
+  membership_expire_at?: string;
+  created_at: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (phone: string, code: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (userId) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (!error && data) {
+          setUser(data);
+        }
+      }
+    } catch (error) {
+      console.error('Check auth error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+第3页                                                                	G open V1.0
+
+  const login = async (phone: string, code: string) => {
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('登录失败');
+    }
+    
+    const { user: userData, token } = await response.json();
+    await AsyncStorage.setItem('userId', userData.id);
+    await AsyncStorage.setItem('token', token);
+    setUser(userData);
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem('userId');
+    await AsyncStorage.removeItem('token');
+    setUser(null);
+  };
+
+  const refreshUser = async () => {
+    if (user) {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setUser(data);
+      }
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      isAuthenticated: !!user,
+      login,
+      logout,
+      refreshUser,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+/**
+ * 会员状态上下文
+ * 管理用户会员等级和权限
+ */
+
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+
+type MembershipLevel = 'free' | 'normal' | 'super';
+
+interface MembershipContextType {
+  level: MembershipLevel;
+  expireAt: Date | null;
+  isActive: boolean;
+  canUseFeature: (feature: string) => boolean;
+  refresh: () => Promise<void>;
+}
+
+第4页                                                                	G open V1.0
+
+const MembershipContext = createContext<MembershipContextType | undefined>(undefined);
+
+export const useMembership = () => {
+  const context = useContext(MembershipContext);
+  if (!context) {
+    throw new Error('useMembership must be used within MembershipProvider');
+  }
+  return context;
+};
+
+export const MembershipProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [level, setLevel] = useState<MembershipLevel>('free');
+  const [expireAt, setExpireAt] = useState<Date | null>(null);
+
+  const isActive = useMemo(() => {
+    if (!expireAt) return level === 'free';
+    return new Date() < expireAt;
+  }, [level, expireAt]);
+
+  const canUseFeature = (feature: string): boolean => {
+    const featureLevels: Record<string, MembershipLevel[]> = {
+      'basic_chat': ['free', 'normal', 'super'],
+      'advanced_ai': ['normal', 'super'],
+      'image_generation': ['normal', 'super'],
+      'voice_synthesis': ['super'],
+      'priority_support': ['super'],
+    };
+    return featureLevels[feature]?.includes(level) ?? false;
+  };
+
+  const refresh = async () => {
+    // 刷新会员状态逻辑
+  };
+
+  return (
+    <MembershipContext.Provider value={{ level, expireAt, isActive, canUseFeature, refresh }}>
+      {children}
+    </MembershipContext.Provider>
+  );
+};
+
+/**
+ * 主题配置
+ * 定义应用的视觉风格和颜色系统
+ */
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 32,
+  '4xl': 40,
+  '5xl': 48,
+} as const;
+
+第5页                                                                	G open V1.0
+
+export const BorderRadius = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  '2xl': 20,
+  '3xl': 24,
+  full: 9999,
+} as const;
+
+export interface Theme {
+  primary: string;
+  accent: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  backgroundRoot: string;
+  backgroundDefault: string;
+  backgroundTertiary: string;
+  border: string;
+  borderLight: string;
+  buttonPrimaryText: string;
+  buttonSecondaryText: string;
+  success: string;
+  error: string;
+  warning: string;
+  tabIconSelected: string;
+  tabIconDefault: string;
+}
+
+export const darkTheme: Theme = {
+  primary: '#6366F1',
+  accent: '#8B5CF6',
+  textPrimary: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textMuted: '#64748B',
+  backgroundRoot: '#0A0A0F',
+  backgroundDefault: '#1A1A24',
+  backgroundTertiary: '#252532',
+  border: '#2D2D3D',
+  borderLight: '#1F1F2E',
+  buttonPrimaryText: '#FFFFFF',
+  buttonSecondaryText: '#94A3B8',
+  success: '#10B981',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  tabIconSelected: '#6366F1',
+  tabIconDefault: '#64748B',
+};
+
+export const lightTheme: Theme = {
+  primary: '#4F46E5',
+  accent: '#7C3AED',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  backgroundRoot: '#F8FAFC',
+  backgroundDefault: '#FFFFFF',
+  backgroundTertiary: '#F1F5F9',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  buttonPrimaryText: '#FFFFFF',
+  buttonSecondaryText: '#64748B',
+  success: '#10B981',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  tabIconSelected: '#4F46E5',
+  tabIconDefault: '#94A3B8',
+};
+
+第6页                                                                	G open V1.0
+
+/**
+ * 主题Hook
+ * 提供主题切换功能
+ */
+
+import { useState, useEffect, useMemo } from 'react';
+import { Appearance } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Theme, darkTheme, lightTheme } from '@/constants/theme';
+
+const THEME_KEY = 'app_theme';
+type ThemeMode = 'light' | 'dark' | 'system';
+
+export const useTheme = () => {
+  const [mode, setMode] = useState<ThemeMode>('system');
+  const [systemColorScheme, setSystemColorScheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    loadTheme();
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemColorScheme(colorScheme ?? 'light');
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const loadTheme = async () => {
+    const savedMode = await AsyncStorage.getItem(THEME_KEY) as ThemeMode | null;
+    if (savedMode) {
+      setMode(savedMode);
+    }
+  };
+
+  const setThemeMode = async (newMode: ThemeMode) => {
+    setMode(newMode);
+    await AsyncStorage.setItem(THEME_KEY, newMode);
+  };
+
+  const isDark = useMemo(() => {
+    if (mode === 'system') {
+      return systemColorScheme === 'dark';
+    }
+    return mode === 'dark';
+  }, [mode, systemColorScheme]);
+
+  const theme = useMemo(() => {
+    return isDark ? darkTheme : lightTheme;
+  }, [isDark]);
+
+  return {
+    theme,
+    isDark,
+    mode,
+    setThemeMode,
+  };
+};
+
+/**
+ * 安全路由Hook
+ * 处理参数编码解码
+ */
+
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo } from 'react';
+
+第7页                                                                	G open V1.0
+
+interface SafeRouter {
+  push: (href: string, params?: Record<string, unknown>) => void;
+  replace: (href: string, params?: Record<string, unknown>) => void;
+  back: () => void;
+  navigate: (href: string) => void;
+}
+
+export const useSafeRouter = (): SafeRouter => {
+  const router = useRouter();
+
+  const encodeParams = (params?: Record<string, unknown>): string => {
+    if (!params) return '';
+    const encoded = Object.entries(params)
+      .map(([key, value]) => {
+        const encodedValue = encodeURIComponent(
+          typeof value === 'object' ? JSON.stringify(value) : String(value)
+        );
+        return `${key}=${encodedValue}`;
+      })
+      .join('&');
+    return encoded ? `?${encoded}` : '';
+  };
+
+  const push = useCallback((href: string, params?: Record<string, unknown>) => {
+    const url = `${href}${encodeParams(params)}`;
+    router.push(url as any);
+  }, [router]);
+
+  const replace = useCallback((href: string, params?: Record<string, unknown>) => {
+    const url = `${href}${encodeParams(params)}`;
+    router.replace(url as any);
+  }, [router]);
+
+  const back = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const navigate = useCallback((href: string) => {
+    router.navigate(href as any);
+  }, [router]);
+
+  return { push, replace, back, navigate };
+};
+
+export const useSafeSearchParams = <T extends Record<string, unknown>>(): T => {
+  const params = useLocalSearchParams();
+  
+  return useMemo(() => {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === 'string') {
+        try {
+          result[key] = JSON.parse(decodeURIComponent(value));
+        } catch {
+          result[key] = decodeURIComponent(value);
+        }
+      } else {
+        result[key] = value;
+      }
+    }
+    return result as T;
+  }, [params]);
+};
+
+第8页                                                                	G open V1.0
+
+/**
+ * 屏幕组件
+ * 提供统一的页面容器
+ */
+
+import React, { ReactNode } from 'react';
+import { View, StyleSheet, StatusBar, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface ScreenProps {
+  children: ReactNode;
+  backgroundColor?: string;
+  statusBarStyle?: 'light' | 'dark';
+  hideBottomInset?: boolean;
+}
+
+export const Screen: React.FC<ScreenProps> = ({
+  children,
+  backgroundColor = '#0A0A0F',
+  statusBarStyle = 'light',
+  hideBottomInset = false,
+}) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[
+      styles.container,
+      {
+        backgroundColor,
+        paddingTop: insets.top,
+        paddingBottom: hideBottomInset ? 0 : insets.bottom,
+      }
+    ]}>
+      <StatusBar
+        barStyle={statusBarStyle === 'light' ? 'light-content' : 'dark-content'}
+        backgroundColor={backgroundColor}
+      />
+      {children}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+
+/**
+ * 主题文本组件
+ * 提供统一的文本样式
+ */
+
+import React, { ReactNode } from 'react';
+import { Text, TextProps, StyleSheet } from 'react-native';
+
+type TextVariant = 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'small' | 
+                   'caption' | 'h1Medium' | 'h2Medium' | 'h3Medium' | 
+                   'bodyMedium' | 'smallMedium' | 'captionMedium';
+
+interface ThemedTextProps extends TextProps {
+  children: ReactNode;
+  variant?: TextVariant;
+  color?: string;
+}
+
+第9页                                                                	G open V1.0
+
+const variantStyles: Record<TextVariant, object> = {
+  h1: { fontSize: 32, fontWeight: '700', lineHeight: 40 },
+  h2: { fontSize: 24, fontWeight: '700', lineHeight: 32 },
+  h3: { fontSize: 20, fontWeight: '600', lineHeight: 28 },
+  h4: { fontSize: 18, fontWeight: '600', lineHeight: 24 },
+  body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
+  small: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
+  caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
+  h1Medium: { fontSize: 32, fontWeight: '500', lineHeight: 40 },
+  h2Medium: { fontSize: 24, fontWeight: '500', lineHeight: 32 },
+  h3Medium: { fontSize: 20, fontWeight: '500', lineHeight: 28 },
+  bodyMedium: { fontSize: 16, fontWeight: '500', lineHeight: 24 },
+  smallMedium: { fontSize: 14, fontWeight: '500', lineHeight: 20 },
+  captionMedium: { fontSize: 12, fontWeight: '500', lineHeight: 16 },
+};
+
+export const ThemedText: React.FC<ThemedTextProps> = ({
+  children,
+  variant = 'body',
+  color,
+  style,
+  ...props
+}) => {
+  return (
+    <Text
+      style={[
+        { color: color || '#F8FAFC' },
+        variantStyles[variant],
+        style,
+      ]}
+      {...props}
+    >
+      {children}
+    </Text>
+  );
+};
+
+/**
+ * 主题视图组件
+ * 提供统一的容器样式
+ */
+
+import React, { ReactNode } from 'react';
+import { View, ViewProps, StyleSheet } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
+
+type ViewLevel = 'root' | 'default' | 'tertiary';
+
+interface ThemedViewProps extends ViewProps {
+  children: ReactNode;
+  level?: ViewLevel;
+}
+
+export const ThemedView: React.FC<ThemedViewProps> = ({
+  children,
+  level = 'default',
+  style,
+  ...props
+}) => {
+  const { theme } = useTheme();
+
+  const getBackgroundColor = () => {
+    switch (level) {
+      case 'root':
+        return theme.backgroundRoot;
+      case 'default':
+        return theme.backgroundDefault;
+      case 'tertiary':
+        return theme.backgroundTertiary;
+      default:
+        return theme.backgroundDefault;
+    }
+  };
+
+  return (
+    <View
+      style={[
+        { backgroundColor: getBackgroundColor() },
+        style,
+      ]}
+      {...props}
+    >
+      {children}
+    </View>
+  );
+};
+
+第10页                                                               	G open V1.0
+
+/**
+ * AI对话页面
+ * 核心AI交互功能
+ */
+
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMembership } from '@/contexts/MembershipContext';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
+export default function ChatScreen() {
+  const { theme, isDark } = useTheme();
+  const { user } = useAuth();
+  const { canUseFeature } = useMembership();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/v1/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage.content,
+          history: messages.slice(-10),
+        }),
+      });
+
+      const data = await response.json();
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.reply,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
+
+第11页                                                               	G open V1.0
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16 }}
+        >
+          {messages.map((message) => (
+            <View
+              key={message.id}
+              style={{
+                alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
+                maxWidth: '80%',
+                marginBottom: 12,
+              }}
+            >
+              <ThemedView
+                level={message.role === 'user' ? 'tertiary' : 'default'}
+                style={{
+                  padding: 12,
+                  borderRadius: 16,
+                }}
+              >
+                <ThemedText variant="body">{message.content}</ThemedText>
+              </ThemedView>
+            </View>
+          ))}
+          {isLoading && (
+            <ActivityIndicator color={theme.primary} />
+          )}
+        </ScrollView>
+
+        <View style={{
+          flexDirection: 'row',
+          padding: 16,
+          gap: 12,
+          backgroundColor: theme.backgroundDefault,
+        }}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="输入消息..."
+            placeholderTextColor={theme.textMuted}
+            style={{
+              flex: 1,
+              backgroundColor: theme.backgroundTertiary,
+              borderRadius: 24,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              color: theme.textPrimary,
+            }}
+          />
+          <TouchableOpacity
+            onPress={sendMessage}
+            disabled={!input.trim() || isLoading}
+            style={{
+              backgroundColor: theme.primary,
+              borderRadius: 24,
+              paddingHorizontal: 24,
+              justifyContent: 'center',
+            }}
+          >
+            <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>
+              发送
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Screen>
+  );
+}
+
+第12页                                                               	G open V1.0
+
+/**
+ * 会员中心页面
+ * 会员购买和管理
+ */
+
+import React, { useState } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+
+interface MembershipPlan {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  features: string[];
+  recommended?: boolean;
+}
+
+const membershipPlans: MembershipPlan[] = [
+  {
+    id: 'free',
+    name: '免费用户',
+    price: 0,
+    duration: 0,
+    features: [
+      '基础AI对话功能',
+      '每日10次对话限制',
+      '基础模型访问',
+    ],
+  },
+  {
+    id: 'normal',
+    name: '普通会员',
+    price: 29,
+    duration: 30,
+    features: [
+      '无限AI对话',
+      '高级模型访问',
+      '图像生成功能',
+      '优先客服支持',
+    ],
+    recommended: true,
+  },
+  {
+    id: 'super',
+    name: '超级会员',
+    price: 99,
+    duration: 30,
+    features: [
+      '普通会员全部权益',
+      '语音合成功能',
+      'GPU算力租赁',
+      '专属客服通道',
+      'API密钥管理',
+    ],
+  },
+];
+
+export default function MembershipScreen() {
+  const { theme, isDark } = useTheme();
+  const { user, refreshUser } = useAuth();
+  const router = useSafeRouter();
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  const handlePurchase = (plan: MembershipPlan) => {
+    if (plan.id === 'free') return;
+    setSelectedPlan(plan.id);
+    router.push('/payment', { planId: plan.id, amount: plan.price });
+  };
+
+第13页                                                               	G open V1.0
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <ThemedText variant="h2" style={{ marginBottom: 8 }}>
+          会员中心
+        </ThemedText>
+        <ThemedText variant="body" color={theme.textSecondary} style={{ marginBottom: 24 }}>
+          解锁更多AI创作能力
+        </ThemedText>
+
+        {membershipPlans.map((plan) => (
+          <TouchableOpacity
+            key={plan.id}
+            onPress={() => handlePurchase(plan)}
+            style={{
+              backgroundColor: theme.backgroundDefault,
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 16,
+              borderWidth: plan.recommended ? 2 : 1,
+              borderColor: plan.recommended ? theme.primary : theme.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View>
+                <ThemedText variant="h3">{plan.name}</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 8 }}>
+                  <ThemedText variant="h1" color={theme.primary}>¥{plan.price}</ThemedText>
+                  <ThemedText variant="small" color={theme.textMuted}>
+                    {plan.duration > 0 ? `/ ${plan.duration}天` : ''}
+                  </ThemedText>
+                </View>
+              </View>
+              {plan.recommended && (
+                <View style={{
+                  backgroundColor: theme.primary,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                }}>
+                  <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                    推荐
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+
+            <View style={{ marginTop: 16 }}>
+              {plan.features.map((feature, index) => (
+                <ThemedText
+                  key={index}
+                  variant="small"
+                  color={theme.textSecondary}
+                  style={{ marginTop: 8 }}
+                >
+                  ✓ {feature}
+                </ThemedText>
+              ))}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+第14页                                                               	G open V1.0
+
+/**
+ * 支付页面
+ * 处理会员购买支付
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  Alert,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
+
+export default function PaymentScreen() {
+  const { theme, isDark } = useTheme();
+  const { user, refreshUser } = useAuth();
+  const router = useSafeRouter();
+  const params = useSafeSearchParams<{ planId: string; amount: number }>();
+  
+  const [transactionId, setTransactionId] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!transactionId.trim()) {
+      Alert.alert('提示', '请输入转账流水号');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/v1/payment/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: params.planId,
+          amount: params.amount,
+          transactionId: transactionId.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        Alert.alert('提交成功', '请等待管理员审核，审核通过后会员将自动激活');
+        router.back();
+      } else {
+        const error = await response.json();
+        Alert.alert('提交失败', error.message || '请稍后重试');
+      }
+    } catch (error) {
+      Alert.alert('网络错误', '请检查网络连接');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+第15页                                                               	G open V1.0
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <ThemedText variant="h2" style={{ marginBottom: 8 }}>
+          支付确认
+        </ThemedText>
+
+        <ThemedView level="default" style={{ borderRadius: 16, padding: 20, marginTop: 20 }}>
+          <ThemedText variant="h3">订单信息</ThemedText>
+          <View style={{ marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <ThemedText variant="body" color={theme.textSecondary}>套餐</ThemedText>
+              <ThemedText variant="bodyMedium">{params.planId === 'normal' ? '普通会员' : '超级会员'}</ThemedText>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+              <ThemedText variant="body" color={theme.textSecondary}>金额</ThemedText>
+              <ThemedText variant="h3" color={theme.primary}>¥{params.amount}</ThemedText>
+            </View>
+          </View>
+        </ThemedView>
+
+        <ThemedView level="default" style={{ borderRadius: 16, padding: 20, marginTop: 20 }}>
+          <ThemedText variant="h3">收款码</ThemedText>
+          <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: 8 }}>
+            请扫码转账后，在下方输入流水号
+          </ThemedText>
+          <View style={{ alignItems: 'center', marginTop: 20 }}>
+            <Image
+              source={{ uri: '/assets/payment-qr.png' }}
+              style={{ width: 200, height: 200, borderRadius: 8 }}
+            />
+          </View>
+        </ThemedView>
+
+        <ThemedView level="default" style={{ borderRadius: 16, padding: 20, marginTop: 20 }}>
+          <ThemedText variant="h3">流水号确认</ThemedText>
+          <TextInput
+            value={transactionId}
+            onChangeText={setTransactionId}
+            placeholder="请输入转账流水号"
+            placeholderTextColor={theme.textMuted}
+            style={{
+              backgroundColor: theme.backgroundTertiary,
+              borderRadius: 12,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              marginTop: 16,
+              color: theme.textPrimary,
+            }}
+          />
+        </ThemedView>
+
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={loading}
+          style={{
+            backgroundColor: theme.primary,
+            borderRadius: 16,
+            paddingVertical: 16,
+            alignItems: 'center',
+            marginTop: 24,
+          }}
+        >
+          <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText}>
+            {loading ? '提交中...' : '确认支付'}
+          </ThemedText>
+        </TouchableOpacity>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+第16页                                                               	G open V1.0
+
+/**
+ * 模型市场页面
+ * AI模型下载和管理
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface AIModel {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  downloads: number;
+  rating: number;
+  thumbnailUrl: string;
+  isPremium: boolean;
+}
+
+export default function ModelsScreen() {
+  const { theme, isDark } = useTheme();
+  const { user } = useAuth();
+  const [models, setModels] = useState<AIModel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const categories = ['all', 'game', 'anime', 'voice', 'image'];
+
+  useEffect(() => {
+    fetchModels();
+  }, [selectedCategory]);
+
+  const fetchModels = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/v1/models?category=${selectedCategory}`);
+      const data = await response.json();
+      setModels(data.models || []);
+    } catch (error) {
+      console.error('Fetch models error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <ThemedText variant="h2" style={{ marginBottom: 16 }}>
+          模型市场
+        </ThemedText>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => setSelectedCategory(cat)}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 20,
+                backgroundColor: selectedCategory === cat ? theme.primary : theme.backgroundDefault,
+                marginRight: 12,
+              }}
+            >
+              <ThemedText
+                variant="smallMedium"
+                color={selectedCategory === cat ? theme.buttonPrimaryText : theme.textSecondary}
+              >
+                {cat === 'all' ? '全部' : cat}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {loading ? (
+          <ActivityIndicator color={theme.primary} />
+        ) : (
+          <View style={{ gap: 16 }}>
+            {models.map((model) => (
+              <TouchableOpacity
+                key={model.id}
+                style={{
+                  backgroundColor: theme.backgroundDefault,
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                }}
+              >
+                <Image
+                  source={{ uri: model.thumbnailUrl }}
+                  style={{ width: '100%', height: 120 }}
+                />
+                <View style={{ padding: 16 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <ThemedText variant="h4">{model.name}</ThemedText>
+                    {model.isPremium && (
+                      <View style={{
+                        backgroundColor: theme.accent,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 8,
+                      }}>
+                        <ThemedText variant="caption" color={theme.buttonPrimaryText}>
+                          会员
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+                  <ThemedText variant="small" color={theme.textSecondary} style={{ marginTop: 8 }}>
+                    {model.description}
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+第17页                                                               	G open V1.0
+
+/**
+ * 设置页面
+ * 用户设置和应用配置
+ */
+
+import React from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface SettingItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  icon: string;
+  route?: string;
+  action?: () => void;
+}
+
+export default function SettingsScreen() {
+  const { theme, isDark, mode, setThemeMode } = useTheme();
+  const { user, logout } = useAuth();
+  const router = useSafeRouter();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      '退出登录',
+      '确定要退出登录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+  const settingsSections: SettingItem[][] = [
+    [
+      {
+        id: 'membership',
+        title: '会员中心',
+        subtitle: user?.membership_type === 'free' ? '未开通' : `${user?.membership_type}会员`,
+        icon: '👑',
+        route: '/membership',
+      },
+      {
+        id: 'wallet',
+        title: '钱包',
+        subtitle: '余额管理',
+        icon: '💰',
+        route: '/wallet',
+      },
+      {
+        id: 'promotion',
+        title: '推广中心',
+        subtitle: '推广赚钱',
+        icon: '📢',
+        route: '/promotion',
+      },
+    ],
+    [
+      {
+        id: 'theme',
+        title: '主题设置',
+        subtitle: isDark ? '暗色模式' : '亮色模式',
+        icon: '🎨',
+        action: () => setThemeMode(isDark ? 'light' : 'dark'),
+      },
+      {
+        id: 'notification',
+        title: '通知设置',
+        icon: '🔔',
+        route: '/notification-settings',
+      },
+      {
+        id: 'privacy',
+        title: '隐私设置',
+        icon: '🔒',
+        route: '/privacy-settings',
+      },
+    ],
+    [
+      {
+        id: 'about',
+        title: '关于我们',
+        icon: 'ℹ️',
+        route: '/about',
+      },
+      {
+        id: 'feedback',
+        title: '意见反馈',
+        icon: '💬',
+        route: '/feedback',
+      },
+    ],
+  ];
+
+第18页                                                               	G open V1.0
+
+  const handleItemPress = (item: SettingItem) => {
+    if (item.action) {
+      item.action();
+    } else if (item.route) {
+      router.push(item.route);
+    }
+  };
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <ThemedText variant="h2" style={{ marginBottom: 20 }}>
+          设置
+        </ThemedText>
+
+        {settingsSections.map((section, sectionIndex) => (
+          <ThemedView
+            key={sectionIndex}
+            level="default"
+            style={{ borderRadius: 16, marginBottom: 16, overflow: 'hidden' }}
+          >
+            {section.map((item, itemIndex) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => handleItemPress(item)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 16,
+                  borderBottomWidth: itemIndex < section.length - 1 ? 1 : 0,
+                  borderBottomColor: theme.border,
+                }}
+              >
+                <ThemedText variant="h4" style={{ width: 40 }}>{item.icon}</ThemedText>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="bodyMedium">{item.title}</ThemedText>
+                  {item.subtitle && (
+                    <ThemedText variant="small" color={theme.textMuted}>
+                      {item.subtitle}
+                    </ThemedText>
+                  )}
+                </View>
+                <ThemedText variant="body" color={theme.textMuted}>›</ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
+        ))}
+
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={{
+            backgroundColor: theme.error,
+            borderRadius: 16,
+            paddingVertical: 16,
+            alignItems: 'center',
+            marginTop: 20,
+          }}
+        >
+          <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText}>
+            退出登录
+          </ThemedText>
+        </TouchableOpacity>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+第19页                                                               	G open V1.0
+
+/**
+ * 推广中心页面
+ * 推广员功能入口
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Clipboard,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface PromotionStats {
+  isPromoter: boolean;
+  promoCode: string;
+  totalClicks: number;
+  totalConversions: number;
+  totalEarnings: number;
+  availableEarnings: number;
+  pendingEarnings: number;
+}
+
+export default function PromotionScreen() {
+  const { theme, isDark } = useTheme();
+  const { user } = useAuth();
+  const [stats, setStats] = useState<PromotionStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/v1/promotion/stats');
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      console.error('Fetch promotion stats error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyPromoter = async () => {
+    try {
+      const response = await fetch('/api/v1/promotion/apply', { method: 'POST' });
+      if (response.ok) {
+        Alert.alert('申请成功', '您已成为推广员');
+        fetchStats();
+      }
+    } catch (error) {
+      Alert.alert('申请失败', '请稍后重试');
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (stats?.promoCode) {
+      const link = `https://gopen.app/register?ref=${stats.promoCode}`;
+      Clipboard.setString(link);
+      Alert.alert('已复制', '推广链接已复制到剪贴板');
+    }
+  };
+
+  const handleWithdraw = async () => {
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount < 10) {
+      Alert.alert('提示', '最低提现金额为10元');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/v1/promotion/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Math.floor(amount * 100) }),
+      });
+
+      if (response.ok) {
+        Alert.alert('提现申请已提交', '请等待审核');
+        setWithdrawAmount('');
+        fetchStats();
+      }
+    } catch (error) {
+      Alert.alert('提现失败', '请稍后重试');
+    }
+  };
+
+第20页                                                               	G open V1.0
+
+  if (!stats?.isPromoter) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <ThemedText variant="h3" style={{ marginBottom: 16 }}>成为推广员</ThemedText>
+          <ThemedText variant="body" color={theme.textSecondary} style={{ textAlign: 'center', marginBottom: 24 }}>
+            邀请好友注册消费，即可获得10%佣金奖励
+          </ThemedText>
+          <TouchableOpacity
+            onPress={handleApplyPromoter}
+            style={{
+              backgroundColor: theme.primary,
+              paddingHorizontal: 32,
+              paddingVertical: 14,
+              borderRadius: 12,
+            }}
+          >
+            <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText}>
+              立即申请
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <ThemedText variant="h2" style={{ marginBottom: 20 }}>推广中心</ThemedText>
+
+        <ThemedView level="default" style={{ borderRadius: 16, padding: 20, marginBottom: 20 }}>
+          <ThemedText variant="small" color={theme.textSecondary}>我的推广链接</ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+            <ThemedView level="tertiary" style={{ flex: 1, padding: 12, borderRadius: 8 }}>
+              <ThemedText variant="small" numberOfLines={1}>
+                https://gopen.app/register?ref={stats?.promoCode}
+              </ThemedText>
+            </ThemedView>
+            <TouchableOpacity
+              onPress={handleCopyLink}
+              style={{
+                backgroundColor: theme.primary,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 8,
+                marginLeft: 12,
+              }}
+            >
+              <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>复制</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </ThemedView>
+
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+          <ThemedView level="default" style={{ flex: 1, borderRadius: 16, padding: 16 }}>
+            <ThemedText variant="caption" color={theme.textSecondary}>点击数</ThemedText>
+            <ThemedText variant="h2" style={{ marginTop: 8 }}>{stats?.totalClicks || 0}</ThemedText>
+          </ThemedView>
+          <ThemedView level="default" style={{ flex: 1, borderRadius: 16, padding: 16 }}>
+            <ThemedText variant="caption" color={theme.textSecondary}>转化数</ThemedText>
+            <ThemedText variant="h2" style={{ marginTop: 8 }}>{stats?.totalConversions || 0}</ThemedText>
+          </ThemedView>
+          <ThemedView level="default" style={{ flex: 1, borderRadius: 16, padding: 16 }}>
+            <ThemedText variant="caption" color={theme.textSecondary}>总收益</ThemedText>
+            <ThemedText variant="h2" color={theme.primary} style={{ marginTop: 8 }}>
+              ¥{((stats?.totalEarnings || 0) / 100).toFixed(2)}
+            </ThemedText>
+          </ThemedView>
+        </View>
+
+        <ThemedView level="default" style={{ borderRadius: 16, padding: 20 }}>
+          <ThemedText variant="h4">申请提现</ThemedText>
+          <ThemedText variant="small" color={theme.textSecondary} style={{ marginTop: 8 }}>
+            可提现: ¥{((stats?.availableEarnings || 0) / 100).toFixed(2)}
+          </ThemedText>
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
+            <TextInput
+              value={withdrawAmount}
+              onChangeText={setWithdrawAmount}
+              keyboardType="numeric"
+              placeholder="输入提现金额"
+              placeholderTextColor={theme.textMuted}
+              style={{
+                flex: 1,
+                backgroundColor: theme.backgroundTertiary,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                color: theme.textPrimary,
+              }}
+            />
+            <TouchableOpacity
+              onPress={handleWithdraw}
+              style={{
+                backgroundColor: theme.primary,
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                borderRadius: 12,
+                marginLeft: 12,
+              }}
+            >
+              <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>提现</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </ThemedView>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+第21页                                                               	G open V1.0
+
+/**
+ * 管理后台页面
+ * 管理员功能入口
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Screen } from '@/components/Screen';
+import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { width } = Dimensions.get('window');
+const IS_DESKTOP = width >= 1024;
+
+type AdminTab = 'stats' | 'users' | 'orders' | 'profit' | 'promotion' | 'logs' | 'config';
+
+export default function AdminScreen() {
+  const { theme, isDark } = useTheme();
+  const router = useSafeRouter();
+  const [activeTab, setActiveTab] = useState<AdminTab>('stats');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    checkAdminAuth();
+  }, []);
+
+  const checkAdminAuth = async () => {
+    const adminToken = await AsyncStorage.getItem('adminToken');
+    if (adminToken) {
+      setIsAuthenticated(true);
+    } else {
+      router.replace('/admin-login');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  const tabs: { id: AdminTab; label: string }[] = [
+    { id: 'stats', label: '数据统计' },
+    { id: 'users', label: '用户管理' },
+    { id: 'orders', label: '订单管理' },
+    { id: 'profit', label: '利润统计' },
+    { id: 'promotion', label: '推广中心' },
+    { id: 'logs', label: '系统日志' },
+    { id: 'config', label: '系统配置' },
+  ];
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
+      <View style={{ flexDirection: IS_DESKTOP ? 'row' : 'column', flex: 1 }}>
+        <ScrollView
+          horizontal={!IS_DESKTOP}
+          style={{
+            width: IS_DESKTOP ? 200 : '100%',
+            backgroundColor: theme.backgroundDefault,
+          }}
+          contentContainerStyle={{
+            flexDirection: IS_DESKTOP ? 'column' : 'row',
+            padding: IS_DESKTOP ? 16 : 12,
+            gap: 8,
+          }}
+        >
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                backgroundColor: activeTab === tab.id ? theme.primary : 'transparent',
+                minWidth: IS_DESKTOP ? undefined : 80,
+              }}
+            >
+              <ThemedText
+                variant="smallMedium"
+                color={activeTab === tab.id ? theme.buttonPrimaryText : theme.textSecondary}
+              >
+                {tab.label}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <View style={{ flex: 1 }}>
+          {/* 渲染对应的管理面板 */}
+        </View>
+      </View>
+    </Screen>
+  );
+}
+
+第22页                                                               	G open V1.0
+
+/**
+ * 服务端入口文件
+ * Express应用配置
+ */
+
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import paymentRoutes from './routes/payment.js';
+import adminRoutes from './routes/admin.js';
+import promotionRoutes from './routes/promotion.js';
+import aiRoutes from './routes/ai.js';
+import modelRoutes from './routes/models.js';
+
+const app = express();
+const PORT = process.env.PORT || 9091;
+
+// 中间件配置
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// API路由注册
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/promotion', promotionRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/models', modelRoutes);
+
+// 健康检查
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 错误处理中间件
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: '服务器内部错误' });
+});
+
+// 启动服务器
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+第23页                                                               	G open V1.0
+
+/**
+ * 认证路由
+ * 用户登录注册
+ */
+
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+import { sendSmsCode, verifySmsCode } from '../services/sms.js';
+
+const router = Router();
+const client = getSupabaseClient();
+
+const sendCodeSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
+});
+
+const loginSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
+  code: z.string().length(6, '验证码为6位数字'),
+  promoCode: z.string().optional(),
+});
+
+router.post('/send-code', async (req: Request, res: Response) => {
+  try {
+    const { phone } = sendCodeSchema.parse(req.body);
+    await sendSmsCode(phone);
+    res.json({ success: true, message: '验证码已发送' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    res.status(500).json({ error: '发送验证码失败' });
+  }
+});
+
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { phone, code, promoCode } = loginSchema.parse(req.body);
+    
+    const isValid = await verifySmsCode(phone, code);
+    if (!isValid) {
+      return res.status(400).json({ error: '验证码错误' });
+    }
+
+    let user = await client
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+
+    if (!user.data) {
+      user = await client
+        .from('users')
+        .insert([{
+          phone,
+          membership_type: 'free',
+          created_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (promoCode) {
+        await client
+          .from('promotion_conversions')
+          .insert([{
+            promoter_id: promoCode,
+            converted_user_id: user.data.id,
+            status: 'active',
+            converted_at: new Date().toISOString(),
+          }]);
+      }
+    }
+
+    const token = generateToken(user.data.id);
+    res.json({ user: user.data, token });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: '登录失败' });
+  }
+});
+
+export default router;
+
+第24页                                                               	G open V1.0
+
+/**
+ * 支付路由
+ * 处理会员购买
+ */
+
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+import { calculatePromotionCommission } from './admin.js';
+
+const router = Router();
+const client = getSupabaseClient();
+
+const submitOrderSchema = z.object({
+  planId: z.enum(['normal', 'super']),
+  amount: z.number().positive(),
+  transactionId: z.string().min(1, '请输入流水号'),
+});
+
+router.post('/submit', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({ error: '请先登录' });
+    }
+
+    const { planId, amount, transactionId } = submitOrderSchema.parse(req.body);
+
+    const { data, error } = await client
+      .from('orders')
+      .insert([{
+        user_id: userId,
+        plan_id: planId,
+        amount: amount * 100,
+        transaction_id: transactionId,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ error: '提交订单失败' });
+    }
+
+    res.json({ success: true, order: data });
+  } catch (error) {
+    console.error('Submit order error:', error);
+    res.status(500).json({ error: '提交订单失败' });
+  }
+});
+
+router.post('/approve', async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.body;
+    
+    const { data: order } = await client
+      .from('orders')
+      .select('*, users!user_id(*)')
+      .eq('id', orderId)
+      .single();
+
+    if (!order) {
+      return res.status(404).json({ error: '订单不存在' });
+    }
+
+    await client
+      .from('orders')
+      .update({ status: 'approved', approved_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    const membershipDays = order.plan_id === 'normal' ? 30 : 30;
+    const membershipType = order.plan_id;
+    const expireAt = new Date(Date.now() + membershipDays * 24 * 60 * 60 * 1000);
+
+    await client
+      .from('users')
+      .update({
+        membership_type: membershipType,
+        membership_expire_at: expireAt.toISOString(),
+      })
+      .eq('id', order.user_id);
+
+    await calculatePromotionCommission(order.user_id, order.amount, orderId);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Approve order error:', error);
+    res.status(500).json({ error: '审核失败' });
+  }
+});
+
+export default router;
+
+第25页                                                               	G open V1.0
+
+/**
+ * 推广路由
+ * 推广员功能API
+ */
+
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+import { nanoid } from 'nanoid';
+
+const router = Router();
+const client = getSupabaseClient();
+
+router.post('/apply', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({ error: '请先登录' });
+    }
+
+    const promoCode = nanoid(8).toUpperCase();
+
+    const { data, error } = await client
+      .from('promoters')
+      .insert([{
+        user_id: userId,
+        promo_code: promoCode,
+        commission_rate: 0.10,
+        status: 'active',
+        created_at: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({ error: '您已是推广员' });
+      }
+      return res.status(500).json({ error: '申请失败' });
+    }
+
+    res.json({ success: true, promoter: data });
+  } catch (error) {
+    console.error('Apply promoter error:', error);
+    res.status(500).json({ error: '申请失败' });
+  }
+});
+
+router.get('/stats', async (req: Request, res: Response) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({ error: '请先登录' });
+    }
+
+    const { data: promoter } = await client
+      .from('promoters')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (!promoter) {
+      return res.json({ isPromoter: false });
+    }
+
+    const { count: totalClicks } = await client
+      .from('promotion_clicks')
+      .select('*', { count: 'exact', head: true })
+      .eq('promoter_id', promoter.id);
+
+    const { count: totalConversions } = await client
+      .from('promotion_conversions')
+      .select('*', { count: 'exact', head: true })
+      .eq('promoter_id', promoter.id);
+
+    const { data: earnings } = await client
+      .from('promotion_earnings')
+      .select('commission, status')
+      .eq('promoter_id', promoter.id);
+
+    const totalEarnings = earnings?.reduce((sum, e) => sum + e.commission, 0) || 0;
+    const availableEarnings = earnings?.filter(e => e.status === 'confirmed')
+      .reduce((sum, e) => sum + e.commission, 0) || 0;
+
+    res.json({
+      isPromoter: true,
+      promoCode: promoter.promo_code,
+      totalClicks,
+      totalConversions,
+      totalEarnings,
+      availableEarnings,
+    });
+  } catch (error) {
+    console.error('Get promotion stats error:', error);
+    res.status(500).json({ error: '获取数据失败' });
+  }
+});
+
+export default router;
+
+第26页                                                               	G open V1.0
+
+/**
+ * AI服务路由
+ * 大模型调用接口
+ */
+
+import { Router, Request, Response } from 'express';
+import { CozeAPI } from 'coze-coding-dev-sdk';
+
+const router = Router();
+const cozeClient = new CozeAPI(process.env.COZE_API_KEY || '');
+
+router.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { message, history } = req.body;
+    const userId = req.headers['x-user-id'] as string;
+
+    const response = await cozeClient.chat({
+      bot_id: process.env.COZE_BOT_ID || '',
+      user_id: userId,
+      messages: [
+        ...history.map((h: any) => ({
+          role: h.role,
+          content: h.content,
+        })),
+        { role: 'user', content: message },
+      ],
+    });
+
+    res.json({ reply: response.messages[0]?.content || '' });
+  } catch (error) {
+    console.error('AI chat error:', error);
+    res.status(500).json({ error: 'AI服务暂时不可用' });
+  }
+});
+
+router.post('/generate-image', async (req: Request, res: Response) => {
+  try {
+    const { prompt } = req.body;
+    const userId = req.headers['x-user-id'] as string;
+
+    const response = await cozeClient.generateImage({
+      prompt,
+      size: '1024x1024',
+    });
+
+    res.json({ imageUrl: response.data?.[0]?.url });
+  } catch (error) {
+    console.error('Generate image error:', error);
+    res.status(500).json({ error: '图像生成失败' });
+  }
+});
+
+router.post('/text-to-speech', async (req: Request, res: Response) => {
+  try {
+    const { text, voice } = req.body;
+
+    const response = await cozeClient.textToSpeech({
+      text,
+      voice_id: voice || 'default',
+    });
+
+    res.json({ audioUrl: response.url });
+  } catch (error) {
+    console.error('TTS error:', error);
+    res.status(500).json({ error: '语音合成失败' });
+  }
+});
+
+export default router;
+
+/**
+ * 模型市场路由
+ * AI模型管理
+ */
+
+import { Router, Request, Response } from 'express';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+
+const router = Router();
+const client = getSupabaseClient();
+
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { category } = req.query;
+
+    let query = client
+      .from('ai_models')
+      .select('*')
+      .eq('status', 'active')
+      .order('downloads', { ascending: false });
+
+    if (category && category !== 'all') {
+      query = query.eq('category', category as string);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res.status(500).json({ error: '获取模型列表失败' });
+    }
+
+    res.json({ models: data });
+  } catch (error) {
+    console.error('Get models error:', error);
+    res.status(500).json({ error: '获取模型列表失败' });
+  }
+});
+
+export default router;
+
+第27页                                                               	G open V1.0
+
+/**
+ * 数据库客户端
+ * Supabase连接管理
+ */
+
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_KEY || '';
+
+let supabaseClient: SupabaseClient | null = null;
+
+export const getSupabaseClient = (): SupabaseClient => {
+  if (!supabaseClient) {
+    supabaseClient = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: false,
+      },
+    });
+  }
+  return supabaseClient;
+};
+
+export const supabase = getSupabaseClient();
+
+/**
+ * 短信服务
+ * 验证码发送
+ */
+
+import axios from 'axios';
+
+const SMS_API_URL = process.env.SMS_API_URL || '';
+const SMS_API_KEY = process.env.SMS_API_KEY || '';
+
+const codeStore = new Map<string, { code: string; expireAt: number }>();
+
+export const sendSmsCode = async (phone: string): Promise<void> => {
+  const code = Math.random().toString().slice(-6);
+  const expireAt = Date.now() + 5 * 60 * 1000;
+
+  codeStore.set(phone, { code, expireAt });
+
+  if (SMS_API_URL && SMS_API_KEY) {
+    await axios.post(SMS_API_URL, {
+      phone,
+      template: 'verification_code',
+      params: { code },
+    }, {
+      headers: { Authorization: `Bearer ${SMS_API_KEY}` },
+    });
+  }
+
+  console.log(`[SMS] Code for ${phone}: ${code}`);
+};
+
+export const verifySmsCode = async (phone: string, code: string): Promise<boolean> => {
+  const stored = codeStore.get(phone);
+  if (!stored) return false;
+
+  if (Date.now() > stored.expireAt) {
+    codeStore.delete(phone);
+    return false;
+  }
+
+  if (stored.code !== code) return false;
+
+  codeStore.delete(phone);
+  return true;
+};
+
+第28页                                                               	G open V1.0
+
+/**
+ * 存储服务
+ * 对象存储管理
+ */
+
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+const s3Client = new S3Client({
+  region: process.env.OSS_REGION || 'cn-hangzhou',
+  endpoint: process.env.OSS_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.OSS_SECRET_ACCESS_KEY || '',
+  },
+});
+
+const BUCKET_NAME = process.env.OSS_BUCKET_NAME || 'gopen';
+
+export const uploadFile = async (
+  key: string,
+  body: Buffer,
+  contentType: string
+): Promise<string> => {
+  await s3Client.send(new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  }));
+
+  return key;
+};
+
+export const getSignedDownloadUrl = async (key: string): Promise<string> => {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  });
+
+  return getSignedUrl(s3Client, command, { expiresIn: 3600 });
+};
+
+/**
+ * 认证中间件
+ * Token验证
+ */
+
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'gopen_secret_key_2024';
+
+export interface AuthRequest extends Request {
+  userId?: string;
+}
+
+export const authMiddleware = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    res.status(401).json({ error: '请先登录' });
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Token无效' });
+  }
+};
+
+export const adminMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const key = req.query.key || req.headers['x-admin-key'];
+
+  if (key !== 'admin_key_2024') {
+    res.status(403).json({ error: '无权限' });
+    return;
+  }
+
+  next();
+};
+
+第29页                                                               	G open V1.0
+
+/**
+ * 日志工具
+ * 日志记录和输出
+ */
+
+import fs from 'fs';
+import path from 'path';
+
+const LOG_DIR = process.env.LOG_DIR || '/app/work/logs';
+
+type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+
+interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: any;
+}
+
+const formatLog = (entry: LogEntry): string => {
+  const dataStr = entry.data ? ` ${JSON.stringify(entry.data)}` : '';
+  return `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}${dataStr}\n`;
+};
+
+const writeLog = (level: LogLevel, message: string, data?: any): void => {
+  const entry: LogEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message,
+    data,
+  };
+
+  const logPath = path.join(LOG_DIR, 'app.log');
+  const logLine = formatLog(entry);
+
+  fs.appendFileSync(logPath, logLine);
+
+  if (level === 'error') {
+    console.error(logLine.trim());
+  } else if (level === 'warn') {
+    console.warn(logLine.trim());
+  } else {
+    console.log(logLine.trim());
+  }
+};
+
+export const logger = {
+  info: (message: string, data?: any) => writeLog('info', message, data),
+  warn: (message: string, data?: any) => writeLog('warn', message, data),
+  error: (message: string, data?: any) => writeLog('error', message, data),
+  debug: (message: string, data?: any) => writeLog('debug', message, data),
+};
+
+/**
+ * 数据验证工具
+ * 输入验证函数
+ */
+
+export const isValidPhone = (phone: string): boolean => {
+  return /^1[3-9]\d{9}$/.test(phone);
+};
+
+export const isValidEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+export const isValidPassword = (password: string): boolean => {
+  return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
+};
+
+export const sanitizeInput = (input: string): string => {
+  return input.replace(/[<>\"\'&]/g, '');
+};
+
+export const isValidAmount = (amount: number): boolean => {
+  return amount > 0 && amount < 100000000 && Number.isFinite(amount);
+};
+
+第30页                                                               	G open V1.0
+
+/**
+ * 应用配置
+ * Expo配置文件
+ */
+
+import { ConfigContext, ExpoConfig } from 'expo/config';
+
+export default ({ config }: ConfigContext): ExpoConfig => {
+  return {
+    ...config,
+    name: 'G open',
+    slug: 'gopen',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'automatic',
+    splash: {
+      image: './assets/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#0A0A0F',
+    },
+    assetBundlePatterns: ['**/*'],
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.gopen.app',
+      config: {
+        usesNonExemptEncryption: false,
+      },
+    },
+    android: {
+      package: 'com.gopen.app',
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#0A0A0F',
+      },
+      permissions: [
+        'CAMERA',
+        'RECORD_AUDIO',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'VIBRATE',
+      ],
+    },
+    web: {
+      favicon: './assets/favicon.png',
+      bundler: 'metro',
+    },
+    plugins: [
+      'expo-camera',
+      'expo-image-picker',
+      'expo-av',
+      'expo-notifications',
+    ],
+    extra: {
+      eas: {
+        projectId: 'your-project-id',
+      },
+    },
+  };
+};
+
+// ============================================================
+// 源代码文档结束
+// G open 智能创作助手 V1.0
+// Copyright (C) 2025 G Open Team
+// ============================================================

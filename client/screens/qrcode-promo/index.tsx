@@ -531,17 +531,19 @@ export default function QRCodePromoScreen() {
     },
     shareButtons: {
       flexDirection: 'row' as const,
-      gap: Spacing.md,
+      flexWrap: 'wrap' as const,
+      gap: Spacing.xs,
       marginBottom: Spacing.sm,
     },
     shareButton: {
-      flex: 1,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       paddingVertical: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
       borderRadius: BorderRadius.md,
       gap: Spacing.xs,
+      minWidth: '30%' as const,
     },
     linkBox: {
       padding: Spacing.xs,
@@ -785,12 +787,20 @@ export default function QRCodePromoScreen() {
           <View style={[styles.shareCard, { backgroundColor: theme.backgroundDefault }]}>
             <View style={styles.shareHeader}>
               <FontAwesome6 name="share-nodes" size={18} color={theme.primary} />
-              <ThemedText variant="smallMedium" color={theme.textPrimary}>对公众开放</ThemedText>
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>收款码操作</ThemedText>
             </View>
             
             <View style={styles.shareButtons}>
               <TouchableOpacity 
                 style={[styles.shareButton, { backgroundColor: theme.primary }]}
+                onPress={saveQRCodeToGallery}
+              >
+                <FontAwesome6 name="download" size={16} color="#fff" />
+                <ThemedText variant="small" color="#fff">保存收款码</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.shareButton, { backgroundColor: theme.accent }]}
                 onPress={handleShare}
               >
                 <FontAwesome6 name="share" size={16} color="#fff" />
@@ -802,7 +812,7 @@ export default function QRCodePromoScreen() {
                 onPress={copyPublicLink}
               >
                 <FontAwesome6 name="link" size={16} color={theme.primary} />
-                <ThemedText variant="small" color={theme.primary}>复制公开链接</ThemedText>
+                <ThemedText variant="small" color={theme.primary}>复制链接</ThemedText>
               </TouchableOpacity>
             </View>
             

@@ -22,56 +22,89 @@ const CARD_WIDTH = SCREEN_WIDTH * 0.42;
 const CARD_HEIGHT = 200;
 
 // 项目类型配置 - 对应Unsplash图片搜索关键词
-const TYPE_CONFIG: Record<string, { icon: string; imageKeyword: string; gradient: string[] }> = {
-  '古风场景': { icon: 'pagoda', imageKeyword: 'chinese-ancient-architecture', gradient: ['#4A5568', '#2D3748'] },
-  '国风热血': { icon: 'fire', imageKeyword: 'martial-arts-sword', gradient: ['#DC2626', '#7F1D1D'] },
-  '唯美风': { icon: 'leaf', imageKeyword: 'cherry-blossom-spring', gradient: ['#EC4899', '#831843'] },
-  '仙侠唯美': { icon: 'cloud', imageKeyword: 'misty-mountain-china', gradient: ['#8B5CF6', '#4C1D95'] },
-  '水墨场景': { icon: 'brush', imageKeyword: 'chinese-ink-painting', gradient: ['#1F2937', '#111827'] },
-  '古风角色': { icon: 'user-ninja', imageKeyword: 'chinese-warrior', gradient: ['#059669', '#064E3B'] },
-  '国风城池': { icon: 'landmark', imageKeyword: 'forbidden-city', gradient: ['#D97706', '#92400E'] },
-  '仙侠场景': { icon: 'mountain-sun', imageKeyword: 'heavenly-mountain', gradient: ['#6366F1', '#312E81'] },
-  '古风剧情': { icon: 'book-open', imageKeyword: 'ancient-scroll', gradient: ['#0891B2', '#164E63'] },
+const TYPE_CONFIG: Record<string, { icon: string; gradient: string[] }> = {
+  '古风场景': { icon: 'pagoda', gradient: ['#4A5568', '#2D3748'] },
+  '国风热血': { icon: 'fire', gradient: ['#DC2626', '#7F1D1D'] },
+  '唯美风': { icon: 'leaf', gradient: ['#EC4899', '#831843'] },
+  '仙侠唯美': { icon: 'cloud', gradient: ['#8B5CF6', '#4C1D95'] },
+  '水墨场景': { icon: 'brush', gradient: ['#1F2937', '#111827'] },
+  '古风角色': { icon: 'user-ninja', gradient: ['#059669', '#064E3B'] },
+  '国风城池': { icon: 'landmark', gradient: ['#D97706', '#92400E'] },
+  '仙侠场景': { icon: 'mountain-sun', gradient: ['#6366F1', '#312E81'] },
+  '古风剧情': { icon: 'book-open', gradient: ['#0891B2', '#164E63'] },
+};
+
+// 真实Unsplash图片链接 - 中国风/古风/唯美风格
+const PROJECT_IMAGES: Record<string, string> = {
+  // 古风场景
+  'a1': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&h=300&fit=crop', // 中国古建筑
+  'a2': 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=400&h=300&fit=crop', // 江南水乡
+  // 国风热血
+  'a3': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop', // 山峰剑影
+  'a4': 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=400&h=300&fit=crop', // 雪山
+  // 唯美风
+  'a5': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&h=300&fit=crop', // 樱花
+  'a6': 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=300&fit=crop', // 星空
+  // 仙侠唯美
+  'a7': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop', // 仙山
+  'a8': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop', // 云海
+  // 水墨场景
+  'a9': 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=300&fit=crop', // 山水
+  'a10': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop', // 雾林
+  // 古风角色
+  'a11': 'https://images.unsplash.com/photo-1545893835-abaa50cbe628?w=400&h=300&fit=crop', // 古风人物
+  'a12': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop', // 书法
+  // 待处理项目
+  'p1': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop', // 竹林
+  'p2': 'https://images.unsplash.com/photo-1517309230475-6736d926b979?w=400&h=300&fit=crop', // 古镇夜景
+  'p3': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop', // 武侠
+  'p4': 'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=400&h=300&fit=crop', // 对决
+  'p5': 'https://images.unsplash.com/photo-1522413171819-61c5fee00f52?w=400&h=300&fit=crop', // 落花
+  'p6': 'https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=400&h=300&fit=crop', // 月光
+  'p7': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop', // 雪山
+  'p8': 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=300&fit=crop', // 湖泊
+  'p9': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop', // 山水
+  'p10': 'https://images.unsplash.com/photo-1580136607857-4c193a8f1e37?w=400&h=300&fit=crop', // 画作
 };
 
 // 精选项目数据 - 每个类型保留优质项目
 const PROJECT_DATA = {
   active: [
     // 古风场景
-    { id: 'a1', title: '山河入梦', type: '古风场景', progress: 92, assets: 56, lastUpdated: '刚刚', imageId: 'chinese-ancient-village-mist' },
-    { id: 'a2', title: '烟雨江南', type: '古风场景', progress: 85, assets: 48, lastUpdated: '20分钟前', imageId: 'jiangnan-water-town' },
+    { id: 'a1', title: '山河入梦', type: '古风场景', progress: 92, assets: 56, lastUpdated: '刚刚' },
+    { id: 'a2', title: '烟雨江南', type: '古风场景', progress: 85, assets: 48, lastUpdated: '20分钟前' },
     // 国风热血
-    { id: 'a3', title: '剑定山河', type: '国风热血', progress: 95, assets: 68, lastUpdated: '刚刚', imageId: 'sword-warrior-battle' },
-    { id: 'a4', title: '血染苍穹', type: '国风热血', progress: 88, assets: 52, lastUpdated: '15分钟前', imageId: 'epic-battle-china' },
+    { id: 'a3', title: '剑定山河', type: '国风热血', progress: 95, assets: 68, lastUpdated: '刚刚' },
+    { id: 'a4', title: '血染苍穹', type: '国风热血', progress: 88, assets: 52, lastUpdated: '15分钟前' },
     // 唯美风
-    { id: 'a5', title: '樱花漫舞', type: '唯美风', progress: 78, assets: 42, lastUpdated: '35分钟前', imageId: 'cherry-blossom-pink' },
-    { id: 'a6', title: '星空梦境', type: '唯美风', progress: 72, assets: 38, lastUpdated: '1小时前', imageId: 'starry-night-dream' },
+    { id: 'a5', title: '樱花漫舞', type: '唯美风', progress: 78, assets: 42, lastUpdated: '35分钟前' },
+    { id: 'a6', title: '星空梦境', type: '唯美风', progress: 72, assets: 38, lastUpdated: '1小时前' },
     // 仙侠唯美
-    { id: 'a7', title: '蓬莱仙境', type: '仙侠唯美', progress: 82, assets: 46, lastUpdated: '30分钟前', imageId: 'fairyland-mountain' },
-    { id: 'a8', title: '云端仙宫', type: '仙侠唯美', progress: 75, assets: 44, lastUpdated: '1小时前', imageId: 'heavenly-palace-clouds' },
+    { id: 'a7', title: '蓬莱仙境', type: '仙侠唯美', progress: 82, assets: 46, lastUpdated: '30分钟前' },
+    { id: 'a8', title: '云端仙宫', type: '仙侠唯美', progress: 75, assets: 44, lastUpdated: '1小时前' },
     // 水墨场景
-    { id: 'a9', title: '一纸江南', type: '水墨场景', progress: 78, assets: 42, lastUpdated: '35分钟前', imageId: 'ink-painting-landscape' },
-    { id: 'a10', title: '墨染山河', type: '水墨场景', progress: 58, assets: 28, lastUpdated: '2小时前', imageId: 'chinese-ink-mountain' },
+    { id: 'a9', title: '一纸江南', type: '水墨场景', progress: 78, assets: 42, lastUpdated: '35分钟前' },
+    { id: 'a10', title: '墨染山河', type: '水墨场景', progress: 58, assets: 28, lastUpdated: '2小时前' },
     // 古风角色
-    { id: 'a11', title: '风月入怀', type: '古风角色', progress: 85, assets: 48, lastUpdated: '20分钟前', imageId: 'chinese-swordsman' },
-    { id: 'a12', title: '青衫烟雨', type: '古风角色', progress: 65, assets: 32, lastUpdated: '2小时前', imageId: 'ancient-scholar' },
+    { id: 'a11', title: '风月入怀', type: '古风角色', progress: 85, assets: 48, lastUpdated: '20分钟前' },
+    { id: 'a12', title: '青衫烟雨', type: '古风角色', progress: 65, assets: 32, lastUpdated: '2小时前' },
   ],
   pending: [
     // 待处理 - 古风场景
-    { id: 'p1', title: '竹影清风', type: '古风场景', progress: 35, assets: 15, lastUpdated: '5小时前', imageId: 'bamboo-forest-mist' },
-    { id: 'p2', title: '古镇夜市', type: '古风场景', progress: 20, assets: 8, lastUpdated: '8小时前', imageId: 'ancient-town-night' },
+    { id: 'p1', title: '竹影清风', type: '古风场景', progress: 35, assets: 15, lastUpdated: '5小时前' },
+    { id: 'p2', title: '古镇夜市', type: '古风场景', progress: 20, assets: 8, lastUpdated: '8小时前' },
     // 待处理 - 国风热血
-    { id: 'p3', title: '武林大会', type: '国风热血', progress: 0, assets: 0, lastUpdated: '待启动', imageId: 'martial-arts-tournament' },
-    { id: 'p4', title: '江湖对决', type: '国风热血', progress: 0, assets: 0, lastUpdated: '待启动', imageId: 'sword-fight-duel' },
+    { id: 'p3', title: '武林大会', type: '国风热血', progress: 0, assets: 0, lastUpdated: '待启动' },
+    { id: 'p4', title: '江湖对决', type: '国风热血', progress: 0, assets: 0, lastUpdated: '待启动' },
     // 待处理 - 唯美风
-    { id: 'p5', title: '落樱缤纷', type: '唯美风', progress: 15, assets: 6, lastUpdated: '6小时前', imageId: 'falling-petals' },
-    { id: 'p6', title: '月光如水', type: '唯美风', progress: 0, assets: 0, lastUpdated: '待启动', imageId: 'moonlight-water' },
+    { id: 'p5', title: '落樱缤纷', type: '唯美风', progress: 15, assets: 6, lastUpdated: '6小时前' },
+    { id: 'p6', title: '月光如水', type: '唯美风', progress: 0, assets: 0, lastUpdated: '待启动' },
     // 待处理 - 仙侠唯美
-    { id: 'p7', title: '昆仑雪域', type: '仙侠唯美', progress: 25, assets: 10, lastUpdated: '4小时前', imageId: 'snow-mountain-mystic' },
-    { id: 'p8', title: '仙湖倒影', type: '仙侠唯美', progress: 0, assets: 0, lastUpdated: '待启动', imageId: 'fairy-lake-reflection' },
+    { id: 'p7', title: '昆仑雪域', type: '仙侠唯美', progress: 25, assets: 10, lastUpdated: '4小时前' },
+    { id: 'p8', title: '仙湖倒影', type: '仙侠唯美', progress: 0, assets: 0, lastUpdated: '待启动' },
     // 待处理 - 水墨场景
-    { id: 'p9', title: '泼墨山水', type: '水墨场景', progress: 10, assets: 4, lastUpdated: '10小时前', imageId: 'splash-ink-mountain' },
-    { id: 'p10', title: '丹青妙笔', type: '水墨场景', progress: 0, assets: 0, lastUpdated: '待启动', imageId: 'traditional-painting' },
+    { id: 'p9', title: '泼墨山水', type: '水墨场景', progress: 10, assets: 4, lastUpdated: '10小时前' },
+    { id: 'p10', title: '丹青妙笔', type: '水墨场景', progress: 0, assets: 0, lastUpdated: '待启动' },
   ],
 };
 
@@ -82,7 +115,6 @@ interface Project {
   progress: number;
   assets: number;
   lastUpdated: string;
-  imageId: string;
 }
 
 // 项目卡片组件
@@ -95,7 +127,7 @@ function ProjectCard({
 }) {
   const { theme } = useTheme();
   const typeConfig = TYPE_CONFIG[project.type] || TYPE_CONFIG['古风场景'];
-  const imageUrl = `https://source.unsplash.com/400x300/?${typeConfig.imageKeyword}&sig=${project.id}`;
+  const imageUrl = PROJECT_IMAGES[project.id] || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop';
   
   return (
     <TouchableOpacity 
@@ -177,7 +209,7 @@ function ProjectDetailModal({
   if (!project) return null;
   
   const typeConfig = TYPE_CONFIG[project.type] || TYPE_CONFIG['古风场景'];
-  const imageUrl = `https://source.unsplash.com/800x400/?${typeConfig.imageKeyword}&sig=${project.id}`;
+  const imageUrl = PROJECT_IMAGES[project.id] || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop';
 
   // 创作服务选项
   const createServices = [

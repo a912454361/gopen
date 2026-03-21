@@ -13,6 +13,9 @@ export const createStyles = (theme: Theme) => {
       paddingBottom: Spacing['5xl'],
     },
     header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       marginBottom: Spacing.xl,
     },
     headerTitle: {

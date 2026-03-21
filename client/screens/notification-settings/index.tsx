@@ -197,23 +197,26 @@ export default function NotificationSettingsScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             onPress={() => router.back()} 
-            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+            style={{ padding: Spacing.sm }}
           >
             <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
           </TouchableOpacity>
-          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing['2xl'] }}>
-            通知设置
-          </ThemedText>
-          <ThemedText variant="label" color={theme.textMuted} style={{ marginLeft: Spacing['2xl'] }}>
-            自定义推送通知偏好
-          </ThemedText>
-          <LinearGradient
-            colors={[theme.primary, theme.accent]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.neonLine}
-          />
+          <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+            <ThemedText variant="h4" color={theme.textPrimary}>
+              通知设置
+            </ThemedText>
+            <ThemedText variant="label" color={theme.textMuted}>
+              自定义推送通知偏好
+            </ThemedText>
+          </View>
+          <View style={{ width: 36 }} />
         </View>
+        <LinearGradient
+          colors={[theme.primary, theme.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.neonLine}
+        />
 
         {/* 说明卡片 */}
         <View style={styles.infoCard}>

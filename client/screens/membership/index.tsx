@@ -157,23 +157,26 @@ export default function MembershipScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             onPress={() => router.back()} 
-            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+            style={{ padding: Spacing.sm }}
           >
             <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
           </TouchableOpacity>
-          <ThemedText variant="h2" color={theme.textPrimary} style={{ marginLeft: Spacing["2xl"] }}>
-            会员中心
-          </ThemedText>
-          <ThemedText variant="label" color={theme.textMuted} style={{ marginLeft: Spacing["2xl"] }}>
-            三级会员 · 按需开通
-          </ThemedText>
-          <LinearGradient
-            colors={[theme.primary, theme.accent]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.neonLine}
-          />
+          <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+            <ThemedText variant="h2" color={theme.textPrimary}>
+              会员中心
+            </ThemedText>
+            <ThemedText variant="label" color={theme.textMuted}>
+              三级会员 · 按需开通
+            </ThemedText>
+          </View>
+          <View style={{ width: 36 }} />
         </View>
+        <LinearGradient
+          colors={[theme.primary, theme.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.neonLine}
+        />
 
         {/* Current Status */}
         <View style={[styles.currentPlan, isMember && styles.currentPlanActive]}>

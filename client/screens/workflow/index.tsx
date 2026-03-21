@@ -125,23 +125,26 @@ export default function WorkflowScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             onPress={() => router.back()} 
-            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+            style={{ padding: Spacing.sm }}
           >
             <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
           </TouchableOpacity>
-          <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing['2xl'] }}>
-            创作工作台
-          </ThemedText>
-          <ThemedText variant="label" color={theme.textMuted} style={{ marginLeft: Spacing['2xl'] }}>
-            环境打通 → 内容制作 → 成品输出
-          </ThemedText>
-          <LinearGradient
-            colors={[theme.primary, theme.accent]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.neonLine}
-          />
+          <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+            <ThemedText variant="h4" color={theme.textPrimary}>
+              创作工作台
+            </ThemedText>
+            <ThemedText variant="label" color={theme.textMuted}>
+              环境打通 → 内容制作 → 成品输出
+            </ThemedText>
+          </View>
+          <View style={{ width: 36 }} />
         </View>
+        <LinearGradient
+          colors={[theme.primary, theme.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.neonLine}
+        />
 
         {/* Storage Card */}
         <View style={styles.storageCard}>

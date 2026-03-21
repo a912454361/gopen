@@ -169,11 +169,12 @@ export default function PaymentScreen() {
           <View style={styles.header}>
             <TouchableOpacity 
               onPress={() => router.back()} 
-              style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+              style={{ padding: Spacing.sm }}
             >
               <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
             </TouchableOpacity>
             <ThemedText variant="h3" color={theme.textPrimary}>支付中心</ThemedText>
+            <View style={{ width: 36 }} />
           </View>
 
           <View style={[styles.statusCard, { alignItems: 'center', padding: Spacing.xl }]}>
@@ -208,11 +209,12 @@ export default function PaymentScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             onPress={() => router.back()} 
-            style={{ position: 'absolute', left: 0, padding: Spacing.sm, zIndex: 1 }}
+            style={{ padding: Spacing.sm }}
           >
             <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
           </TouchableOpacity>
           <ThemedText variant="h3" color={theme.textPrimary}>支付中心</ThemedText>
+          <View style={{ width: 36 }} />
         </View>
 
         {/* 支付方式选择 */}

@@ -11,9 +11,11 @@ export const createStyles = (theme: Theme) => {
     },
 
     header: {
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       marginBottom: Spacing.xl,
-      paddingHorizontal: Spacing.xl,
+      paddingHorizontal: Spacing.md,
     },
 
     // 支付方式选择

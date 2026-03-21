@@ -100,8 +100,8 @@ export default function QRCodePromoScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
-  const [activePayType, setActivePayType] = useState<'alipay' | 'wechat'>('alipay');
-  const [qrcodes, setQrcodes] = useState<{ alipay: QRCodeData; wechat: QRCodeData } | null>(null);
+  const [activePayType, setActivePayType] = useState<'alipay' | 'wechat' | 'unionpay' | 'jdpay' | 'bank'>('alipay');
+  const [qrcodes, setQrcodes] = useState<Record<string, QRCodeData> | null>(null);
   const [stats, setStats] = useState<PromoStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -704,8 +704,8 @@ export default function QRCodePromoScreen() {
             ]}
             onPress={() => setActivePayType('alipay')}
           >
-            <FontAwesome6 name="alipay" size={20} color={activePayType === 'alipay' ? '#1677FF' : theme.textMuted} />
-            <ThemedText variant="label" color={activePayType === 'alipay' ? '#1677FF' : theme.textPrimary}>
+            <FontAwesome6 name="alipay" size={18} color={activePayType === 'alipay' ? '#1677FF' : theme.textMuted} />
+            <ThemedText variant="tiny" color={activePayType === 'alipay' ? '#1677FF' : theme.textPrimary}>
               支付宝
             </ThemedText>
           </TouchableOpacity>
@@ -719,9 +719,54 @@ export default function QRCodePromoScreen() {
             ]}
             onPress={() => setActivePayType('wechat')}
           >
-            <FontAwesome6 name="weixin" size={20} color={activePayType === 'wechat' ? '#07C160' : theme.textMuted} brand />
-            <ThemedText variant="label" color={activePayType === 'wechat' ? '#07C160' : theme.textPrimary}>
-              微信支付
+            <FontAwesome6 name="weixin" size={18} color={activePayType === 'wechat' ? '#07C160' : theme.textMuted} brand />
+            <ThemedText variant="tiny" color={activePayType === 'wechat' ? '#07C160' : theme.textPrimary}>
+              微信
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.payTypeButton,
+              { 
+                backgroundColor: activePayType === 'unionpay' ? 'rgba(230,0,18,0.1)' : theme.backgroundDefault,
+                borderColor: activePayType === 'unionpay' ? '#E60012' : theme.border,
+              }
+            ]}
+            onPress={() => setActivePayType('unionpay')}
+          >
+            <FontAwesome6 name="credit-card" size={18} color={activePayType === 'unionpay' ? '#E60012' : theme.textMuted} />
+            <ThemedText variant="tiny" color={activePayType === 'unionpay' ? '#E60012' : theme.textPrimary}>
+              银联
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.payTypeButton,
+              { 
+                backgroundColor: activePayType === 'jdpay' ? 'rgba(225,37,27,0.1)' : theme.backgroundDefault,
+                borderColor: activePayType === 'jdpay' ? '#E1251B' : theme.border,
+              }
+            ]}
+            onPress={() => setActivePayType('jdpay')}
+          >
+            <FontAwesome6 name="wallet" size={18} color={activePayType === 'jdpay' ? '#E1251B' : theme.textMuted} />
+            <ThemedText variant="tiny" color={activePayType === 'jdpay' ? '#E1251B' : theme.textPrimary}>
+              京东
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.payTypeButton,
+              { 
+                backgroundColor: activePayType === 'bank' ? 'rgba(196,18,48,0.1)' : theme.backgroundDefault,
+                borderColor: activePayType === 'bank' ? '#C41230' : theme.border,
+              }
+            ]}
+            onPress={() => setActivePayType('bank')}
+          >
+            <FontAwesome6 name="building-columns" size={18} color={activePayType === 'bank' ? '#C41230' : theme.textMuted} />
+            <ThemedText variant="tiny" color={activePayType === 'bank' ? '#C41230' : theme.textPrimary}>
+              银行
             </ThemedText>
           </TouchableOpacity>
         </View>

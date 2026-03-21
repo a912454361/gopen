@@ -34,14 +34,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
-type PayMethod = 'alipay' | 'wechat';
+type PayMethod = 'alipay' | 'wechat' | 'unionpay' | 'jdpay' | 'bank';
 
 interface PaymentAccount {
   name: string;
   account?: string;
-  qrcodeUrl: string;
+  qrcodeUrl?: string;
   realName: string;
   desc?: string;
+  color?: string;
+  icon?: string;
+  bankName?: string;
+  bankBranch?: string;
 }
 
 // 支付方式配置
@@ -56,9 +60,31 @@ const PAY_METHODS = [
   { 
     id: 'wechat' as PayMethod, 
     name: '微信支付', 
-    icon: 'comment', 
+    icon: 'weixin', 
     color: '#07C160', 
     bgColor: 'rgba(7,193,96,0.08)',
+    brand: true,
+  },
+  { 
+    id: 'unionpay' as PayMethod, 
+    name: '银联', 
+    icon: 'credit-card', 
+    color: '#E60012', 
+    bgColor: 'rgba(230,0,18,0.08)',
+  },
+  { 
+    id: 'jdpay' as PayMethod, 
+    name: '京东支付', 
+    icon: 'wallet', 
+    color: '#E1251B', 
+    bgColor: 'rgba(225,37,27,0.08)',
+  },
+  { 
+    id: 'bank' as PayMethod, 
+    name: '银行转账', 
+    icon: 'building-columns', 
+    color: '#C41230', 
+    bgColor: 'rgba(196,18,48,0.08)',
   },
 ];
 
@@ -235,7 +261,7 @@ export default function PaymentScreen() {
               onPress={() => setPayMethod(method.id)}
             >
               <View style={[styles.payMethodIcon, { backgroundColor: method.bgColor }]}>
-                <FontAwesome6 name={method.icon as any} size={24} color={method.color} />
+                <FontAwesome6 name={method.icon as any} size={24} color={method.color} brand={(method as any).brand} />
               </View>
               <ThemedText variant="smallMedium" color={payMethod === method.id ? method.color : theme.textPrimary}>
                 {method.name}
@@ -289,6 +315,21 @@ export default function PaymentScreen() {
                       <FontAwesome6 name="copy" size={12} color={theme.textMuted} />
                     </View>
                   </TouchableOpacity>
+                </View>
+              )}
+              
+              {/* 银行转账时显示银行信息 */}
+              {currentAccount.bankName && (
+                <View style={styles.accountRow}>
+                  <ThemedText variant="caption" color={theme.textMuted}>开户银行</ThemedText>
+                  <ThemedText variant="small" color={theme.textPrimary}>{currentAccount.bankName}</ThemedText>
+                </View>
+              )}
+              
+              {currentAccount.bankBranch && (
+                <View style={styles.accountRow}>
+                  <ThemedText variant="caption" color={theme.textMuted}>开户支行</ThemedText>
+                  <ThemedText variant="small" color={theme.textPrimary}>{currentAccount.bankBranch}</ThemedText>
                 </View>
               )}
               

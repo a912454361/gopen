@@ -108,6 +108,7 @@ const verifyAdmin = (adminKey: string): boolean => {
 // 真实收款账户信息（管理员可配置）
 // 支付宝收款码格式：https://qr.alipay.com/xxx
 // 微信收款码格式：wxp://xxx 或图片URL
+// 银联收款码格式：图片URL
 const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
@@ -115,6 +116,8 @@ const PAYMENT_ACCOUNTS = {
     qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/alipay-qrcode_fea69237.png?sign=1805436367-d91c235771-0-f4f506bd6dc6a7dd8461776b01138ce542579dcc6cc82f22fb7c7eb04089e51c', // 支付宝商户收款码图片
     realName: 'G Open官方', // 收款人姓名
     desc: '请使用支付宝扫码支付',
+    color: '#1677FF',
+    icon: 'alipay',
   },
   wechat: {
     name: '微信收款',
@@ -122,6 +125,37 @@ const PAYMENT_ACCOUNTS = {
     qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/wechat-qrcode_c072ee41.png?sign=1805435684-13fd0778c0-0-d9cbf4d37cd37cba46a1bb9e0bc7981d07781fee239857e81b89d74bac7b76ae', // 微信商户收款码
     realName: 'G Open官方', // 收款人姓名
     desc: '请使用微信扫码支付',
+    color: '#07C160',
+    icon: 'weixin',
+  },
+  unionpay: {
+    name: '银联收款',
+    account: '6214****8888', // 银联卡号后四位
+    qrcodeUrl: '', // 银联收款码图片
+    realName: 'G Open官方',
+    desc: '请使用云闪付扫码支付',
+    color: '#E60012',
+    icon: 'credit-card',
+  },
+  jdpay: {
+    name: '京东支付',
+    account: '', // 京东账号
+    qrcodeUrl: '', // 京东收款码图片
+    realName: 'G Open官方',
+    desc: '请使用京东APP扫码支付',
+    color: '#E1251B',
+    icon: 'wallet',
+  },
+  bank: {
+    name: '银行转账',
+    account: '6214********8888', // 银行卡号
+    bankName: '中国工商银行',
+    bankBranch: '上海市浦东新区支行',
+    qrcodeUrl: '',
+    realName: 'G Open官方',
+    desc: '请使用网银或柜台转账',
+    color: '#C41230',
+    icon: 'building-columns',
   },
 };
 

@@ -417,7 +417,7 @@ export default function MembershipScreen() {
                     扫码支付
                   </ThemedText>
                   <ThemedText variant="caption" color={theme.textMuted}>
-                    支付宝/微信扫码付款，即时开通
+                    支付宝/微信/银联扫码，即时开通
                   </ThemedText>
                 </View>
                 <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
@@ -428,15 +428,34 @@ export default function MembershipScreen() {
                 onPress={handleTransferPay}
                 activeOpacity={0.7}
               >
-                <View style={[styles.payOptionIcon, { backgroundColor: '#1677FF' }]}>
+                <View style={[styles.payOptionIcon, { backgroundColor: '#E1251B' }]}>
                   <FontAwesome6 name="wallet" size={22} color="#fff" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                    转账支付
+                    京东支付
                   </ThemedText>
                   <ThemedText variant="caption" color={theme.textMuted}>
-                    手动转账后联系客服开通
+                    使用京东钱包付款
+                  </ThemedText>
+                </View>
+                <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.payOption}
+                onPress={handleTransferPay}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.payOptionIcon, { backgroundColor: '#C41230' }]}>
+                  <FontAwesome6 name="building-columns" size={22} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    银行转账
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    银行卡转账后联系客服开通
                   </ThemedText>
                 </View>
                 <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />

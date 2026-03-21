@@ -1185,7 +1185,13 @@ export default function ProjectsScreen() {
   const totalAssets = mockProjects.reduce((acc, p) => acc + p.assets, 0);
 
   const handleProjectPress = (project: Project) => {
-    router.push('/workflow', { projectId: project.id, title: project.title });
+    // 跳转到聊天页面，传递项目信息让AI自动创作
+    router.push('/', { 
+      projectId: project.id, 
+      projectTitle: project.title,
+      projectType: project.type,
+      autoCreate: 'true'
+    });
   };
 
   const handleCreateProject = () => {

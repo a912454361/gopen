@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   ScrollView,
   TextInput,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 // @ts-ignore - react-native-sse lacks proper type definitions
 import RNSSE from 'react-native-sse';
 import { useTheme } from '@/hooks/useTheme';
@@ -26,15 +26,228 @@ interface Message {
   content: string;
 }
 
+// 根据项目类型生成创作提示词
+const generateProjectPrompt = (title: string, type: string): string => {
+  const stylePrompts: Record<string, string> = {
+    '古风场景': `请为《${title}》项目创作一个古风场景设计方案。
+
+要求：
+1. 场景氛围：江南水乡、青砖黛瓦、小桥流水
+2. 色调：以青灰、水墨色为主，点缀朱红
+3. 元素：古建筑、石桥、柳树、荷花、远山
+4. 光影：晨雾朦胧、夕照余晖可选
+5. 风格：写实与写意结合，富有诗意
+
+请输出：
+- 场景描述（200字）
+- 主要元素清单
+- 色彩搭配方案
+- 氛围营造建议`,
+
+    '古风角色': `请为《${title}》项目设计一个古风角色。
+
+要求：
+1. 造型：汉服风格，细节精致
+2. 配色：传统中国色，如黛青、绛紫、缃色
+3. 配饰：发簪、玉佩、折扇等
+4. 气质：温婉如玉或英气逼人
+5. 背景：与角色气质相符的场景暗示
+
+请输出：
+- 角色设定（姓名、性格、背景）
+- 外貌描述
+- 服装设计方案
+- 标志性特征`,
+
+    '国风热血': `请为《${title}》项目设计一个热血战斗场景。
+
+要求：
+1. 氛围：气势磅礴、热血沸腾
+2. 元素：刀光剑影、战旗飘扬、骏马奔腾
+3. 色调：以红黑金为主，突出热血感
+4. 动作：动态感强，张力十足
+5. 背景：战场、古城、山川可选
+
+请输出：
+- 战斗场景描述
+- 角色动作设计
+- 武器装备设定
+- 特效表现建议`,
+
+    '唯美风': `请为《${title}》项目设计一个唯美意境场景。
+
+要求：
+1. 氛围：空灵唯美、如梦似幻
+2. 元素：花瓣、流光、薄雾、月色
+3. 色调：淡粉、浅紫、月白为主
+4. 构图：留白与细节结合
+5. 情感：温婉、缱绻、诗意
+
+请输出：
+- 意境描述（诗意表达）
+- 视觉元素清单
+- 色彩情感分析
+- 光影设计`,
+
+    '仙侠唯美': `请为《${title}》项目设计一个仙侠唯美场景。
+
+要求：
+1. 氛围：仙气飘渺、超凡脱俗
+2. 元素：仙山、云海、瑶台、仙鹤
+3. 色调：以白、青、金为主，仙气感
+4. 光效：流光溢彩、祥云瑞气
+5. 风格：仙侠风，如梦如幻
+
+请输出：
+- 仙境场景描述
+- 仙家元素设计
+- 法术特效建议
+- 灵气氛围营造`,
+
+    '水墨场景': `请为《${title}》项目设计一个水墨风格场景。
+
+要求：
+1. 风格：传统水墨画风格
+2. 笔法：浓淡干湿、虚实结合
+3. 元素：山水、竹林、扁舟、渔翁
+4. 意境：淡泊宁静、禅意悠远
+5. 留白：适当留白，意境深远
+
+请输出：
+- 水墨场景构图
+- 笔墨技法建议
+- 意境表达
+- 题款位置建议`,
+
+    '古风剧情': `请为《${title}》项目构思一段古风剧情。
+
+要求：
+1. 背景：古代中国，朝代可选
+2. 人物：才子佳人、帝王将相
+3. 情节：曲折动人、情感真挚
+4. 语言：古风韵味，诗词点缀
+5. 主题：爱情、权谋、江湖可选
+
+请输出：
+- 故事梗概
+- 主要人物设定
+- 关键情节设计
+- 情感线索`,
+
+    '国风城池': `请为《${title}》项目设计一座国风古城。
+
+要求：
+1. 规模：皇城、府城、县城可选
+2. 布局：中轴对称、棋盘格局
+3. 建筑：宫殿、官署、民居、市井
+4. 防御：城墙、城门、角楼、护城河
+5. 氛围：繁华或萧瑟，符合剧情需要
+
+请输出：
+- 城池整体布局
+- 主要建筑群设计
+- 城市功能分区
+- 特色地标`,
+
+    '仙侠场景': `请为《${title}》项目设计一个仙侠场景。
+
+要求：
+1. 类型：仙山、洞府、秘境、战场
+2. 元素：灵气、仙草、阵法、法宝
+3. 氛围：神秘、庄严或激烈
+4. 光效：仙光流转、灵气氤氲
+5. 交互：修仙、斗法、探索功能
+
+请输出：
+- 场景整体描述
+- 灵气分布设定
+- 交互玩法设计
+- 特效表现方案`,
+
+    '国风场景': `请为《${title}》项目设计一个国风场景。
+
+要求：
+1. 风格：中国传统文化元素
+2. 元素：根据主题选择合适元素
+3. 色调：传统中国色系
+4. 氛围：典雅、大气或婉约
+5. 细节：传统纹样、书法题词
+
+请输出：
+- 场景设计理念
+- 文化元素运用
+- 色彩搭配方案
+- 细节装饰建议`,
+
+    '游戏角色': `请为《${title}》项目设计一个游戏角色。
+
+要求：
+1. 风格：符合游戏整体美术风格
+2. 特征：辨识度高，记忆点明确
+3. 动作：战斗姿态或休闲姿态
+4. 装备：武器、防具、配饰
+5. 背景：简要人物背景
+
+请输出：
+- 角色设定（姓名、职业、性格）
+- 外貌特征设计
+- 装备武器设计
+- 技能特效建议`,
+
+    '动漫场景': `请为《${title}》项目设计一个动漫场景。
+
+要求：
+1. 风格：日系动漫或国漫风格
+2. 透视：动态构图，视觉冲击力
+3. 色彩：饱和度高，明快或深沉
+4. 氛围：根据剧情需要
+5. 细节：精良的背景绘制
+
+请输出：
+- 场景构图设计
+- 色彩氛围设定
+- 光影处理方案
+- 细节绘制要点`,
+  };
+
+  return stylePrompts[type] || `请为《${title}》项目进行创作设计。
+
+项目类型：${type}
+
+请输出：
+- 项目概述
+- 设计理念
+- 主要元素
+- 实施方案`;
+};
+
 export default function ChatScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { isMember, dailyChatCount, maxFreeChatsPerDay, incrementChatCount, canChat } = useMembership();
   const router = useSafeRouter();
+  const params = useSafeSearchParams<{ 
+    projectId?: string; 
+    projectTitle?: string;
+    projectType?: string;
+    autoCreate?: string;
+  }>();
+  const { projectTitle, projectType, autoCreate } = params;
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
+  
+  // Compute initial input text from project params if autoCreate
+  const initialInputText = useMemo(() => {
+    if (autoCreate && projectTitle && projectType) {
+      return generateProjectPrompt(projectTitle, projectType);
+    }
+    return '';
+  }, [autoCreate, projectTitle, projectType]);
+  
+  const [inputText, setInputText] = useState(initialInputText);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentProject, setCurrentProject] = useState<{title: string; type: string} | null>(null);
+  const autoSendTriggered = useRef<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sseRef = useRef<any>(null);
@@ -171,6 +384,18 @@ export default function ChatScreen() {
       setIsLoading(false);
     }
   };
+
+  // Auto-create content when navigating from project with autoCreate flag
+  useEffect(() => {
+    if (autoCreate && initialInputText && !autoSendTriggered.current) {
+      autoSendTriggered.current = true;
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        handleSend();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [autoCreate, initialInputText]);
 
   const handleQuickAction = (text: string) => {
     setInputText(text);

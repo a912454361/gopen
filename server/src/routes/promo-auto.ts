@@ -162,12 +162,12 @@ router.post('/tasks', async (req: Request, res: Response) => {
       .insert({
         name,
         type,
-        platforms: JSON.stringify(platforms),
+        platforms: platforms || [],
         content_template,
-        link_ids: JSON.stringify(link_ids),
+        link_ids: link_ids || [],
         schedule_type,
-        schedule_config: JSON.stringify(schedule_config),
-        risk_control: JSON.stringify(risk_control),
+        schedule_config: schedule_config || {},
+        risk_control: risk_control || {},
         status: 'pending',
         run_count: 0,
         success_count: 0,
@@ -249,11 +249,10 @@ router.post('/tasks/:id/execute', async (req: Request, res: Response) => {
     }
 
     // 获取关联的推广链接
-    const linkIds = JSON.parse(task.link_ids || '[]');
-    const { data: links, error: linksError } = await db
-      .from('promo_links')
-      .select('*')
-      .in('id', linkIds);
+    const linkIds = task.link_ids || [];
+    const { data: links, error: linksError } = linkIds.length > 0 
+      ? await db.from('promo_links').select('*').in('id', linkIds)
+      : { data: [], error: null };
 
     if (linksError) throw linksError;
 
@@ -262,6 +261,8 @@ router.post('/tasks/:id/execute', async (req: Request, res: Response) => {
       .from('promo_executions')
       .insert({
         task_id: id,
+        platform: 'multi',
+        action: task.type,
         status: 'running',
         started_at: new Date().toISOString(),
       })
@@ -286,8 +287,8 @@ router.post('/tasks/:id/execute', async (req: Request, res: Response) => {
 
 // 异步执行推广任务
 async function executePromoTask(task: any, links: any[], executionId: string) {
-  const riskControl = JSON.parse(task.risk_control || '{}');
-  const platforms = JSON.parse(task.platforms || '[]');
+  const riskControl = task.risk_control || {};
+  const platforms = task.platforms || [];
   const contentTemplate = task.content_template;
 
   let successCount = 0;

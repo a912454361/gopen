@@ -57,6 +57,40 @@ export default function SettingsScreen() {
     },
   ];
 
+  // 创作功能菜单
+  const createMenuItems: MenuItem[] = [
+    {
+      icon: 'folder-open',
+      title: '我的作品',
+      subtitle: '查看创作历史',
+      onPress: () => router.push('/my-works'),
+    },
+    {
+      icon: 'users',
+      title: '创作社区',
+      subtitle: '发现精彩作品',
+      onPress: () => router.push('/community'),
+    },
+    {
+      icon: 'shapes',
+      title: '模板市场',
+      subtitle: '快速开始创作',
+      onPress: () => router.push('/templates'),
+    },
+    {
+      icon: 'chart-pie',
+      title: '数据统计',
+      subtitle: '创作数据一览',
+      onPress: () => router.push('/stats'),
+    },
+    {
+      icon: 'bell',
+      title: '消息通知',
+      subtitle: '系统消息提醒',
+      onPress: () => router.push('/notifications'),
+    },
+  ];
+
   const aiMenuItems: MenuItem[] = [
     {
       icon: 'microchip',
@@ -244,6 +278,18 @@ export default function SettingsScreen() {
           <View style={styles.menuList}>
             {generalMenuItems.map((item, index) =>
               renderMenuItem(item, index, generalMenuItems.length)
+            )}
+          </View>
+        </View>
+
+        {/* Create Features */}
+        <View style={styles.section}>
+          <ThemedText variant="label" color={theme.textMuted}>
+            创作功能
+          </ThemedText>
+          <View style={styles.menuList}>
+            {createMenuItems.map((item, index) =>
+              renderMenuItem(item, index, createMenuItems.length)
             )}
           </View>
         </View>

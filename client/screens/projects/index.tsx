@@ -8,9 +8,11 @@ import {
   Image,
   ActivityIndicator,
   Animated,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -1036,6 +1038,41 @@ function ProjectDetailModal({
     setPrompt('');
   };
 
+  // 自动保存作品到数据库（SSE完成后调用）
+  const autoSaveWork = async (content: string, imageUrl?: string) => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
+        return;
+      }
+
+      const serviceConfig = createServices.find(s => s.id === selectedService);
+      
+      /**
+       * 服务端文件：server/src/routes/works.ts
+       * 接口：POST /api/v1/works
+       * Body 参数：user_id: number, project_id: string, project_title: string, project_type: string, service_type: string, service_name: string, content: string, content_type: string, image_url?: string
+       */
+      await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: parseInt(userId, 10),
+          project_id: project.id,
+          project_title: project.title,
+          project_type: project.type,
+          service_type: selectedService,
+          service_name: serviceConfig?.title || '创作',
+          content,
+          content_type: imageUrl ? 'image' : 'text',
+          image_url: imageUrl,
+        }),
+      });
+    } catch (error) {
+      console.error('Save work error:', error);
+    }
+  };
+
   // 确认创作 - 开始AI生成
   const handleConfirmCreate = async () => {
     setStage('creating');
@@ -1051,6 +1088,7 @@ function ProjectDetailModal({
       });
 
       sseRef.current = sse;
+      let finalContent = '';
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sse.addEventListener('message', (event: any) => {
@@ -1060,16 +1098,20 @@ function ProjectDetailModal({
           setIsLoading(false);
           setStage('result');
           sse.close();
+          // 自动保存作品
+          autoSaveWork(finalContent);
           return;
         }
 
         try {
           const parsed = JSON.parse(data);
           if (parsed.content) {
+            finalContent += parsed.content;
             setCreatedContent(prev => prev + parsed.content);
           }
         } catch {
           if (data && data !== '[DONE]') {
+            finalContent += data;
             setCreatedContent(prev => prev + data);
           }
         }
@@ -1092,6 +1134,48 @@ function ProjectDetailModal({
   const handleRecreate = () => {
     setStage('confirm');
     setCreatedContent('');
+  };
+
+  // 保存作品
+  const handleSaveWork = async () => {
+    if (!createdContent || !project) return;
+
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) {
+      Alert.alert('提示', '请先登录');
+      return;
+    }
+
+    try {
+      const service = createServices.find(s => s.id === selectedService);
+      /**
+       * 服务端文件：server/src/routes/works.ts
+       * 接口：POST /api/v1/works
+       * Body 参数：user_id: number, project_id: string, project_title: string, project_type: string, service_type: string, service_name: string, content: string, content_type: string
+       */
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: parseInt(userId, 10),
+          project_id: project.id,
+          project_title: project.title,
+          project_type: project.type,
+          service_type: selectedService,
+          service_name: service?.title || '创作',
+          content: createdContent,
+          content_type: 'text',
+        }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        Alert.alert('保存成功', '作品已保存到「我的作品」');
+      }
+    } catch (error) {
+      console.error('Save work error:', error);
+      Alert.alert('保存失败', '请重试');
+    }
   };
 
   // 渲染不同阶段的内容
@@ -1231,6 +1315,14 @@ function ProjectDetailModal({
               >
                 <FontAwesome6 name="rotate" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
                 <ThemedText variant="label" color={theme.textSecondary}>重新创作</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmButton, styles.confirmPrimary, { backgroundColor: theme.success }]}
+                onPress={handleSaveWork}
+                disabled={isLoading || !createdContent}
+              >
+                <FontAwesome6 name="bookmark" size={14} color="#fff" style={{ marginRight: 6 }} />
+                <ThemedText variant="label" color="#fff">保存</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.confirmButton, styles.confirmPrimary, { backgroundColor: theme.primary }]}

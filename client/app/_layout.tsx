@@ -34,6 +34,12 @@ export default function RootLayout() {
         <Stack.Screen name="api-keys" options={{ title: "API密钥管理" }} />
         <Stack.Screen name="promotion" options={{ title: "推广中心" }} />
         <Stack.Screen name="admin-login" options={{ title: "管理员登录" }} />
+        {/* 新增页面 */}
+        <Stack.Screen name="my-works" options={{ title: "我的作品" }} />
+        <Stack.Screen name="community" options={{ title: "创作社区" }} />
+        <Stack.Screen name="templates" options={{ title: "模板市场" }} />
+        <Stack.Screen name="notifications" options={{ title: "消息通知" }} />
+        <Stack.Screen name="stats" options={{ title: "数据统计" }} />
       </Stack>
     </MembershipProvider>
   );

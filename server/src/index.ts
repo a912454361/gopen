@@ -18,6 +18,12 @@ import aiGatewayRouter from "./routes/ai-gateway.js";
 import modelSyncRouter from "./routes/model-sync.js";
 import userRouter from "./routes/user.js";
 import promotionRouter from "./routes/promotion.js";
+import worksRouter from "./routes/works.js";
+import notificationsRouter from "./routes/notifications.js";
+import templatesRouter from "./routes/templates.js";
+import communityRouter from "./routes/community.js";
+import statsRouter from "./routes/stats.js";
+import imageRouter from "./routes/image.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -53,6 +59,12 @@ app.use('/api/v1/ai', aiGatewayRouter);
 app.use('/api/v1/model-sync', modelSyncRouter);
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/promotion', promotionRouter);
+app.use('/api/v1/works', worksRouter);
+app.use('/api/v1/notifications', notificationsRouter);
+app.use('/api/v1/templates', templatesRouter);
+app.use('/api/v1/community', communityRouter);
+app.use('/api/v1/stats', statsRouter);
+app.use('/api/v1/image', imageRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

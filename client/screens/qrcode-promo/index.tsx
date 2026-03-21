@@ -18,6 +18,7 @@ import {
   Linking,
   Share,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -79,6 +80,7 @@ interface PromoStats {
 
 export default function QRCodePromoScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [activePayType, setActivePayType] = useState<'alipay' | 'wechat'>('alipay');
   const [qrcodes, setQrcodes] = useState<{ alipay: QRCodeData; wechat: QRCodeData } | null>(null);
   const [stats, setStats] = useState<PromoStats | null>(null);
@@ -266,23 +268,23 @@ export default function QRCodePromoScreen() {
     },
     header: {
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing['2xl'],
-      paddingBottom: Spacing.lg,
+      paddingTop: insets.top + Spacing.md,
+      paddingBottom: Spacing.md,
       alignItems: 'center' as const,
     },
     neonLine: {
       height: 2,
       borderRadius: 1,
-      marginTop: Spacing.lg,
+      marginTop: Spacing.sm,
       width: scaleSize(120),
     },
     statsRow: {
       flexDirection: 'row' as const,
       justifyContent: 'space-around' as const,
-      paddingVertical: Spacing.lg,
+      paddingVertical: Spacing.md,
       marginHorizontal: Spacing.lg,
       borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.md,
+      marginBottom: Spacing.sm,
     },
     statItem: {
       alignItems: 'center' as const,
@@ -291,14 +293,14 @@ export default function QRCodePromoScreen() {
       flexDirection: 'row' as const,
       paddingHorizontal: Spacing.lg,
       gap: Spacing.md,
-      marginBottom: Spacing.lg,
+      marginBottom: Spacing.md,
     },
     payTypeButton: {
       flex: 1,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
-      paddingVertical: Spacing.lg,
+      paddingVertical: Spacing.md,
       borderRadius: BorderRadius.lg,
       borderWidth: 2,
       gap: Spacing.sm,
@@ -311,9 +313,9 @@ export default function QRCodePromoScreen() {
       paddingBottom: Spacing['5xl'],
     },
     qrCard: {
-      padding: Spacing.xl,
+      padding: Spacing.lg,
       borderRadius: BorderRadius.xl,
-      marginBottom: Spacing.lg,
+      marginBottom: Spacing.md,
       alignItems: 'center' as const,
     },
     qrImage: {
@@ -329,15 +331,15 @@ export default function QRCodePromoScreen() {
       alignItems: 'center' as const,
     },
     promoText: {
-      marginTop: Spacing.lg,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.lg,
+      marginTop: Spacing.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
       borderRadius: BorderRadius.md,
       width: '100%' as const,
     },
     accountInfo: {
-      marginTop: Spacing.lg,
-      padding: Spacing.lg,
+      marginTop: Spacing.md,
+      padding: Spacing.md,
       borderRadius: BorderRadius.lg,
       width: '100%' as const,
     },
@@ -348,32 +350,32 @@ export default function QRCodePromoScreen() {
       paddingVertical: Spacing.xs,
     },
     shareCard: {
-      padding: Spacing.lg,
+      padding: Spacing.md,
       borderRadius: BorderRadius.lg,
-      marginBottom: Spacing.lg,
+      marginBottom: Spacing.md,
     },
     shareHeader: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: Spacing.sm,
-      marginBottom: Spacing.md,
+      marginBottom: Spacing.sm,
     },
     shareButtons: {
       flexDirection: 'row' as const,
       gap: Spacing.md,
-      marginBottom: Spacing.md,
+      marginBottom: Spacing.sm,
     },
     shareButton: {
       flex: 1,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
-      paddingVertical: Spacing.md,
+      paddingVertical: Spacing.sm,
       borderRadius: BorderRadius.md,
       gap: Spacing.xs,
     },
     linkBox: {
-      padding: Spacing.md,
+      padding: Spacing.sm,
       borderRadius: BorderRadius.sm,
     },
     actionRow: {
@@ -449,11 +451,11 @@ export default function QRCodePromoScreen() {
       borderRadius: BorderRadius.md,
       borderLeftWidth: 3,
     },
-  }), [theme, qrSize]);
+  }), [theme, qrSize, insets.top]);
 
   if (loading) {
     return (
-      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light" safeAreaEdges={['left', 'right', 'bottom']}>
         <View style={styles.container}>
           <View style={styles.header}>
             <ThemedText variant="h4" color={theme.textPrimary}>收款码推广</ThemedText>
@@ -468,7 +470,7 @@ export default function QRCodePromoScreen() {
   }
 
   return (
-    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light" safeAreaEdges={['left', 'right', 'bottom']}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>

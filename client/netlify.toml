@@ -1,10 +1,14 @@
 [build]
   # 构建命令
-  command = "npx expo export --platform web"
+  command = "pnpm install && npx expo export --platform web"
   # 发布目录
   publish = "dist"
   # Node.js 版本
-  environment = { NODE_VERSION = "20" }
+  environment = { NODE_VERSION = "20", NPM_FLAGS = "--version" }
+
+# 使用 pnpm
+[build.environment]
+  PNPM_VERSION = "9"
 
 # SPA 路由重定向（支持 expo-router）
 [[redirects]]

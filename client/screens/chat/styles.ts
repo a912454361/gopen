@@ -187,5 +187,77 @@ export const createStyles = (theme: Theme) => {
       fontSize: 13,
       fontWeight: '500',
     },
+    // Guide Modal Styles
+    guideOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.lg,
+    },
+    guideModal: {
+      width: '100%',
+      maxWidth: 500,
+      borderRadius: BorderRadius.xl,
+      padding: Spacing.xl,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    guideHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+    },
+    guideIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    guideContent: {
+      marginBottom: Spacing.lg,
+    },
+    guidePromptWrap: {
+      marginTop: Spacing.sm,
+      maxHeight: 200,
+      padding: Spacing.lg,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    guideTip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      marginBottom: Spacing.lg,
+    },
+    guideActions: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+    },
+    guideButton: {
+      flex: 1,
+      paddingVertical: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+    },
+    guideCancelButton: {
+      borderWidth: 1,
+    },
+    guideConfirmButton: {
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
   });
 };

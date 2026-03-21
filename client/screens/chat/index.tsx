@@ -8,6 +8,7 @@ import {
   Platform,
   Animated,
   Alert,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -291,20 +292,27 @@ export default function ChatScreen() {
   }>();
   const { projectTitle, projectType, serviceType, autoCreate } = params;
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  
-  // Compute initial input text from project params if autoCreate
-  const initialInputText = useMemo(() => {
+  // 计算初始提示词和项目信息
+  const initialGuideData = useMemo(() => {
     if (autoCreate && projectTitle && projectType) {
-      return generateProjectPrompt(projectTitle, projectType, serviceType);
+      return {
+        prompt: generateProjectPrompt(projectTitle, projectType, serviceType),
+        project: { title: projectTitle, type: projectType },
+        shouldShow: true,
+      };
     }
-    return '';
+    return { prompt: '', project: null, shouldShow: false };
   }, [autoCreate, projectTitle, projectType, serviceType]);
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
   
-  const [inputText, setInputText] = useState(initialInputText);
+  // 引导模式状态 - 显示提示词预览，等待用户确认
+  const [showGuide, setShowGuide] = useState(initialGuideData.shouldShow);
+  const [guidePrompt, setGuidePrompt] = useState(initialGuideData.prompt);
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [currentProject, setCurrentProject] = useState<{title: string; type: string} | null>(null);
-  const autoSendTriggered = useRef<boolean>(false);
+  const [currentProject, setCurrentProject] = useState<{title: string; type: string} | null>(initialGuideData.project);
   const scrollViewRef = useRef<ScrollView>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sseRef = useRef<any>(null);
@@ -339,7 +347,24 @@ export default function ChatScreen() {
     };
   }, []);
 
-  const handleSend = async () => {
+  // 确认发送 - 用户点击确认后开始创作
+  const handleConfirmGuide = () => {
+    setShowGuide(false);
+    setInputText(guidePrompt);
+    // 短暂延迟后发送
+    setTimeout(() => {
+      handleSendWithText(guidePrompt);
+    }, 100);
+  };
+
+  // 取消引导
+  const handleCancelGuide = () => {
+    setShowGuide(false);
+    setGuidePrompt('');
+  };
+
+  // 带文本参数的发送函数
+  const handleSendWithText = async (text: string) => {
     if (!inputText.trim() || isLoading) return;
 
     // Check if user can chat (member or has free chats left)
@@ -442,17 +467,13 @@ export default function ChatScreen() {
     }
   };
 
-  // Auto-create content when navigating from project with autoCreate flag
-  useEffect(() => {
-    if (autoCreate && initialInputText && !autoSendTriggered.current) {
-      autoSendTriggered.current = true;
-      // Small delay to ensure component is fully mounted
-      const timer = setTimeout(() => {
-        handleSend();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [autoCreate, initialInputText]);
+  // 普通发送 - 从输入框发送
+  const handleSend = async () => {
+    if (!inputText.trim() || isLoading) return;
+    const textToSend = inputText;
+    setInputText('');
+    await handleSendWithText(textToSend);
+  };
 
   const handleQuickAction = (text: string) => {
     setInputText(text);
@@ -469,6 +490,70 @@ export default function ChatScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      {/* 引导确认Modal */}
+      <Modal
+        visible={showGuide}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCancelGuide}
+      >
+        <View style={styles.guideOverlay}>
+          <View style={[styles.guideModal, { backgroundColor: theme.backgroundDefault }]}>
+            {/* 标题 */}
+            <View style={styles.guideHeader}>
+              <View style={[styles.guideIconWrap, { backgroundColor: `${theme.primary}20` }]}>
+                <FontAwesome6 name="wand-magic-sparkles" size={24} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <ThemedText variant="h3" color={theme.textPrimary}>创作引导</ThemedText>
+                {currentProject && (
+                  <ThemedText variant="label" color={theme.textMuted}>
+                    项目：{currentProject.title} · {currentProject.type}
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+
+            {/* 提示词预览 */}
+            <View style={styles.guideContent}>
+              <ThemedText variant="labelSmall" color={theme.textMuted}>
+                即将发送的创作提示：
+              </ThemedText>
+              <ScrollView style={styles.guidePromptWrap} nestedScrollEnabled>
+                <ThemedText variant="body" color={theme.textPrimary}>
+                  {guidePrompt}
+                </ThemedText>
+              </ScrollView>
+            </View>
+
+            {/* 提示信息 */}
+            <View style={[styles.guideTip, { backgroundColor: theme.backgroundTertiary }]}>
+              <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
+              <ThemedText variant="caption" color={theme.textSecondary}>
+                确认后AI将根据以上提示开始创作，您也可以取消后手动修改
+              </ThemedText>
+            </View>
+
+            {/* 操作按钮 */}
+            <View style={styles.guideActions}>
+              <TouchableOpacity 
+                style={[styles.guideButton, styles.guideCancelButton, { borderColor: theme.border }]}
+                onPress={handleCancelGuide}
+              >
+                <ThemedText variant="label" color={theme.textSecondary}>取消</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.guideButton, styles.guideConfirmButton, { backgroundColor: theme.primary }]}
+                onPress={handleConfirmGuide}
+              >
+                <FontAwesome6 name="paper-plane" size={14} color="#fff" style={{ marginRight: 8 }} />
+                <ThemedText variant="label" color="#fff">确认开始创作</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

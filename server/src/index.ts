@@ -26,6 +26,8 @@ import statsRouter from "./routes/stats.js";
 import imageRouter from "./routes/image.js";
 import inviteRouter from "./routes/invite.js";
 import promoAutoRouter from "./routes/promo-auto.js";
+import promoSystemRouter from "./routes/promo-system.js";
+import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -69,6 +71,7 @@ app.use('/api/v1/stats', statsRouter);
 app.use('/api/v1/image', imageRouter);
 app.use('/api/v1/invite', inviteRouter);
 app.use('/api/v1/promo', promoAutoRouter);
+app.use('/api/v1/promo/system', promoSystemRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {
@@ -158,4 +161,8 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);
+  
+  // 启动推广任务调度器
+  startScheduler();
+  console.log('Promo scheduler started');
 });

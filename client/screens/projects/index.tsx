@@ -7,6 +7,7 @@ import {
   Dimensions,
   Image,
   Animated,
+  StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -14,8 +15,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -160,7 +159,8 @@ function ProjectDetailModal({
   onStartCreate: (serviceType: string) => void;
 }) {
   const { theme } = useTheme();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  // 使用 useMemo 创建动画值，确保只创建一次
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
   
   React.useEffect(() => {
     if (visible) {
@@ -214,7 +214,7 @@ function ProjectDetailModal({
           
           {/* 关闭按钮 */}
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <FontAwesome6 name="times" size={20} color="#fff" />
+            <FontAwesome6 name="xmark" size={20} color="#fff" />
           </TouchableOpacity>
           
           {/* 项目信息 */}
@@ -282,7 +282,6 @@ function ProjectDetailModal({
 
 export default function ProjectsScreen() {
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
   
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'pending'>('all');
@@ -423,19 +422,21 @@ export default function ProjectsScreen() {
             </View>
             
             {/* 横向滚动卡片 */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.cardsRow}
-            >
-              {projects.map(project => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onPress={() => handleProjectPress(project)}
-                />
-              ))}
-            </ScrollView>
+            <View>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.cardsRow}
+              >
+                {projects.map(project => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onPress={() => handleProjectPress(project)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -453,6 +454,18 @@ export default function ProjectsScreen() {
 
 // 组件内部样式
 const styles = {
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing['2xl'],
+    paddingBottom: Spacing.lg,
+    alignItems: 'center' as const,
+  },
+  neonLine: {
+    height: 2,
+    borderRadius: 1,
+    marginTop: Spacing.lg,
+    width: 120,
+  },
   card: {
     height: CARD_HEIGHT,
     borderRadius: BorderRadius.lg,

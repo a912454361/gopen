@@ -26,8 +26,64 @@ interface Message {
   content: string;
 }
 
-// 根据项目类型生成创作提示词
-const generateProjectPrompt = (title: string, type: string): string => {
+// 根据项目类型和服务类型生成创作提示词
+const generateProjectPrompt = (title: string, type: string, serviceType?: string): string => {
+  // 服务类型前缀
+  const servicePrefix: Record<string, string> = {
+    'scene': '【场景创作】',
+    'character': '【角色设计】',
+    'story': '【剧情编写】',
+    'music': '【配乐推荐】',
+  };
+  
+  const prefix = serviceType ? (servicePrefix[serviceType] || '') : '';
+  
+  // 根据服务类型调整提示词
+  if (serviceType === 'character') {
+    return `${prefix}请为《${title}》项目设计一个${type.replace(/场景|剧情/g, '角色')}。
+
+要求：
+1. 造型：符合${type}风格，细节精致
+2. 配色：传统中国色系，突出气质
+3. 配饰：发簪、玉佩、折扇等可选
+4. 气质：温婉如玉或英气逼人
+5. 背景：与角色气质相符的场景暗示
+
+请输出：
+- 角色设定（姓名、性格、背景）
+- 外貌描述
+- 服装设计方案
+- 标志性特征`;
+  }
+  
+  if (serviceType === 'story') {
+    return `${prefix}请为《${title}》项目构思一段${type.replace(/场景|角色/g, '剧情')}。
+
+要求：
+1. 背景：符合${type}的世界观设定
+2. 人物：角色鲜活，性格鲜明
+3. 情节：曲折动人，情感真挚
+4. 语言：古风韵味，诗词点缀
+5. 主题：爱情、权谋、江湖可选
+
+请输出：
+- 故事梗概
+- 主要人物设定
+- 关键情节设计
+- 情感线索`;
+  }
+  
+  if (serviceType === 'music') {
+    return `${prefix}请为《${title}》项目推荐合适的配乐。
+
+项目类型：${type}
+
+请推荐：
+1. 主旋律风格建议（乐器、节奏、情绪）
+2. 场景配乐清单（3-5首参考曲目风格）
+3. 音效设计建议（环境音、特效音）
+4. 整体音乐风格定位`;
+  }
   const stylePrompts: Record<string, string> = {
     '古风场景': `请为《${title}》项目创作一个古风场景设计方案。
 
@@ -230,19 +286,20 @@ export default function ChatScreen() {
     projectId?: string; 
     projectTitle?: string;
     projectType?: string;
+    serviceType?: string;
     autoCreate?: string;
   }>();
-  const { projectTitle, projectType, autoCreate } = params;
+  const { projectTitle, projectType, serviceType, autoCreate } = params;
 
   const [messages, setMessages] = useState<Message[]>([]);
   
   // Compute initial input text from project params if autoCreate
   const initialInputText = useMemo(() => {
     if (autoCreate && projectTitle && projectType) {
-      return generateProjectPrompt(projectTitle, projectType);
+      return generateProjectPrompt(projectTitle, projectType, serviceType);
     }
     return '';
-  }, [autoCreate, projectTitle, projectType]);
+  }, [autoCreate, projectTitle, projectType, serviceType]);
   
   const [inputText, setInputText] = useState(initialInputText);
   const [isLoading, setIsLoading] = useState(false);

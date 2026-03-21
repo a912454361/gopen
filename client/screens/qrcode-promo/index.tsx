@@ -24,6 +24,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from 'expo-router';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -81,6 +82,7 @@ interface PromoStats {
 export default function QRCodePromoScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useSafeRouter();
   const [activePayType, setActivePayType] = useState<'alipay' | 'wechat'>('alipay');
   const [qrcodes, setQrcodes] = useState<{ alipay: QRCodeData; wechat: QRCodeData } | null>(null);
   const [stats, setStats] = useState<PromoStats | null>(null);
@@ -466,6 +468,30 @@ export default function QRCodePromoScreen() {
       padding: Spacing.xs,
       borderRadius: BorderRadius.sm,
     },
+    rechargeCard: {
+      padding: Spacing.sm,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.xs,
+    },
+    rechargeHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: Spacing.xs,
+      marginBottom: Spacing.xs,
+    },
+    rechargeButtons: {
+      flexDirection: 'row' as const,
+      gap: Spacing.sm,
+    },
+    rechargeButton: {
+      flex: 1,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      gap: Spacing.xs,
+    },
     actionRow: {
       flexDirection: 'row' as const,
       gap: Spacing.xs,
@@ -696,6 +722,31 @@ export default function QRCodePromoScreen() {
                 </ThemedText>
               </View>
             )}
+          </View>
+
+          {/* 充值功能区 */}
+          <View style={[styles.rechargeCard, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={styles.rechargeHeader}>
+              <FontAwesome6 name="crown" size={18} color={theme.primary} />
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>会员充值</ThemedText>
+            </View>
+            <View style={styles.rechargeButtons}>
+              <TouchableOpacity 
+                style={[styles.rechargeButton, { backgroundColor: theme.primary }]}
+                onPress={() => router.push('/membership')}
+              >
+                <FontAwesome6 name="crown" size={16} color="#fff" />
+                <ThemedText variant="small" color="#fff">开通会员</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.rechargeButton, { backgroundColor: theme.accent }]}
+                onPress={() => router.push('/payment')}
+              >
+                <FontAwesome6 name="credit-card" size={16} color="#fff" />
+                <ThemedText variant="small" color="#fff">立即充值</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 快捷支付按钮 */}

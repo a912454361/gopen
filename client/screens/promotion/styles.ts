@@ -16,6 +16,24 @@ export const createStyles = (theme: Theme) => {
     header: {
       marginBottom: Spacing.xl,
     },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+      paddingHorizontal: Spacing.sm,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.backgroundTertiary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: Spacing.md,
+    },
+    navTitle: {
+      flex: 1,
+    },
     title: {
       marginBottom: Spacing.xs,
     },

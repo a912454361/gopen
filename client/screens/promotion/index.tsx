@@ -346,6 +346,14 @@ export default function PromotionScreen() {
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         >
+          {/* 导航栏 */}
+          <View style={styles.navBar}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+            </TouchableOpacity>
+            <ThemedText variant="h4" color={theme.textPrimary} style={styles.navTitle}>推广中心</ThemedText>
+          </View>
+          
           <View style={styles.applyCard}>
             <View style={styles.applyIcon}>
               <FontAwesome6 name="bullhorn" size={32} color={theme.primary} />
@@ -380,6 +388,14 @@ export default function PromotionScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       >
+        {/* 导航栏 */}
+        <View style={styles.navBar}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h4" color={theme.textPrimary} style={styles.navTitle}>推广中心</ThemedText>
+        </View>
+        
         {/* 标题 */}
         <ThemedView level="root" style={styles.header}>
           <ThemedText variant="h2" color={theme.textPrimary} style={styles.title}>

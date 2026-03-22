@@ -66,6 +66,18 @@ export default function SettingsScreen() {
       onPress: () => router.push('/my-works'),
     },
     {
+      icon: 'comments',
+      title: '对话历史',
+      subtitle: '查看聊天记录',
+      onPress: () => router.push('/chat-history'),
+    },
+    {
+      icon: 'wave-square',
+      title: 'AI音频工具',
+      subtitle: '语音转文字、文字转语音',
+      onPress: () => router.push('/audio'),
+    },
+    {
       icon: 'users',
       title: '创作社区',
       subtitle: '发现精彩作品',
@@ -137,6 +149,12 @@ export default function SettingsScreen() {
       title: '钱包',
       subtitle: '余额充值与消费记录',
       onPress: () => router.push('/wallet'),
+    },
+    {
+      icon: 'chart-line',
+      title: 'Token用量',
+      subtitle: 'AI使用统计与余额',
+      onPress: () => router.push('/token-usage'),
     },
     {
       icon: 'bullhorn',

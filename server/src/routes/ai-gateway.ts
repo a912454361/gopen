@@ -339,7 +339,7 @@ router.get('/models', async (req: Request, res: Response) => {
       models = models.filter(m => m.provider === provider);
     }
     
-    // 转换为前端友好格式
+    // 转换为前端友好格式 - 使用新的价格字段
     const result = models.map(m => ({
       code: m.code,
       name: m.name,
@@ -348,11 +348,19 @@ router.get('/models', async (req: Request, res: Response) => {
       type: m.type,
       category: m.category,
       description: m.description || `${m.name} - ${m.provider}`,
-      pricing: {
-        input: m.inputPrice,
-        output: m.outputPrice,
-        tier: m.isFree ? 'free' : m.superMemberOnly ? 'enterprise' : m.memberOnly ? 'premium' : 'standard',
-      },
+      // 平台售价（用户实际支付）
+      sellInputPrice: m.sellInputPrice,
+      sellOutputPrice: m.sellOutputPrice,
+      // 成本价
+      costInputPrice: m.costInputPrice,
+      costOutputPrice: m.costOutputPrice,
+      // 平台加价比例
+      platformMarkup: m.platformMarkup,
+      // 上下文信息
+      contextWindow: m.contextWindow,
+      maxOutputTokens: m.maxOutputTokens,
+      // 标签
+      tags: m.tags || [],
     }));
     
     res.json({
@@ -389,7 +397,8 @@ router.get('/providers', (req: Request, res: Response) => {
 // ==================== 辅助函数 ====================
 
 /**
- * 扣费（详细）
+ * 扣费（详细）- 使用新的价格体系
+ * 费用 = 平台售价（包含平台服务费）
  */
 async function deductFee(
   userId: string,
@@ -398,10 +407,18 @@ async function deductFee(
   outputTokens: number,
   projectId?: string
 ) {
-  // 计算费用（厘为单位）
-  const inputFee = Math.ceil((inputTokens / 1000000) * (modelInfo.inputPrice || 0));
-  const outputFee = Math.ceil((outputTokens / 1000000) * (modelInfo.outputPrice || 0));
+  // 计算费用（厘为单位）- 使用平台售价
+  const inputFee = Math.ceil((inputTokens / 1000000) * (modelInfo.sellInputPrice || 0));
+  const outputFee = Math.ceil((outputTokens / 1000000) * (modelInfo.sellOutputPrice || 0));
   const totalFee = inputFee + outputFee;
+  
+  // 计算成本（商家收费）
+  const inputCost = Math.ceil((inputTokens / 1000000) * (modelInfo.costInputPrice || 0));
+  const outputCost = Math.ceil((outputTokens / 1000000) * (modelInfo.costOutputPrice || 0));
+  const totalCost = inputCost + outputCost;
+  
+  // 平台利润
+  const platformProfit = totalFee - totalCost;
   
   if (totalFee <= 0) return;
   
@@ -423,7 +440,7 @@ async function deductFee(
       .eq('user_id', userId);
   }
   
-  // 记录消费
+  // 记录消费（包含成本和平台利润）
   await client.from('consumption_records').insert([{
     user_id: userId,
     consumption_type: 'model',
@@ -431,9 +448,16 @@ async function deductFee(
     resource_name: modelInfo.name,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
+    // 售价（用户支付）
     sell_input_fee: inputFee,
     sell_output_fee: outputFee,
     sell_total: totalFee,
+    // 成本（商家收费）
+    cost_input_fee: inputCost,
+    cost_output_fee: outputCost,
+    cost_total: totalCost,
+    // 平台利润
+    profit: platformProfit,
     project_id: projectId,
   }]);
 }

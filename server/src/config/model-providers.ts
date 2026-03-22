@@ -1,6 +1,12 @@
 /**
- * AI 模型提供商配置
- * 统一对接所有主流模型公司的所有模型产品
+ * AI 模型提供商配置 - 平台抽成模式
+ * 
+ * 商业模式：
+ * 1. 所有模型都收费，没有免费模型
+ * 2. 平台在商家成本价基础上加价（平台服务费）
+ * 3. 用户按平台售价付费使用
+ * 
+ * 价格单位：厘/百万tokens（1元 = 1000厘）
  */
 
 // ==================== 类型定义 ====================
@@ -33,22 +39,20 @@ export interface ModelConfig {
   code: string;
   name: string;
   provider: string;
-  category: ModelType;  // 改为使用 ModelType
+  category: ModelType;
   type: ModelCategory;
-  description?: string;  // 可选字段
+  description?: string;
   
   // 上下文和输出限制
   contextWindow: number;
   maxOutputTokens: number;
   
   // 定价（厘/百万tokens，即 1元 = 1000厘）
-  inputPrice: number;  // 保留旧字段名，向后兼容
-  outputPrice: number; // 保留旧字段名，向后兼容
-  pricing?: {
-    input: number;  // 新字段，可选
-    output: number;
-    tier: 'free' | 'standard' | 'premium' | 'enterprise';
-  };
+  costInputPrice: number;   // 商家成本价（输入）
+  costOutputPrice: number;  // 商家成本价（输出）
+  sellInputPrice: number;   // 平台售价（输入）= 成本价 * (1 + platformMarkup)
+  sellOutputPrice: number;  // 平台售价（输出）= 成本价 * (1 + platformMarkup)
+  platformMarkup: number;   // 平台加价比例（如 0.2 表示加价 20%）
   
   // 功能特性
   features: {
@@ -59,14 +63,32 @@ export interface ModelConfig {
     jsonMode: boolean;
   };
   
-  // 权限
-  isFree: boolean;
-  memberOnly: boolean;
-  superMemberOnly: boolean;
-  
   // 状态
   status: 'active' | 'deprecated' | 'beta';
+  
+  // 标签
+  tags?: string[];
 }
+
+// ==================== 平台抽成配置 ====================
+
+/**
+ * 默认平台加价比例
+ * 可根据模型类型或提供商自定义
+ */
+export const DEFAULT_PLATFORM_MARKUP = 0.20; // 20% 加价
+
+/**
+ * 不同类型模型的平台加价比例
+ */
+export const MARKUP_BY_CATEGORY: Record<string, number> = {
+  text: 0.15,        // 文本模型 15%
+  multimodal: 0.20,  // 多模态模型 20%
+  image: 0.25,       // 图像模型 25%
+  audio: 0.20,       // 音频模型 20%
+  video: 0.30,       // 视频模型 30%
+  embedding: 0.10,   // 向量化模型 10%
+};
 
 // ==================== 提供商配置 ====================
 
@@ -99,11 +121,11 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     nameEn: 'Anthropic',
     baseUrl: 'https://api.anthropic.com/v1',
     apiKeyEnv: 'ANTHROPIC_API_KEY',
-    icon: 'anthropic',
+    icon: 'robot',
     website: 'https://anthropic.com',
     docs: 'https://docs.anthropic.com',
     status: 'active',
-    categories: ['text', 'vision'],
+    categories: ['text', 'multimodal'],
     features: {
       streaming: true,
       functionCall: true,
@@ -118,12 +140,12 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     name: 'Google AI',
     nameEn: 'Google AI',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    apiKeyEnv: 'GOOGLE_AI_API_KEY',
+    apiKeyEnv: 'GOOGLE_API_KEY',
     icon: 'google',
-    website: 'https://ai.google.dev',
+    website: 'https://ai.google',
     docs: 'https://ai.google.dev/docs',
     status: 'active',
-    categories: ['text', 'image', 'audio', 'video', 'embedding'],
+    categories: ['text', 'image', 'audio', 'embedding', 'multimodal'],
     features: {
       streaming: true,
       functionCall: true,
@@ -133,17 +155,17 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     },
   },
   
-  mistral: {
-    id: 'mistral',
-    name: 'Mistral AI',
-    nameEn: 'Mistral AI',
-    baseUrl: 'https://api.mistral.ai/v1',
-    apiKeyEnv: 'MISTRAL_API_KEY',
-    icon: 'mistral',
-    website: 'https://mistral.ai',
-    docs: 'https://docs.mistral.ai',
+  deepseek: {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    nameEn: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKeyEnv: 'DEEPSEEK_API_KEY',
+    icon: 'brain',
+    website: 'https://deepseek.com',
+    docs: 'https://platform.deepseek.com/docs',
     status: 'active',
-    categories: ['text', 'embedding'],
+    categories: ['text'],
     features: {
       streaming: true,
       functionCall: true,
@@ -159,7 +181,7 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     nameEn: 'Groq',
     baseUrl: 'https://api.groq.com/openai/v1',
     apiKeyEnv: 'GROQ_API_KEY',
-    icon: 'groq',
+    icon: 'bolt-lightning',
     website: 'https://groq.com',
     docs: 'https://console.groq.com/docs',
     status: 'active',
@@ -167,8 +189,28 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
+      vision: false,
       audio: true,
+      tools: true,
+    },
+  },
+  
+  mistral: {
+    id: 'mistral',
+    name: 'Mistral AI',
+    nameEn: 'Mistral AI',
+    baseUrl: 'https://api.mistral.ai/v1',
+    apiKeyEnv: 'MISTRAL_API_KEY',
+    icon: 'wind',
+    website: 'https://mistral.ai',
+    docs: 'https://docs.mistral.ai',
+    status: 'active',
+    categories: ['text', 'embedding'],
+    features: {
+      streaming: true,
+      functionCall: true,
+      vision: false,
+      audio: false,
       tools: true,
     },
   },
@@ -179,7 +221,7 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     nameEn: 'Cohere',
     baseUrl: 'https://api.cohere.ai/v1',
     apiKeyEnv: 'COHERE_API_KEY',
-    icon: 'cohere',
+    icon: 'circle-nodes',
     website: 'https://cohere.com',
     docs: 'https://docs.cohere.com',
     status: 'active',
@@ -193,62 +235,22 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     },
   },
   
-  deepseek: {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    nameEn: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com/v1',
-    apiKeyEnv: 'DEEPSEEK_API_KEY',
-    icon: 'deepseek',
-    website: 'https://deepseek.com',
-    docs: 'https://platform.deepseek.com/docs',
-    status: 'active',
-    categories: ['text'],
-    features: {
-      streaming: true,
-      functionCall: true,
-      vision: false,
-      audio: false,
-      tools: true,
-    },
-  },
-  
-  replicate: {
-    id: 'replicate',
-    name: 'Replicate',
-    nameEn: 'Replicate',
-    baseUrl: 'https://api.replicate.com/v1',
-    apiKeyEnv: 'REPLICATE_API_TOKEN',
-    icon: 'replicate',
-    website: 'https://replicate.com',
-    docs: 'https://replicate.com/docs',
-    status: 'active',
-    categories: ['text', 'image', 'audio', 'video'],
-    features: {
-      streaming: true,
-      functionCall: false,
-      vision: false,
-      audio: true,
-      tools: false,
-    },
-  },
-  
   stability: {
     id: 'stability',
     name: 'Stability AI',
     nameEn: 'Stability AI',
     baseUrl: 'https://api.stability.ai/v1',
     apiKeyEnv: 'STABILITY_API_KEY',
-    icon: 'stability',
+    icon: 'palette',
     website: 'https://stability.ai',
     docs: 'https://platform.stability.ai/docs',
     status: 'active',
-    categories: ['image', 'audio', 'video'],
+    categories: ['image'],
     features: {
       streaming: false,
       functionCall: false,
       vision: false,
-      audio: true,
+      audio: false,
       tools: false,
     },
   },
@@ -258,18 +260,18 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   doubao: {
     id: 'doubao',
     name: '豆包',
-    nameEn: 'Doubao (ByteDance)',
+    nameEn: 'Doubao',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     apiKeyEnv: 'DOUBAO_API_KEY',
-    icon: 'doubao',
+    icon: 'fire',
     website: 'https://www.doubao.com',
     docs: 'https://www.volcengine.com/docs/82379',
     status: 'active',
-    categories: ['text', 'audio', 'embedding'],
+    categories: ['text', 'audio'],
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
+      vision: false,
       audio: true,
       tools: true,
     },
@@ -278,14 +280,14 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   qwen: {
     id: 'qwen',
     name: '通义千问',
-    nameEn: 'Qwen (Alibaba)',
+    nameEn: 'Qwen',
     baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
     apiKeyEnv: 'QWEN_API_KEY',
-    icon: 'qwen',
+    icon: 'cloud',
     website: 'https://tongyi.aliyun.com',
     docs: 'https://help.aliyun.com/zh/dashscope',
     status: 'active',
-    categories: ['text', 'image', 'audio', 'video', 'embedding'],
+    categories: ['text', 'image', 'audio', 'embedding', 'multimodal'],
     features: {
       streaming: true,
       functionCall: true,
@@ -298,18 +300,18 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   wenxin: {
     id: 'wenxin',
     name: '文心一言',
-    nameEn: 'Ernie Bot (Baidu)',
-    baseUrl: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop',
+    nameEn: 'Wenxin',
+    baseUrl: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1',
     apiKeyEnv: 'WENXIN_API_KEY',
-    icon: 'wenxin',
+    icon: 'feather',
     website: 'https://yiyan.baidu.com',
-    docs: 'https://cloud.baidu.com/doc/WENXINWORKSHOP/index.html',
+    docs: 'https://cloud.baidu.com/doc/WENXINWORKSHOP',
     status: 'active',
-    categories: ['text', 'image', 'embedding'],
+    categories: ['text', 'image'],
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
+      vision: false,
       audio: false,
       tools: true,
     },
@@ -318,34 +320,14 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   zhipu: {
     id: 'zhipu',
     name: '智谱AI',
-    nameEn: 'Zhipu AI (GLM)',
+    nameEn: 'Zhipu AI',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     apiKeyEnv: 'ZHIPU_API_KEY',
-    icon: 'zhipu',
-    website: 'https://www.zhipuai.cn',
+    icon: 'atom',
+    website: 'https://www.bigmodel.cn',
     docs: 'https://open.bigmodel.cn/dev/api',
     status: 'active',
-    categories: ['text', 'image', 'audio', 'video', 'embedding'],
-    features: {
-      streaming: true,
-      functionCall: true,
-      vision: true,
-      audio: true,
-      tools: true,
-    },
-  },
-  
-  moonshot: {
-    id: 'moonshot',
-    name: 'Moonshot',
-    nameEn: 'Moonshot (Kimi)',
-    baseUrl: 'https://api.moonshot.cn/v1',
-    apiKeyEnv: 'MOONSHOT_API_KEY',
-    icon: 'moonshot',
-    website: 'https://www.moonshot.cn',
-    docs: 'https://platform.moonshot.cn/docs',
-    status: 'active',
-    categories: ['text', 'vision'],
+    categories: ['text', 'image', 'embedding', 'multimodal'],
     features: {
       streaming: true,
       functionCall: true,
@@ -355,21 +337,41 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     },
   },
   
-  minimax: {
-    id: 'minimax',
-    name: 'MiniMax',
-    nameEn: 'MiniMax (Hailuo)',
-    baseUrl: 'https://api.minimax.chat/v1',
-    apiKeyEnv: 'MINIMAX_API_KEY',
-    icon: 'minimax',
-    website: 'https://www.minimaxi.com',
-    docs: 'https://www.minimaxi.com/document',
+  moonshot: {
+    id: 'moonshot',
+    name: 'Moonshot',
+    nameEn: 'Moonshot',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    apiKeyEnv: 'MOONSHOT_API_KEY',
+    icon: 'moon',
+    website: 'https://www.moonshot.cn',
+    docs: 'https://platform.moonshot.cn/docs',
     status: 'active',
-    categories: ['text', 'image', 'audio', 'video'],
+    categories: ['text'],
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
+      vision: false,
+      audio: false,
+      tools: true,
+    },
+  },
+  
+  minimax: {
+    id: 'minimax',
+    name: 'MiniMax',
+    nameEn: 'MiniMax',
+    baseUrl: 'https://api.minimax.chat/v1',
+    apiKeyEnv: 'MINIMAX_API_KEY',
+    icon: 'infinity',
+    website: 'https://www.minimaxi.com',
+    docs: 'https://www.minimaxi.com/document',
+    status: 'active',
+    categories: ['text', 'audio', 'video'],
+    features: {
+      streaming: true,
+      functionCall: true,
+      vision: false,
       audio: true,
       tools: true,
     },
@@ -378,18 +380,18 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   spark: {
     id: 'spark',
     name: '讯飞星火',
-    nameEn: 'Spark (iFLYTEK)',
+    nameEn: 'iFlytek Spark',
     baseUrl: 'https://spark-api-open.xf-yun.com/v1',
     apiKeyEnv: 'SPARK_API_KEY',
-    icon: 'spark',
-    website: 'https://xinghuo.xfyun.cn',
+    icon: 'bolt',
+    website: 'https://www.xfyun.cn/doc/spark',
     docs: 'https://www.xfyun.cn/doc/spark',
     status: 'active',
-    categories: ['text', 'image', 'audio', 'video'],
+    categories: ['text', 'audio'],
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
+      vision: false,
       audio: true,
       tools: true,
     },
@@ -398,34 +400,14 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   hunyuan: {
     id: 'hunyuan',
     name: '腾讯混元',
-    nameEn: 'Hunyuan (Tencent)',
-    baseUrl: 'https://api.hunyuan.cloud.tencent.com/v1',
+    nameEn: 'Hunyuan',
+    baseUrl: 'https://hunyuan.tencentcloudapi.com',
     apiKeyEnv: 'HUNYUAN_API_KEY',
-    icon: 'hunyuan',
-    website: 'https://hunyuan.tencent.com',
+    icon: 'yin-yang',
+    website: 'https://cloud.tencent.com/product/hunyuan',
     docs: 'https://cloud.tencent.com/document/product/1729',
     status: 'active',
-    categories: ['text', 'image', 'audio', 'video', 'embedding'],
-    features: {
-      streaming: true,
-      functionCall: true,
-      vision: true,
-      audio: true,
-      tools: true,
-    },
-  },
-  
-  pangu: {
-    id: 'pangu',
-    name: '华为盘古',
-    nameEn: 'Pangu (Huawei)',
-    baseUrl: 'https://pangu-api.cn-east-3.myhuaweicloud.com/v1',
-    apiKeyEnv: 'PANGU_API_KEY',
-    icon: 'pangu',
-    website: 'https://www.huaweicloud.com/product/pangu.html',
-    docs: 'https://support.huaweicloud.com/product-pangu/pangu_01_0001.html',
-    status: 'active',
-    categories: ['text', 'image', 'video'],
+    categories: ['text', 'image', 'embedding', 'multimodal'],
     features: {
       streaming: true,
       functionCall: true,
@@ -438,18 +420,18 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
   yi: {
     id: 'yi',
     name: '零一万物',
-    nameEn: 'Yi (01.AI)',
+    nameEn: 'Yi',
     baseUrl: 'https://api.lingyiwanwu.com/v1',
     apiKeyEnv: 'YI_API_KEY',
-    icon: 'yi',
+    icon: 'sun',
     website: 'https://www.lingyiwanwu.com',
     docs: 'https://platform.lingyiwanwu.com/docs',
     status: 'active',
-    categories: ['text', 'vision'],
+    categories: ['text'],
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
+      vision: false,
       audio: false,
       tools: true,
     },
@@ -461,42 +443,25 @@ export const MODEL_PROVIDERS: Record<string, ModelProvider> = {
     nameEn: 'Baichuan',
     baseUrl: 'https://api.baichuan-ai.com/v1',
     apiKeyEnv: 'BAICHUAN_API_KEY',
-    icon: 'baichuan',
+    icon: 'water',
     website: 'https://www.baichuan-ai.com',
     docs: 'https://platform.baichuan-ai.com/docs',
     status: 'active',
-    categories: ['text', 'vision'],
+    categories: ['text'],
     features: {
       streaming: true,
       functionCall: true,
-      vision: true,
-      audio: false,
-      tools: true,
-    },
-  },
-  
-  sensechat: {
-    id: 'sensechat',
-    name: '商汤日日新',
-    nameEn: 'SenseChat (SenseTime)',
-    baseUrl: 'https://api.sensenova.cn/v1',
-    apiKeyEnv: 'SENSECHAT_API_KEY',
-    icon: 'sensechat',
-    website: 'https://chat.sensenova.cn',
-    docs: 'https://platform.sensenova.cn/doc',
-    status: 'active',
-    categories: ['text', 'image', 'video'],
-    features: {
-      streaming: true,
-      functionCall: true,
-      vision: true,
+      vision: false,
       audio: false,
       tools: true,
     },
   },
 };
 
-// ==================== 模型列表 ====================
+// ==================== 模型配置 ====================
+// 价格单位：厘/百万tokens（1元 = 1000厘）
+// costInputPrice/costOutputPrice = 商家成本价
+// sellInputPrice/sellOutputPrice = 平台售价（包含平台服务费）
 
 export const AVAILABLE_MODELS: ModelConfig[] = [
   // ============ OpenAI ============
@@ -507,15 +472,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'openai',
     category: 'multimodal',
     type: 'chat',
+    description: 'OpenAI 最新多模态模型，支持文本、图像、音频',
     contextWindow: 128000,
     maxOutputTokens: 16384,
-    inputPrice: 250, // ¥2.5/百万tokens
-    outputPrice: 1000, // ¥10/百万tokens
+    costInputPrice: 250,      // 商家成本：¥0.25/千tokens
+    costOutputPrice: 1000,    // 商家成本：¥1/千tokens
+    platformMarkup: 0.20,     // 平台加价 20%
+    sellInputPrice: 300,      // 平台售价：¥0.3/千tokens
+    sellOutputPrice: 1200,    // 平台售价：¥1.2/千tokens
     features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['推荐', '多模态', '最新'],
   },
   {
     id: 'openai-gpt-4o-mini',
@@ -524,15 +491,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'openai',
     category: 'multimodal',
     type: 'chat',
+    description: 'GPT-4o 轻量版，性价比高',
     contextWindow: 128000,
     maxOutputTokens: 16384,
-    inputPrice: 15, // ¥0.15/百万tokens
-    outputPrice: 60, // ¥0.6/百万tokens
+    costInputPrice: 15,
+    costOutputPrice: 60,
+    platformMarkup: 0.20,
+    sellInputPrice: 18,
+    sellOutputPrice: 72,
     features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['性价比', '多模态'],
   },
   {
     id: 'openai-gpt-4-turbo',
@@ -541,15 +510,36 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'openai',
     category: 'text',
     type: 'chat',
+    description: 'GPT-4 高性能版本',
     contextWindow: 128000,
     maxOutputTokens: 4096,
-    inputPrice: 100, // ¥1/百万tokens
-    outputPrice: 300, // ¥3/百万tokens
+    costInputPrice: 100,
+    costOutputPrice: 300,
+    platformMarkup: 0.20,
+    sellInputPrice: 120,
+    sellOutputPrice: 360,
     features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['高性能'],
+  },
+  {
+    id: 'openai-gpt-3.5-turbo',
+    code: 'gpt-3.5-turbo',
+    name: 'GPT-3.5 Turbo',
+    provider: 'openai',
+    category: 'text',
+    type: 'chat',
+    description: '经典高性价比模型',
+    contextWindow: 16384,
+    maxOutputTokens: 4096,
+    costInputPrice: 5,
+    costOutputPrice: 15,
+    platformMarkup: 0.20,
+    sellInputPrice: 6,
+    sellOutputPrice: 18,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['经典', '便宜'],
   },
   {
     id: 'openai-dall-e-3',
@@ -558,15 +548,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'openai',
     category: 'image',
     type: 'image_gen',
+    description: 'OpenAI 图像生成模型',
     contextWindow: 0,
     maxOutputTokens: 0,
-    inputPrice: 4000, // ¥40/张
-    outputPrice: 0,
+    costInputPrice: 4000,    // ¥4/张
+    costOutputPrice: 0,
+    platformMarkup: 0.25,
+    sellInputPrice: 5000,    // ¥5/张
+    sellOutputPrice: 0,
     features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['图像生成'],
   },
   {
     id: 'openai-whisper',
@@ -575,15 +567,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'openai',
     category: 'audio',
     type: 'audio_transcribe',
+    description: '语音转文字',
     contextWindow: 0,
     maxOutputTokens: 0,
-    inputPrice: 60, // ¥0.6/分钟
-    outputPrice: 0,
+    costInputPrice: 60,      // ¥0.06/分钟
+    costOutputPrice: 0,
+    platformMarkup: 0.20,
+    sellInputPrice: 72,
+    sellOutputPrice: 0,
     features: { streaming: false, functionCall: false, vision: false, audio: true, jsonMode: false },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['语音识别'],
   },
   {
     id: 'openai-tts',
@@ -592,15 +586,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'openai',
     category: 'audio',
     type: 'audio_tts',
+    description: '文字转语音',
     contextWindow: 0,
     maxOutputTokens: 0,
-    inputPrice: 150, // ¥1.5/百万字符
-    outputPrice: 0,
+    costInputPrice: 150,
+    costOutputPrice: 0,
+    platformMarkup: 0.20,
+    sellInputPrice: 180,
+    sellOutputPrice: 0,
     features: { streaming: true, functionCall: false, vision: false, audio: true, jsonMode: false },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['语音合成'],
   },
   
   // ============ Anthropic ============
@@ -611,15 +607,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'anthropic',
     category: 'multimodal',
     type: 'chat',
+    description: 'Anthropic 最新旗舰模型',
     contextWindow: 200000,
     maxOutputTokens: 8192,
-    inputPrice: 300, // ¥3/百万tokens
-    outputPrice: 1500, // ¥15/百万tokens
+    costInputPrice: 300,
+    costOutputPrice: 1500,
+    platformMarkup: 0.20,
+    sellInputPrice: 360,
+    sellOutputPrice: 1800,
     features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['推荐', '旗舰', '长上下文'],
   },
   {
     id: 'anthropic-claude-3-opus',
@@ -628,15 +626,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'anthropic',
     category: 'multimodal',
     type: 'chat',
+    description: 'Anthropic 最强模型',
     contextWindow: 200000,
     maxOutputTokens: 4096,
-    inputPrice: 1500, // ¥15/百万tokens
-    outputPrice: 7500, // ¥75/百万tokens
+    costInputPrice: 1500,
+    costOutputPrice: 7500,
+    platformMarkup: 0.20,
+    sellInputPrice: 1800,
+    sellOutputPrice: 9000,
     features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['顶级', '长上下文'],
   },
   {
     id: 'anthropic-claude-3-haiku',
@@ -645,15 +645,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'anthropic',
     category: 'text',
     type: 'chat',
+    description: 'Claude 轻量快速版',
     contextWindow: 200000,
     maxOutputTokens: 4096,
-    inputPrice: 25, // ¥0.25/百万tokens
-    outputPrice: 125, // ¥1.25/百万tokens
+    costInputPrice: 25,
+    costOutputPrice: 125,
+    platformMarkup: 0.20,
+    sellInputPrice: 30,
+    sellOutputPrice: 150,
     features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['快速', '便宜'],
   },
   
   // ============ Google ============
@@ -664,15 +666,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'google',
     category: 'multimodal',
     type: 'chat',
+    description: 'Google 最新多模态模型',
     contextWindow: 1000000,
     maxOutputTokens: 8192,
-    inputPrice: 0, // 免费
-    outputPrice: 0,
+    costInputPrice: 0,        // Google 免费额度
+    costOutputPrice: 0,
+    platformMarkup: 0.50,     // 即使免费，平台也收取服务费
+    sellInputPrice: 50,       // 平台售价：用户需付费使用
+    sellOutputPrice: 50,
     features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
-    isFree: true,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['推荐', '免费额度', '超长上下文'],
   },
   {
     id: 'google-gemini-1-5-pro',
@@ -681,15 +685,36 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'google',
     category: 'multimodal',
     type: 'chat',
+    description: 'Google 专业版模型',
     contextWindow: 2000000,
     maxOutputTokens: 8192,
-    inputPrice: 175, // ¥1.75/百万tokens
-    outputPrice: 700, // ¥7/百万tokens
+    costInputPrice: 175,
+    costOutputPrice: 700,
+    platformMarkup: 0.20,
+    sellInputPrice: 210,
+    sellOutputPrice: 840,
     features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['专业', '超长上下文'],
+  },
+  {
+    id: 'google-gemini-1-5-flash',
+    code: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    provider: 'google',
+    category: 'multimodal',
+    type: 'chat',
+    description: 'Google 快速版模型',
+    contextWindow: 1000000,
+    maxOutputTokens: 8192,
+    costInputPrice: 35,
+    costOutputPrice: 105,
+    platformMarkup: 0.20,
+    sellInputPrice: 42,
+    sellOutputPrice: 126,
+    features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
+    status: 'active',
+    tags: ['快速', '长上下文'],
   },
   
   // ============ DeepSeek ============
@@ -700,15 +725,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'deepseek',
     category: 'text',
     type: 'chat',
+    description: 'DeepSeek 对话模型',
     contextWindow: 64000,
     maxOutputTokens: 4096,
-    inputPrice: 10, // ¥0.1/百万tokens
-    outputPrice: 20, // ¥0.2/百万tokens
+    costInputPrice: 10,
+    costOutputPrice: 20,
+    platformMarkup: 0.20,
+    sellInputPrice: 12,
+    sellOutputPrice: 24,
     features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['性价比', '国产'],
   },
   {
     id: 'deepseek-reasoner',
@@ -717,51 +744,76 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'deepseek',
     category: 'text',
     type: 'chat',
+    description: 'DeepSeek 推理模型',
     contextWindow: 64000,
     maxOutputTokens: 8192,
-    inputPrice: 55, // ¥0.55/百万tokens
-    outputPrice: 220, // ¥2.2/百万tokens
+    costInputPrice: 55,
+    costOutputPrice: 220,
+    platformMarkup: 0.20,
+    sellInputPrice: 66,
+    sellOutputPrice: 264,
     features: { streaming: true, functionCall: false, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['推理', '国产'],
   },
   
-  // ============ Groq ============
+  // ============ Groq (极速推理) ============
   {
     id: 'groq-llama-3-3-70b',
     code: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B (Groq)',
+    name: 'Llama 3.3 70B',
     provider: 'groq',
     category: 'text',
     type: 'chat',
+    description: 'Groq 极速推理 Llama 模型',
     contextWindow: 128000,
     maxOutputTokens: 8192,
-    inputPrice: 60, // ¥0.6/百万tokens
-    outputPrice: 60, // ¥0.6/百万tokens
+    costInputPrice: 60,
+    costOutputPrice: 60,
+    platformMarkup: 0.20,
+    sellInputPrice: 72,
+    sellOutputPrice: 72,
     features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['极速', '开源'],
+  },
+  {
+    id: 'groq-llama-3-2-90b',
+    code: 'llama-3.2-90b-vision-preview',
+    name: 'Llama 3.2 90B Vision',
+    provider: 'groq',
+    category: 'multimodal',
+    type: 'chat',
+    description: 'Groq 多模态 Llama 模型',
+    contextWindow: 128000,
+    maxOutputTokens: 8192,
+    costInputPrice: 90,
+    costOutputPrice: 90,
+    platformMarkup: 0.20,
+    sellInputPrice: 108,
+    sellOutputPrice: 108,
+    features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['极速', '多模态', '开源'],
   },
   {
     id: 'groq-whisper',
     code: 'whisper-large-v3',
-    name: 'Whisper Large V3 (Groq)',
+    name: 'Whisper Large V3',
     provider: 'groq',
     category: 'audio',
     type: 'audio_transcribe',
+    description: 'Groq 极速语音识别',
     contextWindow: 0,
     maxOutputTokens: 0,
-    inputPrice: 20, // ¥0.2/分钟
-    outputPrice: 0,
+    costInputPrice: 20,
+    costOutputPrice: 0,
+    platformMarkup: 0.20,
+    sellInputPrice: 24,
+    sellOutputPrice: 0,
     features: { streaming: false, functionCall: false, vision: false, audio: true, jsonMode: false },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['极速', '语音识别'],
   },
   
   // ============ Mistral ============
@@ -772,15 +824,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'mistral',
     category: 'text',
     type: 'chat',
+    description: 'Mistral 旗舰模型',
     contextWindow: 128000,
     maxOutputTokens: 8192,
-    inputPrice: 200, // ¥2/百万tokens
-    outputPrice: 600, // ¥6/百万tokens
+    costInputPrice: 200,
+    costOutputPrice: 600,
+    platformMarkup: 0.20,
+    sellInputPrice: 240,
+    sellOutputPrice: 720,
     features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['旗舰', '欧洲'],
   },
   {
     id: 'mistral-small',
@@ -789,479 +843,36 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'mistral',
     category: 'text',
     type: 'chat',
+    description: 'Mistral 轻量模型',
     contextWindow: 128000,
     maxOutputTokens: 8192,
-    inputPrice: 20, // ¥0.2/百万tokens
-    outputPrice: 60, // ¥0.6/百万tokens
+    costInputPrice: 20,
+    costOutputPrice: 60,
+    platformMarkup: 0.20,
+    sellInputPrice: 24,
+    sellOutputPrice: 72,
     features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
-  },
-  
-  // ============ 豆包 ============
-  {
-    id: 'doubao-pro-128k',
-    code: 'doubao-pro-128k',
-    name: '豆包 Pro 128K',
-    provider: 'doubao',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,
-    inputPrice: 50, // ¥0.5/百万tokens
-    outputPrice: 50, // ¥0.5/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
+    tags: ['便宜', '欧洲'],
   },
   {
-    id: 'doubao-lite-4k',
-    code: 'doubao-lite-4k',
-    name: '豆包 Lite 4K',
-    provider: 'doubao',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 4096,
-    maxOutputTokens: 2048,
-    inputPrice: 3, // ¥0.03/百万tokens
-    outputPrice: 3, // ¥0.03/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ 通义千问 ============
-  {
-    id: 'qwen-max',
-    code: 'qwen-max',
-    name: '通义千问 Max',
-    provider: 'qwen',
+    id: 'mistral-pixtral',
+    code: 'pixtral-12b-2409',
+    name: 'Pixtral 12B',
+    provider: 'mistral',
     category: 'multimodal',
     type: 'chat',
-    contextWindow: 32768,
-    maxOutputTokens: 8192,
-    inputPrice: 200, // ¥2/百万tokens
-    outputPrice: 600, // ¥6/百万tokens
-    features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'qwen-plus',
-    code: 'qwen-plus',
-    name: '通义千问 Plus',
-    provider: 'qwen',
-    category: 'text',
-    type: 'chat',
+    description: 'Mistral 多模态模型',
     contextWindow: 128000,
-    maxOutputTokens: 6144,
-    inputPrice: 40, // ¥0.4/百万tokens
-    outputPrice: 120, // ¥1.2/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'qwen-turbo',
-    code: 'qwen-turbo',
-    name: '通义千问 Turbo',
-    provider: 'qwen',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 128000,
-    maxOutputTokens: 6144,
-    inputPrice: 30, // ¥0.3/百万tokens
-    outputPrice: 60, // ¥0.6/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'qwen-vl-max',
-    code: 'qwen-vl-max',
-    name: '通义千问 VL Max',
-    provider: 'qwen',
-    category: 'multimodal',
-    type: 'chat',
-    contextWindow: 32768,
     maxOutputTokens: 8192,
-    inputPrice: 200, // ¥2/百万tokens
-    outputPrice: 600, // ¥6/百万tokens
+    costInputPrice: 15,
+    costOutputPrice: 15,
+    platformMarkup: 0.20,
+    sellInputPrice: 18,
+    sellOutputPrice: 18,
     features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
     status: 'active',
-  },
-  
-  // ============ 文心一言 ============
-  {
-    id: 'wenxin-4-8k',
-    code: 'ernie-4.0-8k',
-    name: '文心一言 4.0',
-    provider: 'wenxin',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 8192,
-    maxOutputTokens: 4096,
-    inputPrice: 120, // ¥1.2/百万tokens
-    outputPrice: 120, // ¥1.2/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'wenxin-3-5-4k',
-    code: 'ernie-3.5-4k',
-    name: '文心一言 3.5',
-    provider: 'wenxin',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 4096,
-    maxOutputTokens: 2048,
-    inputPrice: 40, // ¥0.4/百万tokens
-    outputPrice: 80, // ¥0.8/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ 智谱AI ============
-  {
-    id: 'zhipu-glm-4-plus',
-    code: 'glm-4-plus',
-    name: 'GLM-4 Plus',
-    provider: 'zhipu',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,
-    inputPrice: 500, // ¥5/百万tokens
-    outputPrice: 500, // ¥5/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'zhipu-glm-4-flash',
-    code: 'glm-4-flash',
-    name: 'GLM-4 Flash',
-    provider: 'zhipu',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,
-    inputPrice: 10, // ¥0.1/百万tokens
-    outputPrice: 10, // ¥0.1/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'zhipu-glm-4v',
-    code: 'glm-4v',
-    name: 'GLM-4V',
-    provider: 'zhipu',
-    category: 'multimodal',
-    type: 'chat',
-    contextWindow: 8192,
-    maxOutputTokens: 4096,
-    inputPrice: 100, // ¥1/百万tokens
-    outputPrice: 100, // ¥1/百万tokens
-    features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'zhipu-cogview-3',
-    code: 'cogview-3',
-    name: 'CogView 3 (图像生成)',
-    provider: 'zhipu',
-    category: 'image',
-    type: 'image_gen',
-    contextWindow: 0,
-    maxOutputTokens: 0,
-    inputPrice: 80, // ¥0.8/张
-    outputPrice: 0,
-    features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ Moonshot ============
-  {
-    id: 'moonshot-v1-8k',
-    code: 'moonshot-v1-8k',
-    name: 'Kimi (Moonshot)',
-    provider: 'moonshot',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 8192,
-    maxOutputTokens: 4096,
-    inputPrice: 120, // ¥1.2/百万tokens
-    outputPrice: 120, // ¥1.2/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'moonshot-v1-32k',
-    code: 'moonshot-v1-32k',
-    name: 'Kimi 32K',
-    provider: 'moonshot',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 32768,
-    maxOutputTokens: 4096,
-    inputPrice: 240, // ¥2.4/百万tokens
-    outputPrice: 240, // ¥2.4/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'moonshot-v1-128k',
-    code: 'moonshot-v1-128k',
-    name: 'Kimi 128K',
-    provider: 'moonshot',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,
-    inputPrice: 600, // ¥6/百万tokens
-    outputPrice: 600, // ¥6/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ MiniMax ============
-  {
-    id: 'minimax-abab6-5-chat',
-    code: 'abab6.5-chat',
-    name: '海螺 AI (MiniMax)',
-    provider: 'minimax',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 245000,
-    maxOutputTokens: 8192,
-    inputPrice: 300, // ¥3/百万tokens
-    outputPrice: 300, // ¥3/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'minimax-abab5-5-chat',
-    code: 'abab5.5-chat',
-    name: '海螺 AI Lite',
-    provider: 'minimax',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 16384,
-    maxOutputTokens: 4096,
-    inputPrice: 150, // ¥1.5/百万tokens
-    outputPrice: 150, // ¥1.5/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ 讯飞星火 ============
-  {
-    id: 'spark-v3-5',
-    code: 'generalv3.5',
-    name: '星火 3.5',
-    provider: 'spark',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 8192,
-    maxOutputTokens: 4096,
-    inputPrice: 30, // ¥0.3/百万tokens
-    outputPrice: 30, // ¥0.3/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'spark-v4',
-    code: 'generalv4',
-    name: '星火 4.0',
-    provider: 'spark',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 8192,
-    maxOutputTokens: 4096,
-    inputPrice: 100, // ¥1/百万tokens
-    outputPrice: 100, // ¥1/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ 腾讯混元 ============
-  {
-    id: 'hunyuan-lite',
-    code: 'hunyuan-lite',
-    name: '混元 Lite',
-    provider: 'hunyuan',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 256000,
-    maxOutputTokens: 6144,
-    inputPrice: 3, // ¥0.03/百万tokens
-    outputPrice: 3, // ¥0.03/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'hunyuan-pro',
-    code: 'hunyuan-pro',
-    name: '混元 Pro',
-    provider: 'hunyuan',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 32000,
-    maxOutputTokens: 4096,
-    inputPrice: 40, // ¥0.4/百万tokens
-    outputPrice: 40, // ¥0.4/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ 零一万物 ============
-  {
-    id: 'yi-large',
-    code: 'yi-large',
-    name: 'Yi Large',
-    provider: 'yi',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 32768,
-    maxOutputTokens: 4096,
-    inputPrice: 200, // ¥2/百万tokens
-    outputPrice: 200, // ¥2/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'yi-medium',
-    code: 'yi-medium',
-    name: 'Yi Medium',
-    provider: 'yi',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 16384,
-    maxOutputTokens: 4096,
-    inputPrice: 25, // ¥0.25/百万tokens
-    outputPrice: 25, // ¥0.25/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ 百川 ============
-  {
-    id: 'baichuan-4',
-    code: 'Baichuan4',
-    name: '百川 4',
-    provider: 'baichuan',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,
-    inputPrice: 100, // ¥1/百万tokens
-    outputPrice: 100, // ¥1/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  {
-    id: 'baichuan-3-turbo',
-    code: 'Baichuan3-Turbo',
-    name: '百川 3 Turbo',
-    provider: 'baichuan',
-    category: 'text',
-    type: 'chat',
-    contextWindow: 32000,
-    maxOutputTokens: 4096,
-    inputPrice: 12, // ¥0.12/百万tokens
-    outputPrice: 12, // ¥0.12/百万tokens
-    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
-    status: 'active',
-  },
-  
-  // ============ Stability AI ============
-  {
-    id: 'stability-sd-3',
-    code: 'stable-diffusion-3',
-    name: 'Stable Diffusion 3',
-    provider: 'stability',
-    category: 'image',
-    type: 'image_gen',
-    contextWindow: 0,
-    maxOutputTokens: 0,
-    inputPrice: 350, // ¥3.5/张
-    outputPrice: 0,
-    features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
-    isFree: false,
-    memberOnly: true,
-    superMemberOnly: false,
-    status: 'active',
+    tags: ['多模态', '便宜'],
   },
   
   // ============ Cohere ============
@@ -1272,15 +883,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'cohere',
     category: 'text',
     type: 'chat',
+    description: 'Cohere 检索增强模型',
     contextWindow: 128000,
     maxOutputTokens: 4096,
-    inputPrice: 30, // ¥0.3/百万tokens
-    outputPrice: 150, // ¥1.5/百万tokens
+    costInputPrice: 30,
+    costOutputPrice: 150,
+    platformMarkup: 0.20,
+    sellInputPrice: 36,
+    sellOutputPrice: 180,
     features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['RAG', '长上下文'],
   },
   {
     id: 'cohere-embed',
@@ -1289,15 +902,666 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'cohere',
     category: 'embedding',
     type: 'embedding',
+    description: 'Cohere 文本嵌入模型',
     contextWindow: 512,
     maxOutputTokens: 0,
-    inputPrice: 10, // ¥0.1/百万tokens
-    outputPrice: 0,
+    costInputPrice: 10,
+    costOutputPrice: 0,
+    platformMarkup: 0.10,
+    sellInputPrice: 11,
+    sellOutputPrice: 0,
     features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
-    isFree: false,
-    memberOnly: false,
-    superMemberOnly: false,
     status: 'active',
+    tags: ['嵌入'],
+  },
+  
+  // ============ Stability AI ============
+  {
+    id: 'stability-sd-3',
+    code: 'stable-diffusion-3',
+    name: 'Stable Diffusion 3',
+    provider: 'stability',
+    category: 'image',
+    type: 'image_gen',
+    description: 'Stability AI 图像生成',
+    contextWindow: 0,
+    maxOutputTokens: 0,
+    costInputPrice: 350,
+    costOutputPrice: 0,
+    platformMarkup: 0.25,
+    sellInputPrice: 438,
+    sellOutputPrice: 0,
+    features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['图像生成', '开源'],
+  },
+  
+  // ============ 豆包 ============
+  {
+    id: 'doubao-pro-128k',
+    code: 'doubao-pro-128k',
+    name: '豆包 Pro 128K',
+    provider: 'doubao',
+    category: 'text',
+    type: 'chat',
+    description: '字节豆包专业版',
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    costInputPrice: 50,
+    costOutputPrice: 50,
+    platformMarkup: 0.15,
+    sellInputPrice: 58,
+    sellOutputPrice: 58,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '长上下文'],
+  },
+  {
+    id: 'doubao-lite-4k',
+    code: 'doubao-lite-4k',
+    name: '豆包 Lite',
+    provider: 'doubao',
+    category: 'text',
+    type: 'chat',
+    description: '字节豆包轻量版',
+    contextWindow: 4096,
+    maxOutputTokens: 2048,
+    costInputPrice: 3,
+    costOutputPrice: 3,
+    platformMarkup: 0.15,
+    sellInputPrice: 4,
+    sellOutputPrice: 4,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '超便宜'],
+  },
+  {
+    id: 'doubao-vision',
+    code: 'doubao-vision-pro-32k',
+    name: '豆包 Vision',
+    provider: 'doubao',
+    category: 'multimodal',
+    type: 'chat',
+    description: '豆包多模态模型',
+    contextWindow: 32000,
+    maxOutputTokens: 4096,
+    costInputPrice: 80,
+    costOutputPrice: 80,
+    platformMarkup: 0.15,
+    sellInputPrice: 92,
+    sellOutputPrice: 92,
+    features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '多模态'],
+  },
+  
+  // ============ 通义千问 ============
+  {
+    id: 'qwen-max',
+    code: 'qwen-max',
+    name: '通义千问 Max',
+    provider: 'qwen',
+    category: 'multimodal',
+    type: 'chat',
+    description: '阿里通义千问旗舰版',
+    contextWindow: 32768,
+    maxOutputTokens: 8192,
+    costInputPrice: 200,
+    costOutputPrice: 600,
+    platformMarkup: 0.15,
+    sellInputPrice: 230,
+    sellOutputPrice: 690,
+    features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '旗舰'],
+  },
+  {
+    id: 'qwen-plus',
+    code: 'qwen-plus',
+    name: '通义千问 Plus',
+    provider: 'qwen',
+    category: 'text',
+    type: 'chat',
+    description: '阿里通义千问增强版',
+    contextWindow: 128000,
+    maxOutputTokens: 6144,
+    costInputPrice: 40,
+    costOutputPrice: 120,
+    platformMarkup: 0.15,
+    sellInputPrice: 46,
+    sellOutputPrice: 138,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '长上下文'],
+  },
+  {
+    id: 'qwen-turbo',
+    code: 'qwen-turbo',
+    name: '通义千问 Turbo',
+    provider: 'qwen',
+    category: 'text',
+    type: 'chat',
+    description: '阿里通义千问快速版',
+    contextWindow: 128000,
+    maxOutputTokens: 6144,
+    costInputPrice: 30,
+    costOutputPrice: 60,
+    platformMarkup: 0.15,
+    sellInputPrice: 35,
+    sellOutputPrice: 69,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '快速'],
+  },
+  {
+    id: 'qwen-vl-max',
+    code: 'qwen-vl-max',
+    name: '通义千问 VL Max',
+    provider: 'qwen',
+    category: 'multimodal',
+    type: 'chat',
+    description: '通义千问视觉模型',
+    contextWindow: 32768,
+    maxOutputTokens: 8192,
+    costInputPrice: 200,
+    costOutputPrice: 600,
+    platformMarkup: 0.15,
+    sellInputPrice: 230,
+    sellOutputPrice: 690,
+    features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '多模态'],
+  },
+  {
+    id: 'qwen-wanx',
+    code: 'wanx-v1',
+    name: '通义万相',
+    provider: 'qwen',
+    category: 'image',
+    type: 'image_gen',
+    description: '阿里图像生成模型',
+    contextWindow: 0,
+    maxOutputTokens: 0,
+    costInputPrice: 80,
+    costOutputPrice: 0,
+    platformMarkup: 0.25,
+    sellInputPrice: 100,
+    sellOutputPrice: 0,
+    features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '图像生成'],
+  },
+  
+  // ============ 文心一言 ============
+  {
+    id: 'wenxin-4-8k',
+    code: 'ernie-4.0-8k',
+    name: '文心一言 4.0',
+    provider: 'wenxin',
+    category: 'text',
+    type: 'chat',
+    description: '百度文心一言旗舰版',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 120,
+    costOutputPrice: 120,
+    platformMarkup: 0.15,
+    sellInputPrice: 138,
+    sellOutputPrice: 138,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '旗舰'],
+  },
+  {
+    id: 'wenxin-3-5-4k',
+    code: 'ernie-3.5-4k',
+    name: '文心一言 3.5',
+    provider: 'wenxin',
+    category: 'text',
+    type: 'chat',
+    description: '百度文心一言标准版',
+    contextWindow: 4096,
+    maxOutputTokens: 2048,
+    costInputPrice: 40,
+    costOutputPrice: 80,
+    platformMarkup: 0.15,
+    sellInputPrice: 46,
+    sellOutputPrice: 92,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产'],
+  },
+  {
+    id: 'wenxin-speed',
+    code: 'ernie-speed-8k',
+    name: '文心一言 Speed',
+    provider: 'wenxin',
+    category: 'text',
+    type: 'chat',
+    description: '百度文心一言快速版',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 4,
+    costOutputPrice: 4,
+    platformMarkup: 0.15,
+    sellInputPrice: 5,
+    sellOutputPrice: 5,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '便宜'],
+  },
+  
+  // ============ 智谱AI ============
+  {
+    id: 'zhipu-glm-4-plus',
+    code: 'glm-4-plus',
+    name: 'GLM-4 Plus',
+    provider: 'zhipu',
+    category: 'text',
+    type: 'chat',
+    description: '智谱GLM-4增强版',
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    costInputPrice: 500,
+    costOutputPrice: 500,
+    platformMarkup: 0.15,
+    sellInputPrice: 575,
+    sellOutputPrice: 575,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '长上下文'],
+  },
+  {
+    id: 'zhipu-glm-4-flash',
+    code: 'glm-4-flash',
+    name: 'GLM-4 Flash',
+    provider: 'zhipu',
+    category: 'text',
+    type: 'chat',
+    description: '智谱GLM-4快速版',
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    costInputPrice: 10,
+    costOutputPrice: 10,
+    platformMarkup: 0.15,
+    sellInputPrice: 12,
+    sellOutputPrice: 12,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '便宜'],
+  },
+  {
+    id: 'zhipu-glm-4v',
+    code: 'glm-4v',
+    name: 'GLM-4V',
+    provider: 'zhipu',
+    category: 'multimodal',
+    type: 'chat',
+    description: '智谱多模态模型',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 100,
+    costOutputPrice: 100,
+    platformMarkup: 0.15,
+    sellInputPrice: 115,
+    sellOutputPrice: 115,
+    features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '多模态'],
+  },
+  {
+    id: 'zhipu-cogview-3',
+    code: 'cogview-3',
+    name: 'CogView 3',
+    provider: 'zhipu',
+    category: 'image',
+    type: 'image_gen',
+    description: '智谱图像生成模型',
+    contextWindow: 0,
+    maxOutputTokens: 0,
+    costInputPrice: 80,
+    costOutputPrice: 0,
+    platformMarkup: 0.25,
+    sellInputPrice: 100,
+    sellOutputPrice: 0,
+    features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '图像生成'],
+  },
+  
+  // ============ Moonshot (Kimi) ============
+  {
+    id: 'moonshot-v1-8k',
+    code: 'moonshot-v1-8k',
+    name: 'Kimi',
+    provider: 'moonshot',
+    category: 'text',
+    type: 'chat',
+    description: '月之暗面 Kimi 对话模型',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 120,
+    costOutputPrice: 120,
+    platformMarkup: 0.15,
+    sellInputPrice: 138,
+    sellOutputPrice: 138,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '长文本'],
+  },
+  {
+    id: 'moonshot-v1-32k',
+    code: 'moonshot-v1-32k',
+    name: 'Kimi 32K',
+    provider: 'moonshot',
+    category: 'text',
+    type: 'chat',
+    description: 'Kimi 长文本版',
+    contextWindow: 32768,
+    maxOutputTokens: 4096,
+    costInputPrice: 240,
+    costOutputPrice: 240,
+    platformMarkup: 0.15,
+    sellInputPrice: 276,
+    sellOutputPrice: 276,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '长文本'],
+  },
+  {
+    id: 'moonshot-v1-128k',
+    code: 'moonshot-v1-128k',
+    name: 'Kimi 128K',
+    provider: 'moonshot',
+    category: 'text',
+    type: 'chat',
+    description: 'Kimi 超长文本版',
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    costInputPrice: 600,
+    costOutputPrice: 600,
+    platformMarkup: 0.15,
+    sellInputPrice: 690,
+    sellOutputPrice: 690,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '超长文本'],
+  },
+  
+  // ============ MiniMax ============
+  {
+    id: 'minimax-abab6-5-chat',
+    code: 'abab6.5-chat',
+    name: '海螺 AI',
+    provider: 'minimax',
+    category: 'text',
+    type: 'chat',
+    description: 'MiniMax 海螺AI',
+    contextWindow: 245000,
+    maxOutputTokens: 8192,
+    costInputPrice: 300,
+    costOutputPrice: 300,
+    platformMarkup: 0.15,
+    sellInputPrice: 345,
+    sellOutputPrice: 345,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '超长上下文'],
+  },
+  {
+    id: 'minimax-abab5-5-chat',
+    code: 'abab5.5-chat',
+    name: '海螺 AI Lite',
+    provider: 'minimax',
+    category: 'text',
+    type: 'chat',
+    description: 'MiniMax 海螺AI轻量版',
+    contextWindow: 16384,
+    maxOutputTokens: 4096,
+    costInputPrice: 150,
+    costOutputPrice: 150,
+    platformMarkup: 0.15,
+    sellInputPrice: 173,
+    sellOutputPrice: 173,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产'],
+  },
+  {
+    id: 'minimax-video',
+    code: 'video-01',
+    name: '海螺视频',
+    provider: 'minimax',
+    category: 'video',
+    type: 'video_gen',
+    description: 'MiniMax 视频生成',
+    contextWindow: 0,
+    maxOutputTokens: 0,
+    costInputPrice: 5000,    // ¥5/视频
+    costOutputPrice: 0,
+    platformMarkup: 0.30,
+    sellInputPrice: 6500,
+    sellOutputPrice: 0,
+    features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '视频生成'],
+  },
+  
+  // ============ 讯飞星火 ============
+  {
+    id: 'spark-v3-5',
+    code: 'generalv3.5',
+    name: '星火 3.5',
+    provider: 'spark',
+    category: 'text',
+    type: 'chat',
+    description: '讯飞星火3.5',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 30,
+    costOutputPrice: 30,
+    platformMarkup: 0.15,
+    sellInputPrice: 35,
+    sellOutputPrice: 35,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产'],
+  },
+  {
+    id: 'spark-v4',
+    code: 'generalv4',
+    name: '星火 4.0',
+    provider: 'spark',
+    category: 'text',
+    type: 'chat',
+    description: '讯飞星火4.0旗舰版',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 100,
+    costOutputPrice: 100,
+    platformMarkup: 0.15,
+    sellInputPrice: 115,
+    sellOutputPrice: 115,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '旗舰'],
+  },
+  {
+    id: 'spark-lite',
+    code: 'general-lite',
+    name: '星火 Lite',
+    provider: 'spark',
+    category: 'text',
+    type: 'chat',
+    description: '讯飞星火轻量版',
+    contextWindow: 4096,
+    maxOutputTokens: 2048,
+    costInputPrice: 2,
+    costOutputPrice: 2,
+    platformMarkup: 0.15,
+    sellInputPrice: 3,
+    sellOutputPrice: 3,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '便宜'],
+  },
+  
+  // ============ 腾讯混元 ============
+  {
+    id: 'hunyuan-lite',
+    code: 'hunyuan-lite',
+    name: '混元 Lite',
+    provider: 'hunyuan',
+    category: 'text',
+    type: 'chat',
+    description: '腾讯混元轻量版',
+    contextWindow: 256000,
+    maxOutputTokens: 6144,
+    costInputPrice: 3,
+    costOutputPrice: 3,
+    platformMarkup: 0.15,
+    sellInputPrice: 4,
+    sellOutputPrice: 4,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '便宜', '超长上下文'],
+  },
+  {
+    id: 'hunyuan-pro',
+    code: 'hunyuan-pro',
+    name: '混元 Pro',
+    provider: 'hunyuan',
+    category: 'text',
+    type: 'chat',
+    description: '腾讯混元专业版',
+    contextWindow: 32000,
+    maxOutputTokens: 4096,
+    costInputPrice: 40,
+    costOutputPrice: 40,
+    platformMarkup: 0.15,
+    sellInputPrice: 46,
+    sellOutputPrice: 46,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产'],
+  },
+  {
+    id: 'hunyuan-vision',
+    code: 'hunyuan-vision',
+    name: '混元 Vision',
+    provider: 'hunyuan',
+    category: 'multimodal',
+    type: 'chat',
+    description: '腾讯混元视觉模型',
+    contextWindow: 8192,
+    maxOutputTokens: 4096,
+    costInputPrice: 80,
+    costOutputPrice: 80,
+    platformMarkup: 0.15,
+    sellInputPrice: 92,
+    sellOutputPrice: 92,
+    features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '多模态'],
+  },
+  
+  // ============ 零一万物 ============
+  {
+    id: 'yi-large',
+    code: 'yi-large',
+    name: 'Yi Large',
+    provider: 'yi',
+    category: 'text',
+    type: 'chat',
+    description: '零一万物大模型',
+    contextWindow: 32768,
+    maxOutputTokens: 4096,
+    costInputPrice: 200,
+    costOutputPrice: 200,
+    platformMarkup: 0.15,
+    sellInputPrice: 230,
+    sellOutputPrice: 230,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产'],
+  },
+  {
+    id: 'yi-medium',
+    code: 'yi-medium',
+    name: 'Yi Medium',
+    provider: 'yi',
+    category: 'text',
+    type: 'chat',
+    description: '零一万物中型模型',
+    contextWindow: 16384,
+    maxOutputTokens: 4096,
+    costInputPrice: 25,
+    costOutputPrice: 25,
+    platformMarkup: 0.15,
+    sellInputPrice: 29,
+    sellOutputPrice: 29,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '便宜'],
+  },
+  {
+    id: 'yi-vision',
+    code: 'yi-vision',
+    name: 'Yi Vision',
+    provider: 'yi',
+    category: 'multimodal',
+    type: 'chat',
+    description: '零一万物视觉模型',
+    contextWindow: 16384,
+    maxOutputTokens: 4096,
+    costInputPrice: 60,
+    costOutputPrice: 60,
+    platformMarkup: 0.15,
+    sellInputPrice: 69,
+    sellOutputPrice: 69,
+    features: { streaming: true, functionCall: false, vision: true, audio: false, jsonMode: false },
+    status: 'active',
+    tags: ['国产', '多模态'],
+  },
+  
+  // ============ 百川 ============
+  {
+    id: 'baichuan-4',
+    code: 'Baichuan4',
+    name: '百川 4',
+    provider: 'baichuan',
+    category: 'text',
+    type: 'chat',
+    description: '百川智能旗舰模型',
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    costInputPrice: 100,
+    costOutputPrice: 100,
+    platformMarkup: 0.15,
+    sellInputPrice: 115,
+    sellOutputPrice: 115,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '长上下文'],
+  },
+  {
+    id: 'baichuan-3-turbo',
+    code: 'Baichuan3-Turbo',
+    name: '百川 3 Turbo',
+    provider: 'baichuan',
+    category: 'text',
+    type: 'chat',
+    description: '百川智能快速版',
+    contextWindow: 32000,
+    maxOutputTokens: 4096,
+    costInputPrice: 12,
+    costOutputPrice: 12,
+    platformMarkup: 0.15,
+    sellInputPrice: 14,
+    sellOutputPrice: 14,
+    features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
+    status: 'active',
+    tags: ['国产', '便宜'],
   },
 ];
 
@@ -1341,4 +1605,55 @@ export function getModelsByCategory(category: string): ModelConfig[] {
  */
 export function getModelsByProvider(providerId: string): ModelConfig[] {
   return AVAILABLE_MODELS.filter(model => model.provider === providerId);
+}
+
+/**
+ * 计算平台利润
+ */
+export function calculatePlatformProfit(
+  model: ModelConfig,
+  inputTokens: number,
+  outputTokens: number
+): { cost: number; revenue: number; profit: number } {
+  const cost = (model.costInputPrice * inputTokens + model.costOutputPrice * outputTokens) / 1000000;
+  const revenue = (model.sellInputPrice * inputTokens + model.sellOutputPrice * outputTokens) / 1000000;
+  const profit = revenue - cost;
+  
+  return {
+    cost: Math.round(cost * 1000) / 1000,    // 保留3位小数
+    revenue: Math.round(revenue * 1000) / 1000,
+    profit: Math.round(profit * 1000) / 1000,
+  };
+}
+
+/**
+ * 获取模型定价信息（返回给前端）
+ */
+export function getModelPricing(model: ModelConfig) {
+  return {
+    code: model.code,
+    name: model.name,
+    provider: model.provider,
+    category: model.category,
+    // 价格单位转换为元/百万tokens
+    inputPrice: model.sellInputPrice / 1000,
+    outputPrice: model.sellOutputPrice / 1000,
+    // 显示格式化价格
+    inputPriceDisplay: formatPrice(model.sellInputPrice),
+    outputPriceDisplay: formatPrice(model.sellOutputPrice),
+    // 平台加价比例
+    platformMarkup: model.platformMarkup,
+    platformMarkupPercent: `${Math.round(model.platformMarkup * 100)}%`,
+  };
+}
+
+/**
+ * 格式化价格显示
+ */
+function formatPrice(priceInLi: number): string {
+  if (priceInLi === 0) return '免费';
+  const priceInYuan = priceInLi / 1000;
+  if (priceInYuan < 0.01) return `¥${(priceInYuan * 100).toFixed(2)}/万tokens`;
+  if (priceInYuan < 1) return `¥${priceInYuan.toFixed(3)}/千tokens`;
+  return `¥${priceInYuan.toFixed(2)}/百万tokens`;
 }

@@ -14,7 +14,6 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
-import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
@@ -23,7 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
-// 新的模型接口类型（匹配统一AI网关）
+// 模型接口类型
 interface Model {
   code: string;
   name: string;
@@ -32,11 +31,17 @@ interface Model {
   type: string;
   category: string;
   description: string;
-  pricing: {
-    input: number;
-    output: number;
-    tier: 'free' | 'standard' | 'premium' | 'enterprise';
-  };
+  // 价格（厘/百万tokens）
+  sellInputPrice: number;
+  sellOutputPrice: number;
+  costInputPrice: number;
+  costOutputPrice: number;
+  platformMarkup: number;
+  // 上下文
+  contextWindow: number;
+  maxOutputTokens: number;
+  // 标签
+  tags?: string[];
 }
 
 // 提供商接口
@@ -67,6 +72,8 @@ const PROVIDER_ICONS: Record<string, keyof typeof FontAwesome6.glyphMap> = {
   minimax: 'infinity',
   spark: 'bolt',
   hunyuan: 'yin-yang',
+  yi: 'sun',
+  baichuan: 'water',
   mistral: 'wind',
   groq: 'bolt-lightning',
   cohere: 'circle-nodes',
@@ -87,6 +94,8 @@ const PROVIDER_COLORS: Record<string, string> = {
   minimax: '#EC4899',
   spark: '#E91E63',
   hunyuan: '#00BFA5',
+  yi: '#F59E0B',
+  baichuan: '#14B8A6',
   mistral: '#FF7000',
   groq: '#F55036',
   cohere: '#39594D',
@@ -108,7 +117,6 @@ export default function ModelsScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useSafeRouter();
-  const { isMember, isSuperMember } = useMembership();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -274,44 +282,40 @@ export default function ModelsScreen() {
     return groups;
   }, [filteredModels]);
 
-  // 检查模型是否锁定
-  const isModelLocked = useCallback((model: Model) => {
-    return (model.pricing.tier === 'enterprise' && !isSuperMember) ||
-           (model.pricing.tier === 'premium' && !isMember);
-  }, [isMember, isSuperMember]);
-
   // 选择模型
   const handleSelectModel = async (model: Model) => {
-    if (isModelLocked(model)) {
-      const tier = model.pricing.tier;
-      if (tier === 'enterprise') {
-        showUpgradeAlert('超级会员', '该模型需要超级会员才能使用', 9900, 'super_member');
-      } else if (tier === 'premium') {
-        showUpgradeAlert('普通会员', '该模型需要普通会员才能使用', 2900, 'membership');
-      }
+    // 检查余额
+    if (tokenUsage.balance.available <= 0) {
+      Alert.alert(
+        '余额不足',
+        '您的账户余额不足，请先充值后再使用模型',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '立即充值', onPress: () => router.push('/payment') },
+        ]
+      );
       return;
     }
     
     setSelectedModelCode(model.code);
     await AsyncStorage.setItem('selectedModel', JSON.stringify(model));
-    Alert.alert('模型已选择', `已选择 ${model.name} 作为默认模型`);
-  };
-
-  const showUpgradeAlert = (title: string, message: string, amount: number, productType: string) => {
-    Alert.alert(
-      title,
-      message,
-      [
-        { text: '取消', style: 'cancel' },
-        { text: '立即开通', onPress: () => router.push('/payment', { amount, productType }) },
-      ]
-    );
+    Alert.alert('模型已选择', `已选择 ${model.name}\n输入: ¥${(model.sellInputPrice / 1000).toFixed(4)}/千tokens\n输出: ¥${(model.sellOutputPrice / 1000).toFixed(4)}/千tokens`);
   };
 
   // 格式化价格
-  const formatPrice = (price: number) => {
-    if (price === 0) return '免费';
-    return `¥${(price / 100).toFixed(2)}`;
+  const formatPrice = (priceInLi: number) => {
+    if (priceInLi === 0) return '免费';
+    const priceInYuan = priceInLi / 1000;
+    if (priceInYuan < 0.01) return `¥${priceInYuan.toFixed(4)}`;
+    if (priceInYuan < 1) return `¥${priceInYuan.toFixed(3)}`;
+    return `¥${priceInYuan.toFixed(2)}`;
+  };
+
+  // 格式化上下文窗口
+  const formatContextWindow = (tokens: number) => {
+    if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`;
+    if (tokens >= 1000) return `${(tokens / 1000).toFixed(0)}K`;
+    return tokens.toString();
   };
 
   // 获取类型图标
@@ -329,7 +333,6 @@ export default function ModelsScreen() {
 
   // 渲染模型卡片
   const renderModelCard = (model: Model) => {
-    const isLocked = isModelLocked(model);
     const isSelected = selectedModelCode === model.code;
     const isFavorite = favorites.includes(model.code);
     const providerColor = PROVIDER_COLORS[model.provider] || theme.primary;
@@ -360,21 +363,18 @@ export default function ModelsScreen() {
               <ThemedText variant="caption" color={theme.textMuted}>
                 {model.providerName}
               </ThemedText>
-              {model.pricing.tier === 'free' && (
-                <View style={[styles.modelBadge, { backgroundColor: theme.success + '20' }]}>
-                  <Text style={{ color: theme.success, fontSize: 10, fontWeight: '600' }}>免费</Text>
-                </View>
-              )}
-              {model.pricing.tier === 'premium' && (
-                <View style={[styles.modelBadge, { backgroundColor: '#D9770620' }]}>
-                  <Text style={{ color: '#D97706', fontSize: 10, fontWeight: '600' }}>会员</Text>
-                </View>
-              )}
-              {model.pricing.tier === 'enterprise' && (
-                <View style={[styles.modelBadge, { backgroundColor: '#7C3AED20' }]}>
-                  <Text style={{ color: '#7C3AED', fontSize: 10, fontWeight: '600' }}>超级会员</Text>
-                </View>
-              )}
+              {/* 上下文窗口标签 */}
+              <View style={[styles.modelBadge, { backgroundColor: theme.primary + '20' }]}>
+                <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '600' }}>
+                  {formatContextWindow(model.contextWindow)}
+                </Text>
+              </View>
+              {/* 平台加价标签 */}
+              <View style={[styles.modelBadge, { backgroundColor: '#F59E0B20' }]}>
+                <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: '600' }}>
+                  +{Math.round(model.platformMarkup * 100)}%服务费
+                </Text>
+              </View>
             </View>
           </View>
           {/* 收藏按钮 */}
@@ -394,31 +394,50 @@ export default function ModelsScreen() {
               <FontAwesome6 name="check" size={12} color="#fff" />
             </View>
           )}
-          {isLocked && !isSelected && (
-            <FontAwesome6 name="lock" size={16} color={theme.textMuted} />
-          )}
         </View>
+
+        {/* 标签 */}
+        {model.tags && model.tags.length > 0 && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: Spacing.xs }}>
+            {model.tags.map((tag, idx) => (
+              <View 
+                key={idx}
+                style={{ 
+                  paddingHorizontal: 6, 
+                  paddingVertical: 2, 
+                  borderRadius: 4, 
+                  backgroundColor: theme.backgroundTertiary,
+                  marginRight: 4,
+                  marginBottom: 4,
+                }}
+              >
+                <Text style={{ fontSize: 10, color: theme.textSecondary }}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <ThemedText variant="caption" color={theme.textSecondary} style={{ marginTop: Spacing.sm }} numberOfLines={2}>
           {model.description}
         </ThemedText>
 
-        <View style={styles.modelFooter}>
+        {/* 价格信息 */}
+        <View style={[styles.modelFooter, { marginTop: Spacing.md }]}>
           <View style={styles.priceGroup}>
-            <ThemedText variant="caption" color={theme.textMuted}>输入 ¥/百万</ThemedText>
-            <ThemedText variant="smallMedium" color={theme.textPrimary}>
-              {formatPrice(model.pricing.input)}
+            <ThemedText variant="caption" color={theme.textMuted}>输入 ¥/千tokens</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.primary}>
+              {formatPrice(model.sellInputPrice / 100)}
             </ThemedText>
           </View>
           <View style={styles.priceGroup}>
-            <ThemedText variant="caption" color={theme.textMuted}>输出 ¥/百万</ThemedText>
-            <ThemedText variant="smallMedium" color={theme.textPrimary}>
-              {formatPrice(model.pricing.output)}
+            <ThemedText variant="caption" color={theme.textMuted}>输出 ¥/千tokens</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.accent}>
+              {formatPrice(model.sellOutputPrice / 100)}
             </ThemedText>
           </View>
-          <View style={[styles.selectButton, isLocked && { backgroundColor: theme.textMuted }]}>
-            <ThemedText variant="small" color={theme.backgroundRoot}>
-              {isSelected ? '已选择' : isLocked ? '解锁' : '选择'}
+          <View style={[styles.selectButton, { backgroundColor: theme.primary }]}>
+            <ThemedText variant="small" color="#fff">
+              {isSelected ? '已选择' : '选择'}
             </ThemedText>
           </View>
         </View>
@@ -499,11 +518,30 @@ export default function ModelsScreen() {
             模型市场
           </ThemedText>
           <TouchableOpacity 
-            onPress={() => router.push('/membership')}
+            onPress={() => router.push('/payment')}
             style={{ padding: Spacing.sm }}
           >
-            <FontAwesome6 name="crown" size={20} color={theme.accent} />
+            <FontAwesome6 name="wallet" size={20} color={theme.primary} />
           </TouchableOpacity>
+        </View>
+
+        {/* 平台说明 */}
+        <View style={[styles.platformInfo, { backgroundColor: theme.backgroundDefault }]}>
+          <View style={styles.platformInfoHeader}>
+            <FontAwesome6 name="info-circle" size={16} color={theme.primary} />
+            <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginLeft: Spacing.sm }}>
+              平台计费说明
+            </ThemedText>
+          </View>
+          <ThemedText variant="caption" color={theme.textSecondary} style={{ marginTop: Spacing.xs }}>
+            • 所有模型按实际使用量计费（输入+输出tokens）
+          </ThemedText>
+          <ThemedText variant="caption" color={theme.textSecondary} style={{ marginTop: 2 }}>
+            • 价格包含平台服务费（15%~30%），用于API对接和运维成本
+          </ThemedText>
+          <ThemedText variant="caption" color={theme.textSecondary} style={{ marginTop: 2 }}>
+            • 请确保账户余额充足，余额不足将无法使用模型
+          </ThemedText>
         </View>
 
         {/* 统计概览 */}
@@ -512,55 +550,41 @@ export default function ModelsScreen() {
             <ThemedText variant="h2" color={theme.primary}>
               {providers.length}
             </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>提供商</ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>厂商</ThemedText>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <ThemedText variant="h2" color={theme.accent}>
               {models.length}
             </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>可用模型</ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>模型</ThemedText>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <ThemedText variant="h2" color={theme.success}>
               ¥{tokenUsage.balance.available.toFixed(2)}
             </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>账户余额</ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>余额</ThemedText>
           </View>
         </View>
 
-        {/* 会员快捷入口 */}
-        <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg }}>
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            onPress={() => router.push('/payment', { amount: 2900, productType: 'membership' })}
+        {/* 充值入口 */}
+        <TouchableOpacity
+          style={{ marginBottom: Spacing.lg }}
+          onPress={() => router.push('/payment')}
+        >
+          <LinearGradient
+            colors={['#00F0FF', '#BF00FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
           >
-            <LinearGradient
-              colors={['#00F0FF', '#BF00FF']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
-            >
-              <FontAwesome6 name="crown" size={16} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>普通会员 ¥29/月</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            onPress={() => router.push('/payment', { amount: 9900, productType: 'super_member' })}
-          >
-            <LinearGradient
-              colors={['#FFD700', '#FF6B00']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
-            >
-              <FontAwesome6 name="rocket" size={16} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>超级会员 ¥99/月</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+            <FontAwesome6 name="wallet" size={16} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+              充值余额 · 立即使用模型
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* 类型筛选 */}
         <View style={{ marginBottom: Spacing.md }}>
@@ -614,7 +638,7 @@ export default function ModelsScreen() {
                   styles.filterChipText,
                   { color: selectedProvider === 'all' ? '#fff' : theme.textPrimary },
                 ]}>
-                  全部提供商
+                  全部厂商
                 </Text>
               </TouchableOpacity>
               {providers.map((provider) => {
@@ -666,7 +690,7 @@ export default function ModelsScreen() {
         {/* 底部提示 */}
         <View style={{ marginTop: Spacing.xl, alignItems: 'center' }}>
           <ThemedText variant="caption" color={theme.textMuted}>
-            当前已集成 {providers.length} 家厂商的 {models.length} 个模型
+            当前已对接 {providers.length} 家厂商的 {models.length} 个模型
           </ThemedText>
           <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: Spacing.xs }}>
             持续更新中...

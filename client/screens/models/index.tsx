@@ -31,12 +31,9 @@ interface Model {
   type: string;
   category: string;
   description: string;
-  // 价格（厘/百万tokens）
-  sellInputPrice: number;
-  sellOutputPrice: number;
-  costInputPrice: number;
-  costOutputPrice: number;
-  platformMarkup: number;
+  // 价格（元/百万tokens）
+  inputPrice: number;
+  outputPrice: number;
   // 上下文
   contextWindow: number;
   maxOutputTokens: number;
@@ -299,13 +296,12 @@ export default function ModelsScreen() {
     
     setSelectedModelCode(model.code);
     await AsyncStorage.setItem('selectedModel', JSON.stringify(model));
-    Alert.alert('模型已选择', `已选择 ${model.name}\n输入: ¥${(model.sellInputPrice / 1000).toFixed(4)}/千tokens\n输出: ¥${(model.sellOutputPrice / 1000).toFixed(4)}/千tokens`);
+    Alert.alert('模型已选择', `已选择 ${model.name}\n输入: ¥${model.inputPrice}/百万tokens\n输出: ¥${model.outputPrice}/百万tokens`);
   };
 
-  // 格式化价格
-  const formatPrice = (priceInLi: number) => {
-    if (priceInLi === 0) return '免费';
-    const priceInYuan = priceInLi / 1000;
+  // 格式化价格（元/百万tokens）
+  const formatPrice = (priceInYuan: number) => {
+    if (priceInYuan === 0) return '免费';
     if (priceInYuan < 0.01) return `¥${priceInYuan.toFixed(4)}`;
     if (priceInYuan < 1) return `¥${priceInYuan.toFixed(3)}`;
     return `¥${priceInYuan.toFixed(2)}`;
@@ -418,15 +414,15 @@ export default function ModelsScreen() {
         {/* 价格信息 */}
         <View style={[styles.modelFooter, { marginTop: Spacing.md }]}>
           <View style={styles.priceGroup}>
-            <ThemedText variant="caption" color={theme.textMuted}>输入 ¥/千tokens</ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>输入 ¥/百万</ThemedText>
             <ThemedText variant="smallMedium" color={theme.primary}>
-              {formatPrice(model.sellInputPrice / 100)}
+              {formatPrice(model.inputPrice)}
             </ThemedText>
           </View>
           <View style={styles.priceGroup}>
-            <ThemedText variant="caption" color={theme.textMuted}>输出 ¥/千tokens</ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>输出 ¥/百万</ThemedText>
             <ThemedText variant="smallMedium" color={theme.accent}>
-              {formatPrice(model.sellOutputPrice / 100)}
+              {formatPrice(model.outputPrice)}
             </ThemedText>
           </View>
           <View style={[styles.selectButton, { backgroundColor: theme.primary }]}>

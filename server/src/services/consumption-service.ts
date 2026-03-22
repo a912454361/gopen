@@ -475,13 +475,13 @@ export class ConsumptionService {
   calculateModelFee(
     inputTokens: number,
     outputTokens: number,
-    inputPricePerMillion: number, // 厘/百万tokens
-    outputPricePerMillion: number
+    inputPricePerThousand: number, // 厘/千tokens
+    outputPricePerThousand: number
   ): { sellInputFee: number; sellOutputFee: number; sellTotal: number } {
-    // 价格单位：厘/百万tokens = 厘/1,000,000 tokens
-    // 费用 = tokens * 价格 / 1,000,000
-    const sellInputFee = Math.ceil(inputTokens * inputPricePerMillion / 1000000);
-    const sellOutputFee = Math.ceil(outputTokens * outputPricePerMillion / 1000000);
+    // 价格单位：厘/千tokens = 厘/1,000 tokens
+    // 费用 = (tokens / 1000) * 价格
+    const sellInputFee = Math.ceil((inputTokens / 1000) * inputPricePerThousand);
+    const sellOutputFee = Math.ceil((outputTokens / 1000) * outputPricePerThousand);
     
     return {
       sellInputFee,

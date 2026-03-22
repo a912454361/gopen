@@ -50,9 +50,9 @@ interface SelectedModel {
   name: string;
   provider: string;
   providerName: string;
-  // 新格式（模型市场存储）
-  sellInputPrice?: number;
-  sellOutputPrice?: number;
+  // 价格（元/百万tokens）
+  inputPrice?: number;
+  outputPrice?: number;
   category?: string;
   // 旧格式（兼容）
   pricing?: { input: number; output: number; tier: string };
@@ -209,11 +209,11 @@ export default function ChatScreen() {
       const saved = await AsyncStorage.getItem('selectedModel');
       if (saved) {
         const model = JSON.parse(saved);
-        // 兼容新旧格式：如果缺少 pricing 字段，根据 category 设置默认 tier
+        // 兼容新旧格式：如果缺少 pricing 字段，根据 inputPrice/outputPrice 设置
         if (!model.pricing) {
           model.pricing = {
-            input: model.sellInputPrice || 0,
-            output: model.sellOutputPrice || 0,
+            input: model.inputPrice || 0,
+            output: model.outputPrice || 0,
             tier: 'standard', // 默认标准等级
           };
         }
@@ -225,7 +225,7 @@ export default function ChatScreen() {
           name: '豆包 Pro 32K',
           provider: 'doubao',
           providerName: '豆包',
-          pricing: { input: 80, output: 200, tier: 'standard' },
+          pricing: { input: 1, output: 1, tier: 'standard' },
         });
       }
     } catch (error) {
@@ -318,8 +318,8 @@ export default function ChatScreen() {
     // 兼容新旧格式：确保模型有 pricing 字段
     if (!model.pricing) {
       model.pricing = {
-        input: model.sellInputPrice || 0,
-        output: model.sellOutputPrice || 0,
+        input: model.inputPrice || 0,
+        output: model.outputPrice || 0,
         tier: 'standard',
       };
     }
@@ -656,8 +656,8 @@ export default function ChatScreen() {
                 const isSelected = selectedModel?.code === model.code;
                 // 兼容新旧格式
                 const tier = model.pricing?.tier || 'standard';
-                const inputPrice = model.pricing?.input || model.sellInputPrice || 0;
-                const outputPrice = model.pricing?.output || model.sellOutputPrice || 0;
+                const inputPrice = model.pricing?.input || model.inputPrice || 0;
+                const outputPrice = model.pricing?.output || model.outputPrice || 0;
                 const isLocked = (tier === 'enterprise' && !isSuperMember) ||
                                 (tier === 'premium' && !isMember);
                 
@@ -701,10 +701,10 @@ export default function ChatScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', marginTop: 8, gap: 16 }}>
                       <ThemedText variant="caption" color={theme.textMuted}>
-                        输入: ¥{(inputPrice / 100).toFixed(2)}/百万
+                        输入: ¥{inputPrice.toFixed(2)}/百万
                       </ThemedText>
                       <ThemedText variant="caption" color={theme.textMuted}>
-                        输出: ¥{(outputPrice / 100).toFixed(2)}/百万
+                        输出: ¥{outputPrice.toFixed(2)}/百万
                       </ThemedText>
                     </View>
                   </TouchableOpacity>

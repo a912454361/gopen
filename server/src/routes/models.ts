@@ -43,9 +43,10 @@ router.get('/', async (req: Request, res: Response) => {
     // 隐藏成本价，只返回售价
     const publicModels = models?.map(model => ({
       ...model,
-      // 价格格式化为元（去掉多余的小数位）
-      inputPrice: Number((model.sell_input_price / 100).toFixed(4)),
-      outputPrice: Number((model.sell_output_price / 100).toFixed(4)),
+      // 价格格式化为：元/百万tokens
+      // 数据库存储：厘/千tokens，转换为：厘/千tokens × 1000 = 厘/百万tokens = 元/百万tokens
+      inputPrice: Number((model.sell_input_price).toFixed(2)),
+      outputPrice: Number((model.sell_output_price).toFixed(2)),
       max_tokens: model.max_output_tokens,
       // 不暴露成本价
       sell_input_price: undefined,
@@ -139,9 +140,9 @@ router.post('/estimate', async (req: Request, res: Response) => {
       });
     }
     
-    // 计算费用（分）
-    const inputFee = Math.ceil((body.inputTokens / 1000000) * model.sell_input_price);
-    const outputFee = Math.ceil((body.outputTokens / 1000000) * model.sell_output_price);
+    // 计算费用（厘）- 价格单位：厘/千tokens
+    const inputFee = Math.ceil((body.inputTokens / 1000) * model.sell_input_price);
+    const outputFee = Math.ceil((body.outputTokens / 1000) * model.sell_output_price);
     const gpuFee = body.gpuSeconds && model.sell_gpu_hour 
       ? Math.ceil((body.gpuSeconds / 3600) * model.sell_gpu_hour) 
       : 0;

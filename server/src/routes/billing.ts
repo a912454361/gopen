@@ -170,18 +170,18 @@ router.post('/deduct', async (req: Request, res: Response) => {
       });
     }
     
-    // 计算成本价（后台）
-    const costInputFee = Math.ceil((body.inputTokens / 1000000) * model.cost_input_price);
-    const costOutputFee = Math.ceil((body.outputTokens / 1000000) * model.cost_output_price);
+    // 计算成本价（后台）- 价格单位：厘/千tokens
+    const costInputFee = Math.ceil((body.inputTokens / 1000) * model.cost_input_price);
+    const costOutputFee = Math.ceil((body.outputTokens / 1000) * model.cost_output_price);
     const costGpuFee = body.gpuSeconds && model.cost_gpu_hour
       ? Math.ceil((body.gpuSeconds / 3600) * model.cost_gpu_hour)
       : 0;
     const costStorageFee = 0; // TODO: 存储费用计算
     const costTotal = costInputFee + costOutputFee + costGpuFee + costStorageFee;
     
-    // 计算售价（用户付费）
-    const sellInputFee = Math.ceil((body.inputTokens / 1000000) * model.sell_input_price);
-    const sellOutputFee = Math.ceil((body.outputTokens / 1000000) * model.sell_output_price);
+    // 计算售价（用户付费）- 价格单位：厘/千tokens
+    const sellInputFee = Math.ceil((body.inputTokens / 1000) * model.sell_input_price);
+    const sellOutputFee = Math.ceil((body.outputTokens / 1000) * model.sell_output_price);
     const sellGpuFee = body.gpuSeconds && model.sell_gpu_hour
       ? Math.ceil((body.gpuSeconds / 3600) * model.sell_gpu_hour)
       : 0;

@@ -2271,8 +2271,9 @@ export function calculatePlatformProfit(
   inputTokens: number,
   outputTokens: number
 ): { cost: number; revenue: number; profit: number } {
-  const cost = (model.costInputPrice * inputTokens + model.costOutputPrice * outputTokens) / 1000000;
-  const revenue = (model.sellInputPrice * inputTokens + model.sellOutputPrice * outputTokens) / 1000000;
+  // 价格单位：厘/千tokens，费用 = (tokens / 1000) * 价格
+  const cost = (model.costInputPrice * inputTokens + model.costOutputPrice * outputTokens) / 1000;
+  const revenue = (model.sellInputPrice * inputTokens + model.sellOutputPrice * outputTokens) / 1000;
   const profit = revenue - cost;
   
   return {

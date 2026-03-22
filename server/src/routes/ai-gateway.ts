@@ -446,13 +446,14 @@ async function deductFee(
   projectId?: string
 ) {
   // 计算费用（厘为单位）- 使用平台售价
-  const inputFee = Math.ceil((inputTokens / 1000000) * (modelInfo.sellInputPrice || 0));
-  const outputFee = Math.ceil((outputTokens / 1000000) * (modelInfo.sellOutputPrice || 0));
+  // 价格单位：厘/千tokens，tokens数量需要除以1000转换为千tokens
+  const inputFee = Math.ceil((inputTokens / 1000) * (modelInfo.sellInputPrice || 0));
+  const outputFee = Math.ceil((outputTokens / 1000) * (modelInfo.sellOutputPrice || 0));
   const totalFee = inputFee + outputFee;
   
   // 计算成本（商家收费）
-  const inputCost = Math.ceil((inputTokens / 1000000) * (modelInfo.costInputPrice || 0));
-  const outputCost = Math.ceil((outputTokens / 1000000) * (modelInfo.costOutputPrice || 0));
+  const inputCost = Math.ceil((inputTokens / 1000) * (modelInfo.costInputPrice || 0));
+  const outputCost = Math.ceil((outputTokens / 1000) * (modelInfo.costOutputPrice || 0));
   const totalCost = inputCost + outputCost;
   
   // 平台利润

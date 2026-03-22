@@ -2,13 +2,12 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 const appName = 'G open';
 const projectId = process.env.COZE_PROJECT_ID || process.env.EXPO_PUBLIC_COZE_PROJECT_ID;
-const slugAppName = projectId ? `app${projectId}` : 'gopen';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     "name": appName,
-    "slug": slugAppName,
+    "slug": "gopen",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -23,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A0A0F"
       },
-      "package": `com.gopen.app${projectId || '0'}`
+      "package": "com.gopen.app"
     },
     "web": {
       "bundler": "metro",

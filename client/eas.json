@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.0.0"
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -20,8 +21,7 @@
       },
       "ios": {
         "simulator": false
-      },
-      "channel": "preview"
+      }
     },
     "production": {
       "distribution": "store",
@@ -30,19 +30,6 @@
       },
       "ios": {
         "autoIncrement": true
-      },
-      "channel": "production"
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./google-service-account.json"
-      },
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
       }
     }
   }

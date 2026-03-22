@@ -50,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="recharge" options={{ title: "充值中心" }} />
           <Stack.Screen name="consumption" options={{ title: "消费明细" }} />
           <Stack.Screen name="rewards" options={{ title: "奖励中心" }} />
+          <Stack.Screen name="providers" options={{ title: "厂商管理" }} />
         </Stack>
       </ToastProvider>
     </MembershipProvider>

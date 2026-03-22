@@ -175,6 +175,12 @@ export default function SettingsScreen() {
       onPress: () => router.push('/models'),
     },
     {
+      icon: 'server',
+      title: '厂商管理',
+      subtitle: '管理AI厂商配置和同步',
+      onPress: () => router.push('/providers'),
+    },
+    {
       icon: 'right-to-bracket',
       title: '账号登录',
       subtitle: '第三方账号绑定',

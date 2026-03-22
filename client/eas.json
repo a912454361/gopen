@@ -20,33 +20,14 @@
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "distribution": "store",
       "android": {
-        "buildType": "apk"
-      },
-      "ios": {
-        "autoIncrement": true
-      }
-    },
-    "apk": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "channel": "production"
-    },
-    "aab": {
-      "distribution": "store",
-      "android": {
         "buildType": "app-bundle"
       },
-      "channel": "production"
-    },
-    "ipa": {
-      "distribution": "store",
       "ios": {
         "autoIncrement": true
       },

@@ -324,24 +324,39 @@ router.post('/audio/synthesize', async (req: Request, res: Response) => {
  * 获取可用模型列表
  * GET /api/v1/ai/models
  * Query: type?: 'text' | 'image' | 'audio' | 'video' | 'embedding'
+ * 
+ * 从数据库获取模型列表，确保数据一致性
  */
 router.get('/models', async (req: Request, res: Response) => {
   try {
     const { type, provider } = req.query;
     
-    let models = AVAILABLE_MODELS;
+    // 从数据库获取模型
+    let query = client
+      .from('ai_models')
+      .select('*')
+      .eq('status', 'active')
+      .eq('is_public', true)
+      .order('sort_order', { ascending: true });
     
-    // 按类型筛选（type 参数实际对应 category 字段）
+    // 按类型筛选
     if (type && typeof type === 'string') {
-      models = models.filter(m => m.category === type);
+      query = query.eq('category', type);
     }
     
     // 按提供商筛选
     if (provider && typeof provider === 'string') {
-      models = models.filter(m => m.provider === provider);
+      query = query.eq('provider', provider);
     }
     
-    // 转换为前端友好格式 - 使用新的价格字段
+    const { data: models, error } = await query;
+    
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ error: '获取模型列表失败' });
+    }
+    
+    // 转换为前端友好格式
     const result = models.map(m => ({
       code: m.code,
       name: m.name,
@@ -350,17 +365,17 @@ router.get('/models', async (req: Request, res: Response) => {
       type: m.type,
       category: m.category,
       description: m.description || `${m.name} - ${m.provider}`,
-      // 平台售价（用户实际支付）
-      sellInputPrice: m.sellInputPrice,
-      sellOutputPrice: m.sellOutputPrice,
+      // 价格（厘/千tokens）- 数据库单位是厘/百万tokens，转换为厘/千tokens
+      sellInputPrice: m.sell_input_price / 1000,
+      sellOutputPrice: m.sell_output_price / 1000,
       // 成本价
-      costInputPrice: m.costInputPrice,
-      costOutputPrice: m.costOutputPrice,
+      costInputPrice: m.cost_input_price / 1000,
+      costOutputPrice: m.cost_output_price / 1000,
       // 平台加价比例
-      platformMarkup: m.platformMarkup,
+      platformMarkup: m.platform_markup,
       // 上下文信息
-      contextWindow: m.contextWindow,
-      maxOutputTokens: m.maxOutputTokens,
+      contextWindow: m.max_context_tokens,
+      maxOutputTokens: m.max_output_tokens,
       // 标签
       tags: m.tags || [],
     }));
@@ -379,21 +394,47 @@ router.get('/models', async (req: Request, res: Response) => {
  * 获取所有提供商
  * GET /api/v1/ai/providers
  */
-router.get('/providers', (req: Request, res: Response) => {
-  const providers = Object.entries(MODEL_PROVIDERS).map(([id, provider]) => ({
-    id,
-    name: provider.name,
-    models: AVAILABLE_MODELS.filter(m => m.provider === id).map(m => ({
-      code: m.code,
-      name: m.name,
-      type: m.type,
-    })),
-  }));
-  
-  res.json({
-    success: true,
-    data: providers,
-  });
+router.get('/providers', async (req: Request, res: Response) => {
+  try {
+    // 从数据库获取提供商列表
+    const { data: models, error } = await client
+      .from('ai_models')
+      .select('provider, code, name, type')
+      .eq('status', 'active')
+      .eq('is_public', true);
+    
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ error: '获取提供商列表失败' });
+    }
+    
+    // 按提供商分组
+    const providerMap = new Map<string, { code: string; name: string; type: string }[]>();
+    models.forEach(m => {
+      if (!providerMap.has(m.provider)) {
+        providerMap.set(m.provider, []);
+      }
+      providerMap.get(m.provider)!.push({
+        code: m.code,
+        name: m.name,
+        type: m.type,
+      });
+    });
+    
+    const providers = Array.from(providerMap.entries()).map(([id, models]) => ({
+      id,
+      name: MODEL_PROVIDERS[id]?.name || id,
+      models,
+    }));
+    
+    res.json({
+      success: true,
+      data: providers,
+    });
+  } catch (error) {
+    console.error('Get providers error:', error);
+    res.status(500).json({ error: '获取提供商列表失败' });
+  }
 });
 
 // ==================== 辅助函数 ====================

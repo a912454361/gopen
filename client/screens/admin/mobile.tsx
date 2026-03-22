@@ -25,11 +25,12 @@ import { ThemedView } from '@/components/ThemedView';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PromoManager } from './components/PromoManager';
+import ModelSyncPanel from './components/ModelSyncPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'model-sync' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -157,6 +158,7 @@ export default function AdminMobileScreen() {
     { key: 'orders', label: '订单', icon: 'clipboard-list' },
     { key: 'users', label: '用户', icon: 'users' },
     { key: 'promotion', label: '推广', icon: 'bullhorn' },
+    { key: 'model-sync', label: '同步', icon: 'rotate' },
     { key: 'config', label: '配置', icon: 'gear' },
     { key: 'logs', label: '日志', icon: 'clock-rotate-left' },
   ];
@@ -218,6 +220,7 @@ export default function AdminMobileScreen() {
         {activeTab === 'orders' && <OrdersTab adminKey={adminKey} />}
         {activeTab === 'users' && <UsersTab adminKey={adminKey} />}
         {activeTab === 'promotion' && <PromoManager adminKey={adminKey} />}
+        {activeTab === 'model-sync' && <ModelSyncPanel />}
         {activeTab === 'config' && <ConfigTab adminKey={adminKey} />}
         {activeTab === 'logs' && <LogsTab adminKey={adminKey} />}
       </ScrollView>

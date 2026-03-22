@@ -29,11 +29,12 @@ import { ConfigPanel } from './components/ConfigPanel';
 import { LogsPanel } from './components/LogsPanel';
 import { ProfitPanel } from './components/ProfitPanel';
 import { PromotionPanel } from './components/PromotionPanel';
+import ModelSyncPanel from './components/ModelSyncPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'model-sync' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -187,6 +188,7 @@ export default function AdminDashboardScreen() {
     { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
     { key: 'users', label: '用户管理', icon: 'users' },
     { key: 'promotion', label: '推广中心', icon: 'bullhorn' },
+    { key: 'model-sync', label: '模型同步', icon: 'rotate' },
     { key: 'config', label: '系统配置', icon: 'gear' },
     { key: 'logs', label: '操作日志', icon: 'clock-rotate-left' },
   ];
@@ -350,6 +352,7 @@ export default function AdminDashboardScreen() {
             {activeTab === 'orders' && <OrdersPanel adminKey={adminKey} />}
             {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}
             {activeTab === 'promotion' && <PromotionPanel adminKey={adminKey} />}
+            {activeTab === 'model-sync' && <ModelSyncPanel />}
             {activeTab === 'config' && <ConfigPanel adminKey={adminKey} />}
             {activeTab === 'logs' && <LogsPanel adminKey={adminKey} />}
           </ScrollView>

@@ -169,4 +169,10 @@ app.listen(port, () => {
   // 启动推广任务调度器
   startScheduler();
   console.log('Promo scheduler started');
+  
+  // 启动模型同步调度器
+  import('./model-sync-scheduler.js').then(({ startModelSyncScheduler }) => {
+    startModelSyncScheduler();
+    console.log('Model sync scheduler started');
+  });
 });

@@ -41,7 +41,7 @@ export default function SettingsScreen() {
       icon: 'palette',
       title: '主题设置',
       subtitle: '外观主题配置',
-      value: '暗黑',
+      onPress: () => router.push('/theme'),
     },
     {
       icon: 'globe',

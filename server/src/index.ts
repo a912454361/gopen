@@ -1,6 +1,21 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
+
+// ============================================================
+// 启动安全自检 - 必须在最开始执行
+// ============================================================
+import { performSecurityCheck } from "./security/startup-check.js";
+
+// 执行安全自检，如果检测到篡改则拒绝启动
+if (!performSecurityCheck()) {
+  console.error('[FATAL] 安全自检失败，服务拒绝启动！');
+  process.exit(1);
+}
+
+// ============================================================
+// 服务初始化
+// ============================================================
 import payRouter from "./routes/pay.js";
 import paymentRouter from "./routes/payment.js";
 import oauthRouter from "./routes/oauth.js";

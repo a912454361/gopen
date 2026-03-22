@@ -14,3 +14,12 @@ logs/
 android/app/*.keystore
 *.jks
 *.p12
+
+# Security files (never commit)
+.security/
+*.encrypted
+.security_key
+
+# Encrypted configs
+.env.encrypted
+.env.production.encrypted

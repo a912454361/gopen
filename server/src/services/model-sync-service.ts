@@ -883,27 +883,38 @@ export class ModelSyncService {
 
       // 获取厂商 API 密钥
       const apiKey = getProviderApiKey(providerId);
-      if (!apiKey) {
+      
+      // 获取适配器
+      const adapter = ADAPTERS[providerId] || openaiCompatibleAdapter;
+      
+      // 获取厂商模型列表（即使没有API Key也尝试使用预定义模型）
+      let providerModels: ProviderModel[] = [];
+      
+      if (apiKey) {
+        // 有API Key，从厂商API获取
+        providerModels = await adapter.fetchModels(provider.baseUrl, apiKey);
+      } else {
+        // 没有API Key，使用适配器的预定义模型
+        providerModels = await this.getPredefinedModels(providerId);
+      }
+      
+      result.totalModels = providerModels.length;
+      
+      if (providerModels.length === 0) {
         this.syncStatus.set(providerId, {
           provider: providerId,
           providerName: provider?.name || providerId,
-          lastSync: null,
-          status: 'not_configured',
+          lastSync: new Date(),
+          status: 'idle',
           totalModels: 0,
           modelsAdded: 0,
           modelsUpdated: 0,
           modelsDeactivated: 0,
         });
-        result.error = 'API key not configured';
+        result.success = true;
+        result.duration = Date.now() - startTime;
         return result;
       }
-
-      // 获取适配器
-      const adapter = ADAPTERS[providerId] || openaiCompatibleAdapter;
-      
-      // 获取厂商模型列表
-      const providerModels = await adapter.fetchModels(provider.baseUrl, apiKey);
-      result.totalModels = providerModels.length;
       
       // 获取数据库中该厂商的现有模型
       const { data: existingModels, error: dbError } = await client
@@ -1022,26 +1033,29 @@ export class ModelSyncService {
           if (!insertError) {
             result.modelsAdded++;
             result.newModels.push(pm.name);
+          } else {
+            console.error(`[ModelSync] Failed to insert model ${pm.id}:`, JSON.stringify(insertError, null, 2));
           }
         }
       }
 
-      // 检查需要下线的模型（厂商已删除的模型）
-      for (const [code, model] of existingMap) {
-        if (!providerModelCodes.has(code) && model.status === 'active') {
-          const { error: deactivateError } = await client
-            .from('ai_models')
-            .update({ 
-              status: 'inactive', 
-              updated_at: new Date().toISOString() 
-            })
-            .eq('code', code);
+      // 注释掉自动下线逻辑，避免误删已有模型
+      // 管理员可以通过后台手动控制模型上下线
+      // for (const [code, model] of existingMap) {
+      //   if (!providerModelCodes.has(code) && model.status === 'active') {
+      //     const { error: deactivateError } = await client
+      //       .from('ai_models')
+      //       .update({ 
+      //         status: 'inactive', 
+      //         updated_at: new Date().toISOString() 
+      //       })
+      //       .eq('code', code);
 
-          if (!deactivateError) {
-            result.modelsDeactivated++;
-          }
-        }
-      }
+      //     if (!deactivateError) {
+      //       result.modelsDeactivated++;
+      //     }
+      //   }
+      // }
 
       // 记录同步日志
       await this.logSync(providerId, 'success', result);
@@ -1185,6 +1199,176 @@ export class ModelSyncService {
       freeModels: stat.free,
       categories: Array.from(stat.categories),
     }));
+  }
+
+  /**
+   * 获取厂商预定义模型列表（无API Key时使用）
+   */
+  private async getPredefinedModels(providerId: string): Promise<ProviderModel[]> {
+    // 预定义模型列表
+    const predefinedModels: Record<string, ProviderModel[]> = {
+      openai: [
+        { id: 'gpt-4o', name: 'GPT-4o', type: 'chat', description: 'OpenAI 最新多模态模型', pricing: { input: 2.5, output: 10 }, context_window: 128000, max_output: 16384, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', type: 'chat', description: 'GPT-4o 轻量版', pricing: { input: 0.15, output: 0.6 }, context_window: 128000, max_output: 16384, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', type: 'chat', description: 'GPT-4 高性能版', pricing: { input: 10, output: 30 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', type: 'chat', description: '经典高性价比模型', pricing: { input: 0.5, output: 1.5 }, context_window: 16384, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'o1', name: 'O1', type: 'chat', description: 'OpenAI 推理模型', pricing: { input: 15, output: 60 }, context_window: 200000, max_output: 100000, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'o1-mini', name: 'O1 Mini', type: 'chat', description: 'O1 轻量版', pricing: { input: 1.5, output: 6 }, context_window: 128000, max_output: 65536, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      anthropic: [
+        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', type: 'chat', description: 'Anthropic 最新旗舰模型', pricing: { input: 3, output: 15 }, context_window: 200000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', type: 'chat', description: 'Claude 轻量快速版', pricing: { input: 1, output: 5 }, context_window: 200000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', type: 'chat', description: 'Anthropic 最强模型', pricing: { input: 15, output: 75 }, context_window: 200000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', type: 'chat', description: 'Claude 经济版', pricing: { input: 0.25, output: 1.25 }, context_window: 200000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      google: [
+        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', type: 'chat', description: 'Google 最新多模态模型（免费）', pricing: { input: 0, output: 0 }, context_window: 1000000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', type: 'chat', description: 'Google 专业版模型', pricing: { input: 1.75, output: 7 }, context_window: 2000000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', type: 'chat', description: 'Google 快速版模型', pricing: { input: 0.35, output: 1.05 }, context_window: 1000000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+        { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B', type: 'chat', description: 'Gemini 轻量版（免费）', pricing: { input: 0, output: 0 }, context_window: 1000000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+      ],
+      deepseek: [
+        { id: 'deepseek-chat', name: 'DeepSeek V3', type: 'chat', description: 'DeepSeek 对话模型（免费）', pricing: { input: 0, output: 0 }, context_window: 64000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'deepseek-reasoner', name: 'DeepSeek R1', type: 'chat', description: 'DeepSeek 推理模型', pricing: { input: 0.55, output: 2.2 }, context_window: 64000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      groq: [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', type: 'chat', description: 'Groq 极速推理 Llama（免费）', pricing: { input: 0, output: 0 }, context_window: 128000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'llama-3.2-90b-vision-preview', name: 'Llama 3.2 90B Vision', type: 'chat', description: 'Groq 多模态 Llama（免费）', pricing: { input: 0, output: 0 }, context_window: 8192, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', type: 'chat', description: 'Groq Mixtral（免费）', pricing: { input: 0, output: 0 }, context_window: 32768, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'whisper-large-v3', name: 'Whisper Large V3', type: 'audio_transcribe', description: 'Groq 极速语音识别（免费）', pricing: { input: 0, output: 0 }, context_window: 0, max_output: 0, status: 'active', features: { streaming: false, functionCall: false, vision: false, audio: true } },
+      ],
+      mistral: [
+        { id: 'mistral-large-latest', name: 'Mistral Large', type: 'chat', description: 'Mistral 旗舰模型', pricing: { input: 2, output: 6 }, context_window: 128000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'mistral-small-latest', name: 'Mistral Small', type: 'chat', description: 'Mistral 轻量模型', pricing: { input: 0.2, output: 0.6 }, context_window: 128000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'codestral-latest', name: 'Codestral', type: 'chat', description: 'Mistral 代码模型', pricing: { input: 0.3, output: 0.9 }, context_window: 256000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'pixtral-12b-2409', name: 'Pixtral 12B', type: 'chat', description: 'Mistral 多模态模型', pricing: { input: 0.15, output: 0.15 }, context_window: 128000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      doubao: [
+        { id: 'doubao-pro-128k', name: '豆包 Pro 128K', type: 'chat', description: '字节豆包专业版', pricing: { input: 0.05, output: 0.05 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'doubao-lite-4k', name: '豆包 Lite', type: 'chat', description: '字节豆包轻量版', pricing: { input: 0.003, output: 0.003 }, context_window: 4096, max_output: 2048, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'doubao-vision-pro-32k', name: '豆包 Vision Pro', type: 'chat', description: '豆包多模态模型', pricing: { input: 0.08, output: 0.08 }, context_window: 32000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      qwen: [
+        { id: 'qwen-max', name: '通义千问 Max', type: 'chat', description: '阿里通义千问旗舰版', pricing: { input: 2, output: 6 }, context_window: 32768, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'qwen-plus', name: '通义千问 Plus', type: 'chat', description: '阿里通义千问增强版', pricing: { input: 0.4, output: 1.2 }, context_window: 128000, max_output: 6144, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'qwen-turbo', name: '通义千问 Turbo', type: 'chat', description: '阿里通义千问快速版', pricing: { input: 0.3, output: 0.6 }, context_window: 128000, max_output: 6144, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'qwen-vl-max', name: '通义千问 VL Max', type: 'chat', description: '通义千问视觉模型', pricing: { input: 2, output: 6 }, context_window: 32768, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      zhipu: [
+        { id: 'glm-4-plus', name: 'GLM-4 Plus', type: 'chat', description: '智谱GLM-4 Plus', pricing: { input: 0.05, output: 0.05 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'glm-4-flash', name: 'GLM-4 Flash', type: 'chat', description: '智谱GLM-4 Flash（免费）', pricing: { input: 0, output: 0 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'glm-4v', name: 'GLM-4V', type: 'chat', description: '智谱GLM-4视觉模型', pricing: { input: 0.05, output: 0.05 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      moonshot: [
+        { id: 'moonshot-v1-8k', name: 'Moonshot V1 8K', type: 'chat', description: 'Moonshot 8K上下文', pricing: { input: 0.12, output: 0.12 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'moonshot-v1-32k', name: 'Moonshot V1 32K', type: 'chat', description: 'Moonshot 32K上下文', pricing: { input: 0.24, output: 0.24 }, context_window: 32768, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'moonshot-v1-128k', name: 'Moonshot V1 128K', type: 'chat', description: 'Moonshot 128K上下文', pricing: { input: 0.6, output: 0.6 }, context_window: 131072, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      baichuan: [
+        { id: 'Baichuan4', name: 'Baichuan4', type: 'chat', description: '百川4代旗舰模型', pricing: { input: 0.12, output: 0.12 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'Baichuan3-Turbo', name: 'Baichuan3 Turbo', type: 'chat', description: '百川3代快速版', pricing: { input: 0.008, output: 0.008 }, context_window: 32000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      yi: [
+        { id: 'yi-lightning', name: 'Yi Lightning', type: 'chat', description: '零一万物闪电版', pricing: { input: 0.01, output: 0.01 }, context_window: 16384, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'yi-large', name: 'Yi Large', type: 'chat', description: '零一万物大模型', pricing: { input: 0.2, output: 0.2 }, context_window: 32768, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'yi-vision', name: 'Yi Vision', type: 'chat', description: '零一万物视觉模型', pricing: { input: 0.06, output: 0.06 }, context_window: 16384, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      minimax: [
+        { id: 'abab6.5s-chat', name: 'ABAB 6.5S', type: 'chat', description: 'MiniMax ABAB 6.5S', pricing: { input: 0.01, output: 0.01 }, context_window: 245000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'abab6.5g-chat', name: 'ABAB 6.5G', type: 'chat', description: 'MiniMax ABAB 6.5G', pricing: { input: 0.06, output: 0.06 }, context_window: 245000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      spark: [
+        { id: 'spark-4.0-ultra', name: '星火 4.0 Ultra', type: 'chat', description: '讯飞星火4.0旗舰版', pricing: { input: 0.06, output: 0.06 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'spark-3.5-max-0405', name: '星火 3.5 Max', type: 'chat', description: '讯飞星火3.5增强版', pricing: { input: 0.03, output: 0.03 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      cohere: [
+        { id: 'command-r-plus', name: 'Command R+', type: 'chat', description: 'Cohere 检索增强模型', pricing: { input: 0.03, output: 0.15 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'command-r', name: 'Command R', type: 'chat', description: 'Cohere Command R', pricing: { input: 0.015, output: 0.075 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      stability: [
+        { id: 'stable-diffusion-3', name: 'Stable Diffusion 3', type: 'image_gen', description: 'Stability AI 图像生成', pricing: { input: 0.35, output: 0 }, context_window: 0, max_output: 0, status: 'active', features: { streaming: false, functionCall: false, vision: false, audio: false } },
+      ],
+      wenxin: [
+        { id: 'ernie-4.0-8k', name: '文心一言 4.0', type: 'chat', description: '百度文心4.0', pricing: { input: 0.12, output: 0.12 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'ernie-3.5-8k', name: '文心一言 3.5', type: 'chat', description: '百度文心3.5', pricing: { input: 0.04, output: 0.04 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      hunyuan: [
+        { id: 'hunyuan-lite', name: '混元 Lite', type: 'chat', description: '腾讯混元轻量版', pricing: { input: 0.008, output: 0.008 }, context_window: 256000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'hunyuan-standard', name: '混元 Standard', type: 'chat', description: '腾讯混元标准版', pricing: { input: 0.05, output: 0.05 }, context_window: 32000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      siliconflow: [
+        { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5 72B', type: 'chat', description: 'SiliconFlow Qwen2.5 72B', pricing: { input: 0, output: 0 }, context_window: 32768, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'deepseek-ai/DeepSeek-V3', name: 'DeepSeek V3', type: 'chat', description: 'SiliconFlow DeepSeek V3', pricing: { input: 0, output: 0 }, context_window: 64000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'THUDM/glm-4-9b-chat', name: 'GLM-4 9B', type: 'chat', description: 'SiliconFlow GLM-4 9B（免费）', pricing: { input: 0, output: 0 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'meta-llama/Meta-Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', type: 'chat', description: 'SiliconFlow Llama 3.1 8B（免费）', pricing: { input: 0, output: 0 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      openrouter: [
+        { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', type: 'chat', description: 'OpenRouter GPT-4o', pricing: { input: 2.5, output: 10 }, context_window: 128000, max_output: 16384, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (OpenRouter)', type: 'chat', description: 'OpenRouter Claude 3.5 Sonnet', pricing: { input: 3, output: 15 }, context_window: 200000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+        { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (OpenRouter)', type: 'chat', description: 'OpenRouter Gemini 2.0 Flash', pricing: { input: 0, output: 0 }, context_window: 1000000, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: true } },
+        { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OpenRouter)', type: 'chat', description: 'OpenRouter Llama 3.3 70B', pricing: { input: 0.6, output: 0.6 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      replicate: [
+        { id: 'meta/llama-2-70b-chat', name: 'Llama 2 70B (Replicate)', type: 'chat', description: 'Replicate Llama 2 70B', pricing: { input: 0.65, output: 2.75 }, context_window: 4096, max_output: 4096, status: 'active', features: { streaming: true, functionCall: false, vision: false, audio: false } },
+        { id: 'stability-ai/sdxl', name: 'SDXL (Replicate)', type: 'image_gen', description: 'Replicate Stable Diffusion XL', pricing: { input: 0.0025, output: 0 }, context_window: 0, max_output: 0, status: 'active', features: { streaming: false, functionCall: false, vision: false, audio: false } },
+      ],
+      together: [
+        { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B Turbo', type: 'chat', description: 'Together AI Llama 3.3 70B', pricing: { input: 0.88, output: 0.88 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'mistralai/Mixtral-8x7B-Instruct-v0.1', name: 'Mixtral 8x7B', type: 'chat', description: 'Together AI Mixtral 8x7B', pricing: { input: 0.6, output: 0.6 }, context_window: 32768, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      fireworks: [
+        { id: 'accounts/fireworks/models/llama-v3p3-70b-instruct', name: 'Llama 3.3 70B (Fireworks)', type: 'chat', description: 'Fireworks AI Llama 3.3 70B', pricing: { input: 0.9, output: 0.9 }, context_window: 131072, max_output: 16384, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'accounts/fireworks/models/qwen2p5-72b-instruct', name: 'Qwen2.5 72B (Fireworks)', type: 'chat', description: 'Fireworks AI Qwen2.5 72B', pricing: { input: 0.9, output: 0.9 }, context_window: 32768, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      perplexity: [
+        { id: 'llama-3.1-sonar-huge-128k-online', name: 'Sonar Huge 128K', type: 'chat', description: 'Perplexity Sonar Huge 在线搜索', pricing: { input: 5, output: 5 }, context_window: 127072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: false, vision: false, audio: false } },
+        { id: 'llama-3.1-sonar-large-128k-online', name: 'Sonar Large 128K', type: 'chat', description: 'Perplexity Sonar Large 在线搜索', pricing: { input: 1, output: 1 }, context_window: 127072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: false, vision: false, audio: false } },
+      ],
+      xai: [
+        { id: 'grok-beta', name: 'Grok Beta', type: 'chat', description: 'xAI Grok Beta', pricing: { input: 5, output: 15 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      meta: [
+        { id: 'llama-3.3-70b', name: 'Llama 3.3 70B', type: 'chat', description: 'Meta Llama 3.3 70B', pricing: { input: 0, output: 0 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'llama-3.2-11b-vision', name: 'Llama 3.2 11B Vision', type: 'chat', description: 'Meta Llama 3.2 Vision', pricing: { input: 0, output: 0 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      ai21: [
+        { id: 'jamba-1-5-large', name: 'Jamba 1.5 Large', type: 'chat', description: 'AI21 Jamba 1.5 Large', pricing: { input: 2, output: 8 }, context_window: 256000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'jamba-1-5-mini', name: 'Jamba 1.5 Mini', type: 'chat', description: 'AI21 Jamba 1.5 Mini', pricing: { input: 0.2, output: 0.4 }, context_window: 256000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      aleph: [
+        { id: 'luminous-supreme-control', name: 'Luminous Supreme Control', type: 'chat', description: 'Aleph Alpha Luminous Supreme', pricing: { input: 0.09, output: 0.09 }, context_window: 2048, max_output: 2048, status: 'active', features: { streaming: true, functionCall: false, vision: false, audio: false } },
+      ],
+      kimi: [
+        { id: 'moonshot-v1-8k', name: 'Kimi V1 8K', type: 'chat', description: 'Kimi 月之暗面 8K', pricing: { input: 0.12, output: 0.12 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'moonshot-v1-32k', name: 'Kimi V1 32K', type: 'chat', description: 'Kimi 月之暗面 32K', pricing: { input: 0.24, output: 0.24 }, context_window: 32768, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'moonshot-v1-128k', name: 'Kimi V1 128K', type: 'chat', description: 'Kimi 月之暗面 128K', pricing: { input: 0.6, output: 0.6 }, context_window: 131072, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      stepfun: [
+        { id: 'step-1-8k', name: 'Step 1 8K', type: 'chat', description: '阶跃星辰 Step 1', pricing: { input: 0.02, output: 0.02 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'step-1-32k', name: 'Step 1 32K', type: 'chat', description: '阶跃星辰 Step 1 32K', pricing: { input: 0.04, output: 0.04 }, context_window: 32768, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      sensenova: [
+        { id: 'SenseChat-5', name: 'SenseChat-5', type: 'chat', description: '商汤日日新 SenseChat-5', pricing: { input: 0.05, output: 0.05 }, context_window: 128000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'SenseChat-Vision', name: 'SenseChat Vision', type: 'chat', description: '商汤日日新视觉模型', pricing: { input: 0.05, output: 0.05 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      tencent: [
+        { id: 'hunyuan-lite', name: '混元 Lite', type: 'chat', description: '腾讯混元轻量版', pricing: { input: 0.008, output: 0.008 }, context_window: 256000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'hunyuan-standard', name: '混元 Standard', type: 'chat', description: '腾讯混元标准版', pricing: { input: 0.05, output: 0.05 }, context_window: 32000, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: true, audio: false } },
+      ],
+      baidu: [
+        { id: 'ernie-4.0-8k', name: '文心一言 4.0', type: 'chat', description: '百度文心4.0', pricing: { input: 0.12, output: 0.12 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'ernie-3.5-8k', name: '文心一言 3.5', type: 'chat', description: '百度文心3.5', pricing: { input: 0.04, output: 0.04 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      '360': [
+        { id: '360gpt-pro', name: '360智脑 Pro', type: 'chat', description: '360智脑专业版', pricing: { input: 0.04, output: 0.04 }, context_window: 8192, max_output: 4096, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+      deepinfra: [
+        { id: 'meta-llama/Meta-Llama-3.1-70B-Instruct', name: 'Llama 3.1 70B (DeepInfra)', type: 'chat', description: 'DeepInfra Llama 3.1 70B', pricing: { input: 0.35, output: 0.4 }, context_window: 131072, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+        { id: 'mistralai/Mistral-Small-24B-Instruct-2501', name: 'Mistral Small 24B', type: 'chat', description: 'DeepInfra Mistral Small', pricing: { input: 0.06, output: 0.06 }, context_window: 32768, max_output: 8192, status: 'active', features: { streaming: true, functionCall: true, vision: false, audio: false } },
+      ],
+    };
+
+    return predefinedModels[providerId] || [];
   }
 
   /**

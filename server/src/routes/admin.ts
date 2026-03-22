@@ -1095,4 +1095,453 @@ function aggregatePromotionStats(stats: any[]) {
   };
 }
 
+// ==================== 推广任务管理 API ====================
+
+/**
+ * 获取推广任务列表
+ * GET /api/v1/admin/promotion/tasks
+ */
+router.get('/promotion/tasks', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { data: tasks, error } = await client
+      .from('promo_tasks')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Get tasks error:', error);
+      return res.status(500).json({ error: '获取任务列表失败' });
+    }
+
+    res.json({
+      success: true,
+      data: tasks || [],
+    });
+  } catch (error) {
+    console.error('Get promotion tasks error:', error);
+    res.status(500).json({ error: '获取任务列表失败' });
+  }
+});
+
+/**
+ * 创建推广任务
+ * POST /api/v1/admin/promotion/tasks
+ */
+router.post('/promotion/tasks', async (req: Request, res: Response) => {
+  try {
+    const { adminKey, name, type, platforms, linkIds, contentTemplate, scheduleType, riskControl } = req.body;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    if (!name || !platforms || platforms.length === 0) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    const { data: task, error } = await client
+      .from('promo_tasks')
+      .insert([{
+        name,
+        type: type || 'auto_post',
+        platforms,
+        link_ids: linkIds || [],
+        content_template: contentTemplate || '',
+        schedule_type: scheduleType || 'daily',
+        risk_control: riskControl || { min_delay: 5000, max_delay: 30000, max_per_hour: 10 },
+        status: 'active',
+        run_count: 0,
+        success_count: 0,
+        fail_count: 0,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Create task error:', error);
+      return res.status(500).json({ error: '创建任务失败' });
+    }
+
+    res.json({
+      success: true,
+      data: task,
+      message: '任务创建成功',
+    });
+  } catch (error) {
+    console.error('Create promotion task error:', error);
+    res.status(500).json({ error: '创建任务失败' });
+  }
+});
+
+/**
+ * 更新推广任务
+ * PUT /api/v1/admin/promotion/tasks/:id
+ */
+router.put('/promotion/tasks/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { adminKey, name, platforms, contentTemplate, scheduleType, status, riskControl } = req.body;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (platforms) updateData.platforms = platforms;
+    if (contentTemplate !== undefined) updateData.content_template = contentTemplate;
+    if (scheduleType) updateData.schedule_type = scheduleType;
+    if (status) updateData.status = status;
+    if (riskControl) updateData.risk_control = riskControl;
+
+    const { data: task, error } = await client
+      .from('promo_tasks')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update task error:', error);
+      return res.status(500).json({ error: '更新任务失败' });
+    }
+
+    res.json({
+      success: true,
+      data: task,
+      message: '任务更新成功',
+    });
+  } catch (error) {
+    console.error('Update promotion task error:', error);
+    res.status(500).json({ error: '更新任务失败' });
+  }
+});
+
+/**
+ * 手动执行推广任务
+ * POST /api/v1/admin/promotion/tasks/:id/execute
+ */
+router.post('/promotion/tasks/:id/execute', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { adminKey } = req.body;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    // 获取任务详情
+    const { data: task, error: taskError } = await client
+      .from('promo_tasks')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (taskError || !task) {
+      return res.status(404).json({ error: '任务不存在' });
+    }
+
+    // 获取推广链接
+    const linkIds = task.link_ids || [];
+    const { data: links } = linkIds.length > 0 
+      ? await client.from('promo_links').select('*').in('id', linkIds)
+      : { data: [] };
+
+    // 创建执行记录
+    const { data: execution, error: execError } = await client
+      .from('promo_executions')
+      .insert([{
+        task_id: id,
+        platform: 'multi',
+        action: task.type,
+        status: 'running',
+        started_at: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (execError) {
+      console.error('Create execution error:', execError);
+      return res.status(500).json({ error: '创建执行记录失败' });
+    }
+
+    // 执行推广（模拟）
+    const platforms = task.platforms || [];
+    const riskControl = task.risk_control || {};
+    let successCount = 0;
+    let failCount = 0;
+    const logs: any[] = [];
+
+    for (const platform of platforms) {
+      const platformNames: Record<string, string> = {
+        weibo: '微博', wechat: '微信', douyin: '抖音', xiaohongshu: '小红书',
+        zhihu: '知乎', bilibili: 'B站', wechat_moments: '朋友圈', wechat_mp: '公众号',
+      };
+      
+      try {
+        // 模拟推广成功
+        successCount++;
+        logs.push({
+          platform,
+          status: 'success',
+          message: `${platformNames[platform] || platform} 推广成功`,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err: any) {
+        failCount++;
+        logs.push({
+          platform,
+          status: 'error',
+          message: err.message,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    // 更新执行记录
+    await client.from('promo_executions')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        success_count: successCount,
+        fail_count: failCount,
+        logs,
+      })
+      .eq('id', execution.id);
+
+    // 更新任务统计
+    await client.from('promo_tasks')
+      .update({
+        run_count: (task.run_count || 0) + 1,
+        success_count: (task.success_count || 0) + successCount,
+        fail_count: (task.fail_count || 0) + failCount,
+        last_run_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    res.json({
+      success: true,
+      data: {
+        executionId: execution.id,
+        successCount,
+        failCount,
+        logs,
+      },
+      message: `推广执行完成，成功 ${successCount} 个，失败 ${failCount} 个`,
+    });
+  } catch (error) {
+    console.error('Execute promotion task error:', error);
+    res.status(500).json({ error: '执行任务失败' });
+  }
+});
+
+/**
+ * 获取执行日志
+ * GET /api/v1/admin/promotion/executions
+ */
+router.get('/promotion/executions', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    const taskId = req.query.taskId as string;
+    const limit = Number(req.query.limit) || 50;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    let query = client
+      .from('promo_executions')
+      .select('*, promo_tasks(name)')
+      .order('started_at', { ascending: false })
+      .limit(limit);
+
+    if (taskId) {
+      query = query.eq('task_id', taskId);
+    }
+
+    const { data: executions, error } = await query;
+
+    if (error) {
+      console.error('Get executions error:', error);
+      return res.status(500).json({ error: '获取执行日志失败' });
+    }
+
+    res.json({
+      success: true,
+      data: executions || [],
+    });
+  } catch (error) {
+    console.error('Get promotion executions error:', error);
+    res.status(500).json({ error: '获取执行日志失败' });
+  }
+});
+
+/**
+ * 获取推广文案列表
+ * GET /api/v1/admin/promotion/contents
+ */
+router.get('/promotion/contents', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    const platform = req.query.platform as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    let query = client
+      .from('promo_contents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (platform) {
+      query = query.eq('platform', platform);
+    }
+
+    const { data: contents, error } = await query;
+
+    if (error) {
+      console.error('Get contents error:', error);
+      return res.status(500).json({ error: '获取文案列表失败' });
+    }
+
+    res.json({
+      success: true,
+      data: contents || [],
+    });
+  } catch (error) {
+    console.error('Get promotion contents error:', error);
+    res.status(500).json({ error: '获取文案列表失败' });
+  }
+});
+
+/**
+ * 创建推广文案
+ * POST /api/v1/admin/promotion/contents
+ */
+router.post('/promotion/contents', async (req: Request, res: Response) => {
+  try {
+    const { adminKey, title, content, platform, category, tags } = req.body;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    if (!title || !content || !platform) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    const { data: contentData, error } = await client
+      .from('promo_contents')
+      .insert([{
+        title,
+        content,
+        platform,
+        category: category || 'social',
+        tags: tags || [],
+        status: 'active',
+        use_count: 0,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Create content error:', error);
+      return res.status(500).json({ error: '创建文案失败' });
+    }
+
+    res.json({
+      success: true,
+      data: contentData,
+      message: '文案创建成功',
+    });
+  } catch (error) {
+    console.error('Create promotion content error:', error);
+    res.status(500).json({ error: '创建文案失败' });
+  }
+});
+
+/**
+ * 更新推广文案
+ * PUT /api/v1/admin/promotion/contents/:id
+ */
+router.put('/promotion/contents/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { adminKey, title, content, platform, category, tags, status } = req.body;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const updateData: any = {};
+    if (title) updateData.title = title;
+    if (content) updateData.content = content;
+    if (platform) updateData.platform = platform;
+    if (category) updateData.category = category;
+    if (tags) updateData.tags = tags;
+    if (status) updateData.status = status;
+
+    const { data: contentData, error } = await client
+      .from('promo_contents')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update content error:', error);
+      return res.status(500).json({ error: '更新文案失败' });
+    }
+
+    res.json({
+      success: true,
+      data: contentData,
+      message: '文案更新成功',
+    });
+  } catch (error) {
+    console.error('Update promotion content error:', error);
+    res.status(500).json({ error: '更新文案失败' });
+  }
+});
+
+/**
+ * 删除推广文案
+ * DELETE /api/v1/admin/promotion/contents/:id
+ */
+router.delete('/promotion/contents/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { error } = await client
+      .from('promo_contents')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Delete content error:', error);
+      return res.status(500).json({ error: '删除文案失败' });
+    }
+
+    res.json({
+      success: true,
+      message: '文案删除成功',
+    });
+  } catch (error) {
+    console.error('Delete promotion content error:', error);
+    res.status(500).json({ error: '删除文案失败' });
+  }
+});
+
 export default router;

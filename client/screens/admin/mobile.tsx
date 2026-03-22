@@ -24,6 +24,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { PromoManager } from './components/PromoManager';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
@@ -216,7 +217,7 @@ export default function AdminMobileScreen() {
         {activeTab === 'profit' && <ProfitTab adminKey={adminKey} />}
         {activeTab === 'orders' && <OrdersTab adminKey={adminKey} />}
         {activeTab === 'users' && <UsersTab adminKey={adminKey} />}
-        {activeTab === 'promotion' && <PromotionTab adminKey={adminKey} />}
+        {activeTab === 'promotion' && <PromoManager adminKey={adminKey} />}
         {activeTab === 'config' && <ConfigTab adminKey={adminKey} />}
         {activeTab === 'logs' && <LogsTab adminKey={adminKey} />}
       </ScrollView>

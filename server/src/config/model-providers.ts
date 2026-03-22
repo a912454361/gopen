@@ -678,11 +678,11 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'google',
     category: 'multimodal',
     type: 'chat',
-    description: 'Google 最新多模态模型（商家免费，平台收服务费）',
+    description: 'Google 最新多模态模型（）',
     contextWindow: 1000000,
     maxOutputTokens: 8192,
-    // 价格单位：厘/千tokens（用户确认：商家免费，平台 $0.05/$0.05 每百万tokens）
-    costInputPrice: 0,        // 商家免费
+    // 价格单位：厘/千tokens（用户确认：，平台 $0.05/$0.05 每百万tokens）
+    costInputPrice: 0,        // 
     costOutputPrice: 0,
     platformMarkup: 0.50,     // 平台服务费比例
     sellInputPrice: 0.4,      // 平台售价：$0.05/百万 ≈ 0.4厘/千
@@ -738,11 +738,11 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'deepseek',
     category: 'text',
     type: 'chat',
-    description: 'DeepSeek V3 对话模型（商家免费，平台收服务费）',
+    description: 'DeepSeek V3 对话模型（）',
     contextWindow: 64000,
     maxOutputTokens: 4096,
-    // 价格单位：厘/千tokens（用户确认：商家免费，平台 $0.1/$0.1 每百万tokens）
-    costInputPrice: 0,        // 商家免费
+    // 价格单位：厘/千tokens（用户确认：，平台 $0.1/$0.1 每百万tokens）
+    costInputPrice: 0,        // 
     costOutputPrice: 0,
     platformMarkup: 0.20,     // 平台服务费比例
     sellInputPrice: 0.7,      // 平台售价：$0.1/百万 ≈ 0.7厘/千
@@ -1578,7 +1578,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     tags: ['国产', '便宜'],
   },
   
-  // ============ 免费模型（商家免费，平台收取服务费）============
+  // ============ 免费模型（）============
   // 这些模型商家提供免费额度，但平台仍收取少量服务费
   
   // --- Groq 免费模型 ---
@@ -1589,11 +1589,11 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'groq',
     category: 'text',
     type: 'chat',
-    description: 'Groq 极速推理 - 商家免费',
+    description: 'Groq 极速推理 - ',
     contextWindow: 128000,
     maxOutputTokens: 8192,
-    costInputPrice: 0,         // 商家免费
-    costOutputPrice: 0,        // 商家免费
+    costInputPrice: 0,         // 
+    costOutputPrice: 0,        // 
     platformMarkup: 1.0,       // 平台加价100%（纯服务费）
     sellInputPrice: 5,         // 平台收费：¥0.005/千tokens
     sellOutputPrice: 5,        // 平台收费：¥0.005/千tokens
@@ -1608,7 +1608,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'groq',
     category: 'text',
     type: 'chat',
-    description: 'Groq 轻量模型 - 商家免费',
+    description: 'Groq 轻量模型 - ',
     contextWindow: 128000,
     maxOutputTokens: 8192,
     costInputPrice: 0,
@@ -1627,7 +1627,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'groq',
     category: 'text',
     type: 'chat',
-    description: 'Groq 中型模型 - 商家免费',
+    description: 'Groq 中型模型 - ',
     contextWindow: 128000,
     maxOutputTokens: 8192,
     costInputPrice: 0,
@@ -1646,7 +1646,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'groq',
     category: 'text',
     type: 'chat',
-    description: 'Groq Mixtral模型 - 商家免费',
+    description: 'Groq Mixtral模型 - ',
     contextWindow: 32768,
     maxOutputTokens: 8192,
     costInputPrice: 0,
@@ -1665,7 +1665,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'groq',
     category: 'text',
     type: 'chat',
-    description: 'Google Gemma 2 - 商家免费',
+    description: 'Google Gemma 2 - ',
     contextWindow: 8192,
     maxOutputTokens: 8192,
     costInputPrice: 0,
@@ -1686,7 +1686,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'google',
     category: 'multimodal',
     type: 'chat',
-    description: 'Google 最新多模态 - 商家免费额度',
+    description: 'Google 最新多模态 - 免费体验',
     contextWindow: 1000000,
     maxOutputTokens: 8192,
     costInputPrice: 0,
@@ -1705,7 +1705,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'google',
     category: 'multimodal',
     type: 'chat',
-    description: 'Google 轻量多模态 - 商家免费额度',
+    description: 'Google 轻量多模态 - 免费体验',
     contextWindow: 1000000,
     maxOutputTokens: 8192,
     costInputPrice: 0,
@@ -1726,7 +1726,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'deepseek',
     category: 'text',
     type: 'chat',
-    description: 'DeepSeek 对话模型 - 商家免费时段',
+    description: 'DeepSeek 对话模型 - 限时免费',
     contextWindow: 64000,
     maxOutputTokens: 4096,
     costInputPrice: 0,
@@ -1747,7 +1747,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'zhipu',
     category: 'text',
     type: 'chat',
-    description: '智谱快速版 - 商家免费额度',
+    description: '智谱快速版 - 免费体验',
     contextWindow: 128000,
     maxOutputTokens: 4096,
     costInputPrice: 0,
@@ -1766,7 +1766,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'qwen',
     category: 'text',
     type: 'chat',
-    description: '阿里通义快速版 - 商家免费额度',
+    description: '阿里通义快速版 - 免费体验',
     contextWindow: 128000,
     maxOutputTokens: 6144,
     costInputPrice: 0,
@@ -1785,7 +1785,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'doubao',
     category: 'text',
     type: 'chat',
-    description: '字节豆包轻量版 - 商家免费额度',
+    description: '字节豆包轻量版 - 免费体验',
     contextWindow: 4096,
     maxOutputTokens: 2048,
     costInputPrice: 0,
@@ -1804,7 +1804,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'hunyuan',
     category: 'text',
     type: 'chat',
-    description: '腾讯混元轻量版 - 商家免费额度',
+    description: '腾讯混元轻量版 - 免费体验',
     contextWindow: 256000,
     maxOutputTokens: 6144,
     costInputPrice: 0,
@@ -1823,7 +1823,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'wenxin',
     category: 'text',
     type: 'chat',
-    description: '百度文心快速版 - 商家免费额度',
+    description: '百度文心快速版 - 免费体验',
     contextWindow: 8192,
     maxOutputTokens: 4096,
     costInputPrice: 0,
@@ -1842,7 +1842,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'spark',
     category: 'text',
     type: 'chat',
-    description: '讯飞星火轻量版 - 商家免费额度',
+    description: '讯飞星火轻量版 - 免费体验',
     contextWindow: 4096,
     maxOutputTokens: 2048,
     costInputPrice: 0,
@@ -1863,7 +1863,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'groq',
     category: 'audio',
     type: 'audio_transcribe',
-    description: 'Groq 极速语音识别 - 商家免费',
+    description: 'Groq 极速语音识别 - ',
     contextWindow: 0,
     maxOutputTokens: 0,
     costInputPrice: 0,

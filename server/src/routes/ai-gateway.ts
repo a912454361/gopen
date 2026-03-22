@@ -356,7 +356,7 @@ router.get('/models', async (req: Request, res: Response) => {
       return res.status(500).json({ error: '获取模型列表失败' });
     }
     
-    // 转换为前端友好格式
+    // 转换为前端友好格式（仅返回售价，不返回成本价）
     const result = models.map(m => ({
       code: m.code,
       name: m.name,
@@ -368,11 +368,6 @@ router.get('/models', async (req: Request, res: Response) => {
       // 价格（厘/千tokens）- 数据库单位是厘/百万tokens，转换为厘/千tokens
       sellInputPrice: m.sell_input_price / 1000,
       sellOutputPrice: m.sell_output_price / 1000,
-      // 成本价
-      costInputPrice: m.cost_input_price / 1000,
-      costOutputPrice: m.cost_output_price / 1000,
-      // 平台加价比例
-      platformMarkup: m.platform_markup,
       // 上下文信息
       contextWindow: m.max_context_tokens,
       maxOutputTokens: m.max_output_tokens,

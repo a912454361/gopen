@@ -369,12 +369,6 @@ export default function ModelsScreen() {
                   {formatContextWindow(model.contextWindow)}
                 </Text>
               </View>
-              {/* 平台加价标签 */}
-              <View style={[styles.modelBadge, { backgroundColor: '#F59E0B20' }]}>
-                <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: '600' }}>
-                  +{Math.round(model.platformMarkup * 100)}%服务费
-                </Text>
-              </View>
             </View>
           </View>
           {/* 收藏按钮 */}
@@ -537,7 +531,7 @@ export default function ModelsScreen() {
             • 所有模型按实际使用量计费（输入+输出tokens）
           </ThemedText>
           <ThemedText variant="caption" color={theme.textSecondary} style={{ marginTop: 2 }}>
-            • 价格包含平台服务费（15%~30%），用于API对接和运维成本
+            • 价格透明，所见即所付
           </ThemedText>
           <ThemedText variant="caption" color={theme.textSecondary} style={{ marginTop: 2 }}>
             • 请确保账户余额充足，余额不足将无法使用模型

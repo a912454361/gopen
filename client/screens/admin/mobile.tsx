@@ -26,11 +26,12 @@ import { Spacing, BorderRadius } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PromoManager } from './components/PromoManager';
 import ModelSyncPanel from './components/ModelSyncPanel';
+import RechargePanel from './components/RechargePanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'model-sync' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -156,6 +157,7 @@ export default function AdminMobileScreen() {
     { key: 'dashboard', label: '概览', icon: 'chart-pie' },
     { key: 'profit', label: '利润', icon: 'coins' },
     { key: 'orders', label: '订单', icon: 'clipboard-list' },
+    { key: 'recharge', label: '充值', icon: 'wallet' },
     { key: 'users', label: '用户', icon: 'users' },
     { key: 'promotion', label: '推广', icon: 'bullhorn' },
     { key: 'model-sync', label: '同步', icon: 'rotate' },
@@ -218,6 +220,7 @@ export default function AdminMobileScreen() {
         {activeTab === 'dashboard' && <DashboardTab adminKey={adminKey} />}
         {activeTab === 'profit' && <ProfitTab adminKey={adminKey} />}
         {activeTab === 'orders' && <OrdersTab adminKey={adminKey} />}
+        {activeTab === 'recharge' && <RechargePanel adminKey={adminKey} />}
         {activeTab === 'users' && <UsersTab adminKey={adminKey} />}
         {activeTab === 'promotion' && <PromoManager adminKey={adminKey} />}
         {activeTab === 'model-sync' && <ModelSyncPanel />}

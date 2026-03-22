@@ -95,6 +95,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 
 const CATEGORIES = [
   { id: 'all', name: '全部', icon: 'grip' as const },
+  { id: 'favorites', name: '收藏', icon: 'star' as const },
   { id: 'text', name: '文本对话', icon: 'message' as const },
   { id: 'multimodal', name: '多模态', icon: 'eye' as const },
   { id: 'image', name: '图像生成', icon: 'image' as const },
@@ -121,6 +122,29 @@ export default function ModelsScreen() {
     month: { totalTokens: 0, calls: 0 },
     balance: { available: 0 },
   });
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  // 加载收藏列表
+  useEffect(() => {
+    const loadFavorites = async () => {
+      const saved = await AsyncStorage.getItem('modelFavorites');
+      if (saved) {
+        setFavorites(JSON.parse(saved));
+      }
+    };
+    loadFavorites();
+  }, []);
+
+  // 切换收藏
+  const toggleFavorite = useCallback((modelCode: string) => {
+    setFavorites(prev => {
+      const newFavorites = prev.includes(modelCode)
+        ? prev.filter(code => code !== modelCode)
+        : [...prev, modelCode];
+      AsyncStorage.setItem('modelFavorites', JSON.stringify(newFavorites));
+      return newFavorites;
+    });
+  }, []);
 
   /**
    * 获取模型列表
@@ -232,10 +256,11 @@ export default function ModelsScreen() {
   const filteredModels = useMemo(() => {
     return models.filter((model) => {
       if (selectedProvider !== 'all' && model.provider !== selectedProvider) return false;
-      if (selectedCategory !== 'all' && model.category !== selectedCategory) return false;
+      if (selectedCategory === 'favorites' && !favorites.includes(model.code)) return false;
+      if (selectedCategory !== 'all' && selectedCategory !== 'favorites' && model.category !== selectedCategory) return false;
       return true;
     });
-  }, [models, selectedProvider, selectedCategory]);
+  }, [models, selectedProvider, selectedCategory, favorites]);
 
   // 按提供商分组
   const groupedByProvider = useMemo(() => {
@@ -306,6 +331,7 @@ export default function ModelsScreen() {
   const renderModelCard = (model: Model) => {
     const isLocked = isModelLocked(model);
     const isSelected = selectedModelCode === model.code;
+    const isFavorite = favorites.includes(model.code);
     const providerColor = PROVIDER_COLORS[model.provider] || theme.primary;
     
     return (
@@ -351,6 +377,18 @@ export default function ModelsScreen() {
               )}
             </View>
           </View>
+          {/* 收藏按钮 */}
+          <TouchableOpacity 
+            style={{ padding: Spacing.sm }}
+            onPress={() => toggleFavorite(model.code)}
+          >
+            <FontAwesome6 
+              name={isFavorite ? 'star' : 'star'} 
+              size={16} 
+              color={isFavorite ? '#F59E0B' : theme.textMuted}
+              solid={isFavorite}
+            />
+          </TouchableOpacity>
           {isSelected && (
             <View style={[styles.selectedBadge, { backgroundColor: theme.primary }]}>
               <FontAwesome6 name="check" size={12} color="#fff" />

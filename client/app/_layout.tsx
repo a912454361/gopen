@@ -41,6 +41,9 @@ export default function RootLayout() {
         <Stack.Screen name="notifications" options={{ title: "消息通知" }} />
         <Stack.Screen name="stats" options={{ title: "数据统计" }} />
         <Stack.Screen name="image-gen" options={{ title: "AI图像创作" }} />
+        <Stack.Screen name="audio" options={{ title: "AI音频工具" }} />
+        <Stack.Screen name="token-usage" options={{ title: "Token用量统计" }} />
+        <Stack.Screen name="chat-history" options={{ title: "对话历史" }} />
         <Stack.Screen name="create" options={{ title: "AI创作中心" }} />
         <Stack.Screen name="theme" options={{ title: "主题设置" }} />
         <Stack.Screen name="language" options={{ title: "语言设置" }} />

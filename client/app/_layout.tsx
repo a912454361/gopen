@@ -48,6 +48,7 @@ export default function RootLayout() {
           <Stack.Screen name="invite" options={{ title: "邀请有礼" }} />
           <Stack.Screen name="profile-edit" options={{ title: "编辑资料" }} />
           <Stack.Screen name="recharge" options={{ title: "充值中心" }} />
+          <Stack.Screen name="consumption" options={{ title: "消费明细" }} />
         </Stack>
       </ToastProvider>
     </MembershipProvider>

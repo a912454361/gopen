@@ -43,7 +43,7 @@ interface PendingOrder {
   confirmed_at: string;
 }
 
-type PayMethodType = 'alipay' | 'wechat' | 'jdpay';
+type PayMethodType = 'alipay' | 'wechat' | 'unionpay' | 'jdpay' | 'bank';
 
 interface PaymentAccount {
   name: string;
@@ -51,6 +51,8 @@ interface PaymentAccount {
   qrcodeUrl: string;
   realName: string;
   desc?: string;
+  bankName?: string;
+  bankBranch?: string;
 }
 
 interface MerchantConfig {
@@ -402,12 +404,14 @@ export default function PaymentAdminScreen() {
         ) : activeTab === 'qrcode' ? (
           // 收款码管理
           <View style={{ gap: Spacing.lg }}>
-            {(['alipay', 'wechat', 'jdpay'] as PayMethodType[]).map(payType => {
+            {(['alipay', 'wechat', 'unionpay', 'jdpay', 'bank'] as PayMethodType[]).map(payType => {
               const account = paymentAccounts?.[payType];
               const payMethodInfo = {
                 alipay: { name: '支付宝收款', icon: 'wallet', color: '#1677FF', bgColor: 'rgba(22,119,255,0.1)' },
                 wechat: { name: '微信收款', icon: 'message', color: '#07C160', bgColor: 'rgba(7,193,96,0.1)' },
+                unionpay: { name: '银联收款', icon: 'credit-card', color: '#E21836', bgColor: 'rgba(226,24,54,0.1)' },
                 jdpay: { name: '京东支付', icon: 'wallet', color: '#E1251B', bgColor: 'rgba(225,37,27,0.1)' },
+                bank: { name: '银行转账', icon: 'building-columns', color: '#1E3A8A', bgColor: 'rgba(30,58,138,0.1)' },
               };
               const info = payMethodInfo[payType];
               return (

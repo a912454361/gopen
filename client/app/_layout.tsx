@@ -18,9 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="bill" options={{ title: "账单明细" }} />
         <Stack.Screen name="cloud-storage" options={{ title: "云存储设置" }} />
         <Stack.Screen name="wallet" options={{ title: "钱包" }} />
-        <Stack.Screen name="models" options={{ title: "模型市场" }} />
         <Stack.Screen name="download" options={{ title: "下载应用" }} />
-        <Stack.Screen name="membership" options={{ title: "会员中心" }} />
         <Stack.Screen name="payment-admin" options={{ title: "支付审核" }} />
         <Stack.Screen name="admin" options={{ title: "管理后台" }} />
         <Stack.Screen name="notification-settings" options={{ title: "通知设置" }} />
@@ -29,8 +27,6 @@ export default function RootLayout() {
         <Stack.Screen name="profit-panel" options={{ title: "利润统计" }} />
         <Stack.Screen name="cloud-storage-setup" options={{ title: "云存储开通" }} />
         <Stack.Screen name="privacy-settings" options={{ title: "隐私设置" }} />
-        <Stack.Screen name="privacy-policy" options={{ title: "隐私政策" }} />
-        <Stack.Screen name="terms-of-service" options={{ title: "服务条款" }} />
         <Stack.Screen name="api-keys" options={{ title: "API密钥管理" }} />
         <Stack.Screen name="promotion" options={{ title: "推广中心" }} />
         <Stack.Screen name="admin-login" options={{ title: "管理员登录" }} />

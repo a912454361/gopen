@@ -43,9 +43,9 @@ router.get('/', async (req: Request, res: Response) => {
     // 隐藏成本价，只返回售价
     const publicModels = models?.map(model => ({
       ...model,
-      // 价格格式化为元
-      inputPrice: (model.sell_input_price / 100).toFixed(4),
-      outputPrice: (model.sell_output_price / 100).toFixed(4),
+      // 价格格式化为元（去掉多余的小数位）
+      inputPrice: Number((model.sell_input_price / 100).toFixed(4)),
+      outputPrice: Number((model.sell_output_price / 100).toFixed(4)),
       max_tokens: model.max_output_tokens,
       // 不暴露成本价
       sell_input_price: undefined,
@@ -85,9 +85,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       success: true,
       data: {
         ...model,
-        inputPrice: (model.sell_input_price / 100).toFixed(4),
-        outputPrice: (model.sell_output_price / 100).toFixed(4),
-        gpuHourPrice: model.sell_gpu_hour ? (model.sell_gpu_hour / 100).toFixed(2) : null,
+        inputPrice: Number((model.sell_input_price / 100).toFixed(4)),
+        outputPrice: Number((model.sell_output_price / 100).toFixed(4)),
+        gpuHourPrice: model.sell_gpu_hour ? Number((model.sell_gpu_hour / 100).toFixed(2)) : null,
       },
     });
   } catch (error) {
@@ -155,7 +155,7 @@ router.post('/estimate', async (req: Request, res: Response) => {
         outputTokens: body.outputTokens,
         gpuSeconds: body.gpuSeconds || 0,
         totalFee, // 分
-        totalFeeYuan: (totalFee / 100).toFixed(2), // 元
+        totalFeeYuan: Number((totalFee / 100).toFixed(2)), // 元
         feeBreakdown: {
           inputFee,
           outputFee,

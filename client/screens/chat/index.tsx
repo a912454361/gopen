@@ -50,7 +50,12 @@ interface SelectedModel {
   name: string;
   provider: string;
   providerName: string;
-  pricing: { input: number; output: number; tier: string };
+  // 新格式（模型市场存储）
+  sellInputPrice?: number;
+  sellOutputPrice?: number;
+  category?: string;
+  // 旧格式（兼容）
+  pricing?: { input: number; output: number; tier: string };
 }
 
 // 根据项目类型和服务类型生成创作提示词
@@ -203,7 +208,16 @@ export default function ChatScreen() {
     try {
       const saved = await AsyncStorage.getItem('selectedModel');
       if (saved) {
-        setSelectedModel(JSON.parse(saved));
+        const model = JSON.parse(saved);
+        // 兼容新旧格式：如果缺少 pricing 字段，根据 category 设置默认 tier
+        if (!model.pricing) {
+          model.pricing = {
+            input: model.sellInputPrice || 0,
+            output: model.sellOutputPrice || 0,
+            tier: 'standard', // 默认标准等级
+          };
+        }
+        setSelectedModel(model);
       } else {
         // 默认使用豆包模型
         setSelectedModel({
@@ -272,7 +286,9 @@ export default function ChatScreen() {
 
   // 检查模型权限
   const checkModelAccess = (model: SelectedModel): boolean => {
-    if (model.pricing.tier === 'enterprise' && !isSuperMember) {
+    const tier = model.pricing?.tier || 'standard';
+    
+    if (tier === 'enterprise' && !isSuperMember) {
       Alert.alert(
         '需要超级会员',
         '该模型需要超级会员才能使用',
@@ -283,7 +299,7 @@ export default function ChatScreen() {
       );
       return false;
     }
-    if (model.pricing.tier === 'premium' && !isMember) {
+    if (tier === 'premium' && !isMember) {
       Alert.alert(
         '需要会员',
         '该模型需要普通会员才能使用',
@@ -298,7 +314,15 @@ export default function ChatScreen() {
   };
 
   // 选择模型
-  const handleSelectModel = (model: SelectedModel) => {
+  const handleSelectModel = (model: any) => {
+    // 兼容新旧格式：确保模型有 pricing 字段
+    if (!model.pricing) {
+      model.pricing = {
+        input: model.sellInputPrice || 0,
+        output: model.sellOutputPrice || 0,
+        tier: 'standard',
+      };
+    }
     if (!checkModelAccess(model)) return;
     
     setSelectedModel(model);
@@ -627,11 +651,15 @@ export default function ChatScreen() {
             </View>
 
             <ScrollView style={{ maxHeight: 400 }}>
-              {availableModels.map((model) => {
+              {availableModels.map((model: any) => {
                 const color = PROVIDER_COLORS[model.provider] || theme.primary;
                 const isSelected = selectedModel?.code === model.code;
-                const isLocked = (model.pricing.tier === 'enterprise' && !isSuperMember) ||
-                                (model.pricing.tier === 'premium' && !isMember);
+                // 兼容新旧格式
+                const tier = model.pricing?.tier || 'standard';
+                const inputPrice = model.pricing?.input || model.sellInputPrice || 0;
+                const outputPrice = model.pricing?.output || model.sellOutputPrice || 0;
+                const isLocked = (tier === 'enterprise' && !isSuperMember) ||
+                                (tier === 'premium' && !isMember);
                 
                 return (
                   <TouchableOpacity
@@ -650,17 +678,17 @@ export default function ChatScreen() {
                       <View style={{ flex: 1, marginLeft: 12 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                           <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.name}</ThemedText>
-                          {model.pricing.tier === 'free' && (
+                          {tier === 'free' && (
                             <View style={[styles.tierBadge, { backgroundColor: theme.success + '20' }]}>
                               <Text style={{ color: theme.success, fontSize: 10 }}>免费</Text>
                             </View>
                           )}
-                          {model.pricing.tier === 'premium' && (
+                          {tier === 'premium' && (
                             <View style={[styles.tierBadge, { backgroundColor: '#D9770620' }]}>
                               <Text style={{ color: '#D97706', fontSize: 10 }}>会员</Text>
                             </View>
                           )}
-                          {model.pricing.tier === 'enterprise' && (
+                          {tier === 'enterprise' && (
                             <View style={[styles.tierBadge, { backgroundColor: '#7C3AED20' }]}>
                               <Text style={{ color: '#7C3AED', fontSize: 10 }}>超级会员</Text>
                             </View>
@@ -673,10 +701,10 @@ export default function ChatScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', marginTop: 8, gap: 16 }}>
                       <ThemedText variant="caption" color={theme.textMuted}>
-                        输入: ¥{(model.pricing.input / 100).toFixed(2)}/百万
+                        输入: ¥{(inputPrice / 100).toFixed(2)}/百万
                       </ThemedText>
                       <ThemedText variant="caption" color={theme.textMuted}>
-                        输出: ¥{(model.pricing.output / 100).toFixed(2)}/百万
+                        输出: ¥{(outputPrice / 100).toFixed(2)}/百万
                       </ThemedText>
                     </View>
                   </TouchableOpacity>

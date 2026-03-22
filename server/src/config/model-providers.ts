@@ -484,11 +484,12 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     description: 'OpenAI 最新多模态模型，支持文本、图像、音频',
     contextWindow: 128000,
     maxOutputTokens: 16384,
-    costInputPrice: 250,      // 商家成本：¥0.25/千tokens
-    costOutputPrice: 1000,    // 商家成本：¥1/千tokens
+    // 价格单位：厘/千tokens（用户确认：成本 $2.5/$10 每百万tokens）
+    costInputPrice: 18,       // 商家成本：$2.5/百万 ≈ 18厘/千
+    costOutputPrice: 72,      // 商家成本：$10/百万 ≈ 72厘/千
     platformMarkup: 0.20,     // 平台加价 20%
-    sellInputPrice: 300,      // 平台售价：¥0.3/千tokens
-    sellOutputPrice: 1200,    // 平台售价：¥1.2/千tokens
+    sellInputPrice: 22,       // 平台售价：$3/百万 ≈ 22厘/千
+    sellOutputPrice: 86,      // 平台售价：$12/百万 ≈ 86厘/千
     features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
     status: 'active',
     tags: ['推荐', '多模态', '最新'],
@@ -560,10 +561,11 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     description: 'OpenAI 图像生成模型',
     contextWindow: 0,
     maxOutputTokens: 0,
-    costInputPrice: 4000,    // ¥4/张
+    // 价格单位：厘/张（用户确认：成本 $40/张，售价 $48/张）
+    costInputPrice: 288000,   // 商家成本：$40 ≈ 288000厘
     costOutputPrice: 0,
-    platformMarkup: 0.25,
-    sellInputPrice: 5000,    // ¥5/张
+    platformMarkup: 0.20,     // 平台加价 20%
+    sellInputPrice: 345600,   // 平台售价：$48 ≈ 345600厘
     sellOutputPrice: 0,
     features: { streaming: false, functionCall: false, vision: false, audio: false, jsonMode: false },
     status: 'active',
@@ -619,11 +621,12 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     description: 'Anthropic 最新旗舰模型',
     contextWindow: 200000,
     maxOutputTokens: 8192,
-    costInputPrice: 300,
-    costOutputPrice: 1500,
-    platformMarkup: 0.20,
-    sellInputPrice: 360,
-    sellOutputPrice: 1800,
+    // 价格单位：厘/千tokens（用户确认：成本 $3/$15 每百万tokens）
+    costInputPrice: 22,       // 商家成本：$3/百万 ≈ 22厘/千
+    costOutputPrice: 108,     // 商家成本：$15/百万 ≈ 108厘/千
+    platformMarkup: 0.20,     // 平台加价 20%
+    sellInputPrice: 26,       // 平台售价：$3.6/百万 ≈ 26厘/千
+    sellOutputPrice: 130,     // 平台售价：$18/百万 ≈ 130厘/千
     features: { streaming: true, functionCall: true, vision: true, audio: false, jsonMode: true },
     status: 'active',
     tags: ['推荐', '旗舰', '长上下文'],
@@ -675,14 +678,15 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     provider: 'google',
     category: 'multimodal',
     type: 'chat',
-    description: 'Google 最新多模态模型',
+    description: 'Google 最新多模态模型（商家免费，平台收服务费）',
     contextWindow: 1000000,
     maxOutputTokens: 8192,
-    costInputPrice: 0,        // Google 免费额度
+    // 价格单位：厘/千tokens（用户确认：商家免费，平台 $0.05/$0.05 每百万tokens）
+    costInputPrice: 0,        // 商家免费
     costOutputPrice: 0,
-    platformMarkup: 0.50,     // 即使免费，平台也收取服务费
-    sellInputPrice: 50,       // 平台售价：用户需付费使用
-    sellOutputPrice: 50,
+    platformMarkup: 0.50,     // 平台服务费比例
+    sellInputPrice: 0.4,      // 平台售价：$0.05/百万 ≈ 0.4厘/千
+    sellOutputPrice: 0.4,
     features: { streaming: true, functionCall: true, vision: true, audio: true, jsonMode: true },
     status: 'active',
     tags: ['推荐', '免费额度', '超长上下文'],
@@ -730,21 +734,22 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
   {
     id: 'deepseek-chat',
     code: 'deepseek-chat',
-    name: 'DeepSeek Chat',
+    name: 'DeepSeek V3 (免费)',
     provider: 'deepseek',
     category: 'text',
     type: 'chat',
-    description: 'DeepSeek 对话模型',
+    description: 'DeepSeek V3 对话模型（商家免费，平台收服务费）',
     contextWindow: 64000,
     maxOutputTokens: 4096,
-    costInputPrice: 10,
-    costOutputPrice: 20,
-    platformMarkup: 0.20,
-    sellInputPrice: 12,
-    sellOutputPrice: 24,
+    // 价格单位：厘/千tokens（用户确认：商家免费，平台 $0.1/$0.1 每百万tokens）
+    costInputPrice: 0,        // 商家免费
+    costOutputPrice: 0,
+    platformMarkup: 0.20,     // 平台服务费比例
+    sellInputPrice: 0.7,      // 平台售价：$0.1/百万 ≈ 0.7厘/千
+    sellOutputPrice: 0.7,
     features: { streaming: true, functionCall: true, vision: false, audio: false, jsonMode: true },
     status: 'active',
-    tags: ['性价比', '国产'],
+    tags: ['性价比', '国产', '免费额度'],
   },
   {
     id: 'deepseek-reasoner',

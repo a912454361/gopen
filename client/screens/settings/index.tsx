@@ -47,7 +47,7 @@ export default function SettingsScreen() {
       icon: 'globe',
       title: '语言',
       subtitle: '界面语言设置',
-      value: '中文',
+      onPress: () => router.push('/language'),
     },
     {
       icon: 'bell',

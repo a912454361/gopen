@@ -9,9 +9,11 @@ import {
   Animated,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 // @ts-ignore - react-native-sse lacks proper type definitions
 import RNSSE from 'react-native-sse';
@@ -21,10 +23,13 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
 
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  saved?: boolean; // 是否已保存到作品库
 }
 
 // 根据项目类型和服务类型生成创作提示词
@@ -313,10 +318,17 @@ export default function ChatScreen() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [currentProject, setCurrentProject] = useState<{title: string; type: string} | null>(initialGuideData.project);
+  const [savingMessageId, setSavingMessageId] = useState<string | null>(null); // 正在保存的消息ID
+  const [userId, setUserId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sseRef = useRef<any>(null);
   const typingAnim = useMemo(() => new Animated.Value(1), []);
+
+  // 获取用户ID
+  useEffect(() => {
+    AsyncStorage.getItem('userId').then(setUserId);
+  }, []);
 
   useEffect(() => {
     if (isLoading) {
@@ -503,6 +515,57 @@ export default function ChatScreen() {
     const textToSend = inputText;
     setInputText('');
     await handleSendWithText(textToSend);
+  };
+
+  // 保存作品到作品库
+  const handleSaveWork = async (message: Message) => {
+    if (!userId || message.saved || savingMessageId === message.id) return;
+
+    setSavingMessageId(message.id);
+
+    try {
+      /**
+       * 服务端文件：server/src/routes/works.ts
+       * 接口：POST /api/v1/works
+       * Body 参数：user_id: string, project_id?: string, project_title?: string, project_type?: string, service_type?: string, service_name?: string, content: string, content_type?: string, image_url?: string
+       */
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          project_id: currentProject?.title ? `project_${Date.now()}` : undefined,
+          project_title: currentProject?.title || 'AI创作',
+          project_type: currentProject?.type || 'AI对话',
+          service_type: 'chat',
+          service_name: 'AI对话创作',
+          content: message.content,
+          content_type: 'text',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 标记消息已保存
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === message.id ? { ...msg, saved: true } : msg
+          )
+        );
+        Alert.alert('保存成功', '作品已保存到「我的作品」', [
+          { text: '继续创作', style: 'default' },
+          { text: '查看作品', onPress: () => router.push('/my-works') },
+        ]);
+      } else {
+        throw new Error(result.error || '保存失败');
+      }
+    } catch (error) {
+      console.error('Save work error:', error);
+      Alert.alert('保存失败', '请稍后重试');
+    } finally {
+      setSavingMessageId(null);
+    }
   };
 
   const handleQuickAction = (text: string) => {
@@ -699,6 +762,38 @@ export default function ChatScreen() {
                       {message.content}
                     </ThemedText>
                   </View>
+                  {/* AI消息下方显示保存按钮 */}
+                  {message.role === 'assistant' && message.content.length > 50 && !isLoading && (
+                    <View style={styles.messageActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.saveButton,
+                          message.saved && styles.saveButtonSaved,
+                          { borderColor: message.saved ? theme.success : theme.primary },
+                        ]}
+                        onPress={() => handleSaveWork(message)}
+                        disabled={message.saved || savingMessageId === message.id}
+                      >
+                        {savingMessageId === message.id ? (
+                          <ActivityIndicator size="small" color={theme.primary} />
+                        ) : (
+                          <>
+                            <FontAwesome6
+                              name={message.saved ? 'check' : 'bookmark'}
+                              size={12}
+                              color={message.saved ? theme.success : theme.primary}
+                            />
+                            <ThemedText
+                              variant="captionMedium"
+                              color={message.saved ? theme.success : theme.primary}
+                            >
+                              {message.saved ? '已保存' : '保存到作品库'}
+                            </ThemedText>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (

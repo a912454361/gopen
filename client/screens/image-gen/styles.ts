@@ -1,0 +1,197 @@
+import { StyleSheet } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.backgroundRoot,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing['5xl'],
+    },
+    header: {
+      marginBottom: Spacing.xl,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.lg,
+      backgroundColor: `${theme.primary}10`,
+      borderWidth: 1,
+      borderColor: `${theme.primary}30`,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+    },
+    neonLine: {
+      height: 2,
+      borderRadius: 1,
+      marginTop: Spacing.lg,
+      width: 80,
+    },
+    memberTip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      marginBottom: Spacing.lg,
+    },
+    inputSection: {
+      marginBottom: Spacing.lg,
+    },
+    inputWrap: {
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      padding: Spacing.md,
+      marginTop: Spacing.sm,
+    },
+    promptInput: {
+      minHeight: 100,
+      maxHeight: 200,
+      fontSize: 15,
+      color: theme.textPrimary,
+      lineHeight: 22,
+    },
+    inputActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+      paddingTop: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    examplesSection: {
+      marginBottom: Spacing.lg,
+    },
+    examplesScrollWrap: {
+      marginTop: Spacing.sm,
+    },
+    examplesScroll: {
+      marginHorizontal: -Spacing.lg,
+      paddingHorizontal: Spacing.lg,
+    },
+    exampleChip: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+      marginRight: Spacing.sm,
+      maxWidth: 150,
+    },
+    styleSection: {
+      marginBottom: Spacing.lg,
+    },
+    styleGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    styleCard: {
+      width: '31%',
+      aspectRatio: 1,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+    },
+    styleIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sizeSection: {
+      marginBottom: Spacing.lg,
+    },
+    sizeOptions: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginTop: Spacing.sm,
+    },
+    sizeOption: {
+      flex: 1,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      alignItems: 'center',
+      gap: 2,
+    },
+    generateButton: {
+      marginBottom: Spacing.xl,
+    },
+    generateButtonDisabled: {
+      opacity: 0.6,
+    },
+    generateButtonGradient: {
+      paddingVertical: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+    },
+    resultSection: {
+      marginBottom: Spacing.lg,
+    },
+    resultCard: {
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      marginTop: Spacing.sm,
+      overflow: 'hidden',
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+    },
+    resultImage: {
+      width: '100%',
+      aspectRatio: 1,
+      backgroundColor: theme.backgroundTertiary,
+    },
+    resultInfo: {
+      padding: Spacing.md,
+      gap: Spacing.xs,
+    },
+    resultActions: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      padding: Spacing.md,
+      paddingTop: 0,
+    },
+    actionButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      backgroundColor: 'transparent',
+    },
+  });
+};

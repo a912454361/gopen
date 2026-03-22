@@ -27,6 +27,7 @@ import imageRouter from "./routes/image.js";
 import inviteRouter from "./routes/invite.js";
 import promoAutoRouter from "./routes/promo-auto.js";
 import promoSystemRouter from "./routes/promo-system.js";
+import imageGenRouter from "./routes/image-gen.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -72,6 +73,7 @@ app.use('/api/v1/image', imageRouter);
 app.use('/api/v1/invite', inviteRouter);
 app.use('/api/v1/promo', promoAutoRouter);
 app.use('/api/v1/promo/system', promoSystemRouter);
+app.use('/api/v1/image-gen', imageGenRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

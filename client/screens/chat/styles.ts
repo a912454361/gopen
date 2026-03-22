@@ -275,5 +275,24 @@ export const createStyles = (theme: Theme) => {
       shadowOpacity: 0.3,
       shadowRadius: 8,
     },
+    // 保存作品按钮
+    messageActions: {
+      flexDirection: 'row',
+      marginTop: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    saveButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+      backgroundColor: 'rgba(0,240,255,0.05)',
+    },
+    saveButtonSaved: {
+      backgroundColor: 'rgba(16,185,129,0.1)',
+    },
   });
 };

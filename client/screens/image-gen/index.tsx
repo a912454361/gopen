@@ -249,14 +249,18 @@ export default function ImageGenScreen() {
                         result.data.image_url;
         
         if (imageUrl) {
-          setGeneratedImage({
+          const newImage = {
             id: Date.now().toString(),
             url: imageUrl,
             prompt: prompt.trim(),
             style: selectedStyle,
             model: selectedModel?.name || 'unknown',
             createdAt: new Date().toISOString(),
-          });
+          };
+          setGeneratedImage(newImage);
+          
+          // 自动保存到作品库
+          autoSaveToWorks(newImage, selectedStyle);
         } else {
           throw new Error('未获取到图像URL');
         }
@@ -270,6 +274,37 @@ export default function ImageGenScreen() {
       setIsGenerating(false);
     }
   }, [prompt, selectedStyle, selectedSize, selectedModel, userId]);
+
+  // 自动保存到作品库
+  const autoSaveToWorks = async (image: GeneratedImage, style: string) => {
+    if (!userId || !image) return;
+    
+    try {
+      const styleName = IMAGE_STYLES.find(s => s.id === style)?.name || style;
+      
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          project_title: `AI图像 - ${styleName}`,
+          project_type: 'AI图像生成',
+          service_type: 'image-gen',
+          service_name: `${image.model}图像创作`,
+          content: image.prompt,
+          content_type: 'image',
+          image_url: image.url,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('Image auto-saved to works');
+      }
+    } catch (error) {
+      console.error('Auto save image error:', error);
+    }
+  };
 
   // 保存到相册
   const handleSaveToGallery = useCallback(async () => {

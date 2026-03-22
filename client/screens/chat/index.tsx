@@ -23,8 +23,16 @@ import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { useToast } from '@/components/Toast';
 import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import { 
+  createChatSession, 
+  updateChatSession, 
+  saveCurrentSessionId,
+  getCurrentSessionId,
+  type ChatSession 
+} from '@/services/chatHistoryService';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
@@ -158,6 +166,10 @@ export default function ChatScreen() {
   const [savingMessageId, setSavingMessageId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
+  // 对话会话管理
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  
   // 模型选择相关状态
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null);
   const [showModelPicker, setShowModelPicker] = useState(false);
@@ -166,6 +178,7 @@ export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const sseRef = useRef<any>(null);
   const typingAnim = useMemo(() => new Animated.Value(1), []);
+  const { showToast } = useToast();
 
   // 获取用户ID和模型
   useEffect(() => {
@@ -307,7 +320,7 @@ export default function ChatScreen() {
   };
 
   // 新对话
-  const handleNewChat = () => {
+  const handleNewChat = async () => {
     if (messages.length === 0) return;
     
     Alert.alert(
@@ -318,7 +331,7 @@ export default function ChatScreen() {
         { 
           text: '确定', 
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             if (sseRef.current) {
               sseRef.current.close();
             }
@@ -328,6 +341,9 @@ export default function ChatScreen() {
             setCurrentProject(null);
             setGuidePrompt('');
             setShowGuide(false);
+            // 清除当前会话
+            setCurrentSession(null);
+            await saveCurrentSessionId(null);
           }
         },
       ]
@@ -349,6 +365,22 @@ export default function ChatScreen() {
         ]
       );
       return;
+    }
+
+    // 如果没有当前会话，创建一个新会话
+    if (!currentSession && userId && autoSaveEnabled) {
+      const title = text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
+      const session = await createChatSession(
+        userId,
+        title,
+        selectedModel.code,
+        selectedModel.name,
+        selectedModel.provider
+      );
+      if (session) {
+        setCurrentSession(session);
+        await saveCurrentSessionId(session.id);
+      }
     }
 
     const userMessage: Message = {
@@ -395,6 +427,16 @@ export default function ChatScreen() {
         if (data === '[DONE]') {
           sse.close();
           setIsLoading(false);
+          // 更新会话信息
+          if (currentSession) {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg) {
+              updateChatSession(currentSession.id, {
+                lastMessage: lastMsg.content.substring(0, 100),
+                messageCount: messages.length,
+              });
+            }
+          }
           return;
         }
 

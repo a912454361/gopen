@@ -14,12 +14,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { useToast } from '@/components/Toast';
+import { createFormDataFile } from '@/utils';
 import { createStyles } from './styles';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -58,6 +61,7 @@ export default function AudioScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { isMember } = useMembership();
   const router = useSafeRouter();
+  const { showToast } = useToast();
 
   // Tab状态
   const [activeTab, setActiveTab] = useState<TabType>('transcribe');
@@ -218,16 +222,13 @@ export default function AudioScreen() {
     setTranscribedText('');
 
     try {
-      // 1. 上传音频文件
+      // 1. 上传音频文件 - 使用跨平台兼容的文件上传
       const fileName = audioUri.split('/').pop() || 'audio.m4a';
       const fileType = fileName.endsWith('.m4a') ? 'audio/m4a' : 'audio/mp3';
       
       const formData = new FormData();
-      formData.append('file', {
-        uri: audioUri,
-        name: fileName,
-        type: fileType,
-      } as any);
+      const fileData = await createFormDataFile(audioUri, fileName, fileType);
+      formData.append('file', fileData as any);
 
       /**
        * 服务端文件：server/src/routes/cloud-storage.ts
@@ -386,6 +387,105 @@ export default function AudioScreen() {
   const formatMillis = (millis: number) => {
     const seconds = Math.floor(millis / 1000);
     return formatTime(seconds);
+  };
+
+  // 保存转写文本到作品库
+  const saveTranscribedText = async () => {
+    if (!transcribedText || !userId) return;
+    
+    try {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          project_title: '语音转文字',
+          project_type: 'AI音频工具',
+          service_type: 'audio-transcribe',
+          service_name: selectedTranscribeModel?.name || '语音识别',
+          content: transcribedText,
+          content_type: 'text',
+        }),
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        showToast('success', '已保存到作品库');
+      } else {
+        throw new Error(result.error || '保存失败');
+      }
+    } catch (error) {
+      console.error('Save transcribed text error:', error);
+      showToast('error', '保存失败');
+    }
+  };
+
+  // 保存音频到相册
+  const saveAudioToGallery = async () => {
+    if (!audioUri) return;
+    
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('需要权限', '请授予相册访问权限');
+        return;
+      }
+      
+      await MediaLibrary.saveToLibraryAsync(audioUri);
+      showToast('success', '音频已保存到相册');
+    } catch (error) {
+      console.error('Save audio to gallery error:', error);
+      showToast('error', '保存失败');
+    }
+  };
+
+  // 保存音频到作品库
+  const saveAudioToWorks = async () => {
+    if (!audioUri || !userId) return;
+    
+    try {
+      // 先上传音频文件 - 使用跨平台兼容的文件上传
+      const fileName = `tts_${Date.now()}.mp3`;
+      const formData = new FormData();
+      const fileData = await createFormDataFile(audioUri, fileName, 'audio/mpeg');
+      formData.append('file', fileData as any);
+      
+      const uploadRes = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const uploadData = await uploadRes.json();
+      if (!uploadData.success || !uploadData.url) {
+        throw new Error(uploadData.error || '上传失败');
+      }
+      
+      // 保存到作品库
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          project_title: '文字转语音',
+          project_type: 'AI音频工具',
+          service_type: 'audio-tts',
+          service_name: selectedTTSModel?.name || '语音合成',
+          content: ttsText,
+          content_type: 'audio',
+          audio_url: uploadData.url,
+        }),
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        showToast('success', '已保存到作品库');
+      } else {
+        throw new Error(result.error || '保存失败');
+      }
+    } catch (error) {
+      console.error('Save audio to works error:', error);
+      showToast('error', '保存失败');
+    }
   };
 
   // 打开模型选择器
@@ -588,7 +688,18 @@ export default function AudioScreen() {
             {/* 转写结果 */}
             {(transcribedText || isTranscribing) && (
               <View style={styles.resultSection}>
-                <ThemedText variant="label" color={theme.textMuted}>转写结果</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <ThemedText variant="label" color={theme.textMuted}>转写结果</ThemedText>
+                  {transcribedText && !isTranscribing && (
+                    <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                      onPress={() => saveTranscribedText()}
+                    >
+                      <FontAwesome6 name="bookmark" size={14} color={theme.primary} style={{ marginRight: 4 }} />
+                      <ThemedText variant="captionMedium" color={theme.primary}>保存到作品库</ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 <View style={[styles.resultCard, { borderColor: theme.primary }]}>
                   {isTranscribing ? (
                     <View style={{ alignItems: 'center', paddingVertical: 20 }}>
@@ -704,7 +815,25 @@ export default function AudioScreen() {
             {/* 播放器 */}
             {audioUri && (
               <View style={styles.playerSection}>
-                <ThemedText variant="label" color={theme.textMuted}>播放结果</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <ThemedText variant="label" color={theme.textMuted}>播放结果</ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                      onPress={saveAudioToGallery}
+                    >
+                      <FontAwesome6 name="download" size={14} color={theme.primary} style={{ marginRight: 4 }} />
+                      <ThemedText variant="captionMedium" color={theme.primary}>保存</ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                      onPress={saveAudioToWorks}
+                    >
+                      <FontAwesome6 name="bookmark" size={14} color={theme.primary} style={{ marginRight: 4 }} />
+                      <ThemedText variant="captionMedium" color={theme.primary}>保存到作品库</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
                 <View style={[styles.playerCard, { borderColor: theme.primary }]}>
                   <View style={styles.playerControls}>
                     <TouchableOpacity onPress={togglePlayback}>

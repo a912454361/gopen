@@ -9,6 +9,60 @@ const router = Router();
 const client = getSupabaseClient();
 
 /**
+ * 保存消息到会话
+ * POST /api/v1/chat-history/:sessionId/messages
+ */
+router.post('/:sessionId/messages', async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const { role, content } = req.body;
+
+    if (!role || !content) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    // 保存消息
+    const { data: message, error } = await client
+      .from('chat_messages')
+      .insert({
+        session_id: sessionId,
+        role,
+        content,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Save message error:', error);
+      return res.status(500).json({ error: '保存消息失败' });
+    }
+
+    // 更新会话信息 - 先获取当前消息数量
+    const { count } = await client
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId);
+
+    await client
+      .from('chat_sessions')
+      .update({
+        last_message: content.substring(0, 100),
+        last_message_at: new Date().toISOString(),
+        message_count: count || 1,
+      })
+      .eq('id', sessionId);
+
+    res.json({
+      success: true,
+      data: message,
+    });
+  } catch (error) {
+    console.error('Save message error:', error);
+    res.status(500).json({ error: '保存消息失败' });
+  }
+});
+
+/**
  * 获取用户对话历史列表
  * GET /api/v1/chat-history/user/:userId
  */

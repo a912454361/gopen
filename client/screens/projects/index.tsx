@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, BorderRadius } from '@/constants/theme';
@@ -1379,6 +1380,7 @@ function ProjectDetailModal({
 
 export default function ProjectsScreen() {
   const { theme } = useTheme();
+  const router = useSafeRouter();
   
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'pending'>('all');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -1426,12 +1428,31 @@ export default function ProjectsScreen() {
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText variant="h4" color={theme.textPrimary}>
-          项目仪表盘
-        </ThemedText>
-        <ThemedText variant="label" color={theme.textMuted}>
-          创作工作空间
-        </ThemedText>
+        <View style={styles.headerTop}>
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="h4" color={theme.textPrimary}>
+              项目仪表盘
+            </ThemedText>
+            <ThemedText variant="label" color={theme.textMuted}>
+              创作工作空间
+            </ThemedText>
+          </View>
+          {/* AI创作中心入口 */}
+          <TouchableOpacity 
+            style={styles.createCenterButton}
+            onPress={() => router.push('/create')}
+          >
+            <LinearGradient
+              colors={[theme.primary, theme.accent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.createCenterGradient}
+            >
+              <FontAwesome6 name="wand-magic-sparkles" size={14} color="#fff" />
+              <ThemedText variant="captionMedium" color="#fff">AI创作中心</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
         <LinearGradient
           colors={[theme.primary, theme.accent]}
           start={{ x: 0, y: 0 }}
@@ -1539,7 +1560,22 @@ const styles = {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
+  },
+  headerTop: {
+    flexDirection: 'row' as const,
     alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+  },
+  createCenterButton: {
+    marginLeft: Spacing.md,
+  },
+  createCenterGradient: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
   },
   neonLine: {
     height: 2,

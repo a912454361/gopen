@@ -18,7 +18,7 @@ router.get('/', async (req: Request, res: Response) => {
     
     let query = client
       .from('ai_models')
-      .select('id, code, name, provider, category, sell_input_price, sell_output_price, sell_gpu_hour, max_tokens, context_window, is_free, member_only, super_member_only, description, icon, sort_order')
+      .select('id, code, name, provider, category, sell_input_price, sell_output_price, max_context_tokens, max_output_tokens, is_free, member_only, super_member_only, description, icon_url, sort_order')
       .eq('status', 'active')
       .eq('is_public', true)
       .order('sort_order', { ascending: true });
@@ -36,6 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
     const { data: models, error } = await query;
     
     if (error) {
+      console.error('Models query error:', error);
       return res.status(500).json({ error: 'Failed to fetch models' });
     }
     
@@ -45,11 +46,10 @@ router.get('/', async (req: Request, res: Response) => {
       // 价格格式化为元
       inputPrice: (model.sell_input_price / 100).toFixed(4),
       outputPrice: (model.sell_output_price / 100).toFixed(4),
-      gpuHourPrice: model.sell_gpu_hour ? (model.sell_gpu_hour / 100).toFixed(2) : null,
+      max_tokens: model.max_output_tokens,
       // 不暴露成本价
       sell_input_price: undefined,
       sell_output_price: undefined,
-      sell_gpu_hour: undefined,
     }));
     
     res.json({

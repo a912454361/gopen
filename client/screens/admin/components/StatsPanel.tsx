@@ -224,8 +224,9 @@ export function StatsPanel({ stats, adminKey, onRefresh }: StatsPanelProps) {
             </TouchableOpacity>
           </View>
           
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
+          <View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
               {paymentStats.map((item, i) => (
                 <View 
                   key={i}
@@ -290,7 +291,8 @@ export function StatsPanel({ stats, adminKey, onRefresh }: StatsPanelProps) {
                 </View>
               ))}
             </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
 
         {/* 收入趋势 */}

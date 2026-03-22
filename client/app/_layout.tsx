@@ -41,6 +41,7 @@ export default function RootLayout() {
         <Stack.Screen name="notifications" options={{ title: "消息通知" }} />
         <Stack.Screen name="stats" options={{ title: "数据统计" }} />
         <Stack.Screen name="image-gen" options={{ title: "AI图像创作" }} />
+        <Stack.Screen name="create" options={{ title: "AI创作中心" }} />
       </Stack>
     </MembershipProvider>
   );

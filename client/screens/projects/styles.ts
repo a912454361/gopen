@@ -9,9 +9,28 @@ export const createStyles = (theme: Theme) => {
     },
     header: {
       paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing['2xl'],
+      paddingTop: Spacing.md,
       paddingBottom: Spacing.lg,
+    },
+    headerTop: {
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    createCenterButton: {
+      marginLeft: Spacing.md,
+    },
+    createCenterGradient: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
     },
     neonLine: {
       height: 2,

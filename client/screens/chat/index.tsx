@@ -24,6 +24,8 @@ import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { useToast } from '@/components/Toast';
+import { PromoBanner } from '@/components/PromoBanner';
+import { PromoModal } from '@/components/PromoModal';
 import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { 
@@ -553,6 +555,13 @@ export default function ChatScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      {/* 推广弹窗 */}
+      <PromoModal 
+        visible={false}
+        onClose={() => {}}
+        onJoin={() => router.push('/promotion')}
+      />
+
       {/* 引导确认Modal */}
       <Modal visible={showGuide} transparent animationType="slide" onRequestClose={handleCancelGuide}>
         <View style={styles.guideOverlay}>
@@ -752,6 +761,9 @@ export default function ChatScreen() {
             </View>
             <FontAwesome6 name="chevron-down" size={14} color={theme.textMuted} />
           </TouchableOpacity>
+
+          {/* 推广横幅 */}
+          <PromoBanner onPress={() => router.push('/promotion')} />
 
           {/* Usage indicator */}
           {!isMember && (

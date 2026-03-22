@@ -156,7 +156,7 @@ export function UsersPanel({ adminKey }: UsersPanelProps) {
         }}>
           <FontAwesome6 name="magnifying-glass" size={14} color={theme.textMuted} />
           <TextInput
-            style={{ flex: 1, color: theme.textPrimary, outline: 'none' }}
+            style={{ flex: 1, color: theme.textPrimary }}
             value={searchText}
             onChangeText={setSearchText}
             placeholder="搜索用户ID/昵称/手机号"
@@ -291,7 +291,7 @@ export function UsersPanel({ adminKey }: UsersPanelProps) {
       {/* 用户详情弹窗 */}
       {selectedUser && (
         <View style={{
-          position: 'fixed',
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,

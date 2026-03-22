@@ -54,6 +54,15 @@ export interface ModelConfig {
   sellOutputPrice: number;  // 平台售价（输出）= 成本价 * (1 + platformMarkup)
   platformMarkup: number;   // 平台加价比例（如 0.2 表示加价 20%）
   
+  // 兼容旧属性名
+  inputPrice?: number;      // 别名: sellInputPrice
+  outputPrice?: number;     // 别名: sellOutputPrice
+  
+  // 会员限制
+  memberOnly?: boolean;      // 是否需要会员
+  superMemberOnly?: boolean; // 是否需要超级会员
+  isFree?: boolean;          // 是否免费（平台抽成模式下所有模型都不免费）
+  
   // 功能特性
   features: {
     streaming: boolean;

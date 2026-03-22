@@ -73,7 +73,7 @@ export default function AudioScreen() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 文字转语音状态
   const [ttsText, setTtsText] = useState('');

@@ -528,7 +528,7 @@ export default function ModelsScreen() {
         {/* 平台说明 */}
         <View style={[styles.platformInfo, { backgroundColor: theme.backgroundDefault }]}>
           <View style={styles.platformInfoHeader}>
-            <FontAwesome6 name="info-circle" size={16} color={theme.primary} />
+            <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
             <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginLeft: Spacing.sm }}>
               平台计费说明
             </ThemedText>

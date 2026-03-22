@@ -67,8 +67,10 @@ router.post('/chat', async (req: Request, res: Response) => {
       return res.status(403).json({ error: '此模型需要会员权限' });
     }
     
-    // 3. 检查余额（非免费模型）
-    if (!modelInfo.isFree) {
+    // 3. 检查余额（平台抽成模式下所有模型都收费）
+    // isFree 默认为 false，所有模型都需要付费
+    const isFreeModel = modelInfo.isFree ?? false;
+    if (!isFreeModel) {
       const { data: balance } = await client
         .from('user_balances')
         .select('balance')
@@ -119,8 +121,8 @@ router.post('/chat', async (req: Request, res: Response) => {
             // 估算输入 token
             inputTokens = Math.ceil(JSON.stringify(body.messages).length / 4);
             
-            // 扣费
-            if (!modelInfo.isFree) {
+            // 扣费（平台抽成模式下所有模型都收费）
+            if (!isFreeModel) {
               await deductFee(body.userId, modelInfo, inputTokens, outputTokens, body.projectId);
             }
             
@@ -142,8 +144,8 @@ router.post('/chat', async (req: Request, res: Response) => {
       // 非流式响应
       const response = await ModelService.chat(request);
       
-      // 扣费
-      if (!modelInfo.isFree) {
+      // 扣费（平台抽成模式下所有模型都收费）
+      if (!isFreeModel) {
         await deductFee(
           body.userId, 
           modelInfo, 
@@ -198,7 +200,7 @@ router.post('/image', async (req: Request, res: Response) => {
       .single();
     
     // 计算费用（每张图按模型定价）
-    const feePerImage = modelInfo.outputPrice || 100; // 默认 1 元/张
+    const feePerImage = modelInfo.sellOutputPrice || modelInfo.outputPrice || 100; // 默认 1 元/张
     const totalFee = feePerImage * body.n;
     
     if (!balance || balance.balance < totalFee) {

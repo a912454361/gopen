@@ -435,7 +435,7 @@ export function OrdersPanel({ adminKey }: OrdersPanelProps) {
         }}>
           <FontAwesome6 name="magnifying-glass" size={14} color={theme.textMuted} />
           <TextInput
-            style={{ flex: 1, color: theme.textPrimary, outline: 'none' }}
+            style={{ flex: 1, color: theme.textPrimary }}
             value={searchText}
             onChangeText={setSearchText}
             placeholder="搜索订单号/用户ID/流水号"

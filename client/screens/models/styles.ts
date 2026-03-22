@@ -139,5 +139,16 @@ export const createStyles = (theme: Theme) => {
       padding: Spacing.lg,
       marginBottom: Spacing.lg,
     },
+    platformInfo: {
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+    platformInfoHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
   });
 };

@@ -21,6 +21,7 @@ export const users = pgTable(
     email: varchar("email", { length: 128 }),
     nickname: varchar("nickname", { length: 64 }),
     avatar: text("avatar"),
+    bio: text("bio"), // 自我介绍
     isAdult: boolean("is_adult").default(false), // 是否成年（实名认证后设置）
     realName: varchar("real_name", { length: 64 }), // 实名姓名
     idCard: varchar("id_card", { length: 32 }), // 身份证号（加密存储）

@@ -46,6 +46,7 @@ export default function RootLayout() {
           <Stack.Screen name="theme" options={{ title: "主题设置" }} />
           <Stack.Screen name="language" options={{ title: "语言设置" }} />
           <Stack.Screen name="invite" options={{ title: "邀请有礼" }} />
+          <Stack.Screen name="profile-edit" options={{ title: "编辑资料" }} />
         </Stack>
       </ToastProvider>
     </MembershipProvider>

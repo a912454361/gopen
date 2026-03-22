@@ -278,12 +278,16 @@ export default function SettingsScreen() {
         </View>
 
         {/* Profile Card */}
-        <View style={styles.profileCard}>
+        <TouchableOpacity 
+          style={styles.profileCard}
+          onPress={() => router.push('/profile-edit')}
+          activeOpacity={0.7}
+        >
           <Avatar 
             userId={userId}
             size={56}
             avatarUrl={avatarUrl}
-            editable={true}
+            editable={false}
             onAvatarChange={handleAvatarChange}
           />
           <View style={styles.profileInfo}>
@@ -294,15 +298,8 @@ export default function SettingsScreen() {
               {isMember ? `到期：${expireDate}` : '升级解锁更多功能'}
             </ThemedText>
           </View>
-          <TouchableOpacity 
-            onPress={() => router.push('/membership')}
-            style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.primary, borderRadius: 6 }}
-          >
-            <ThemedText variant="captionMedium" color={theme.backgroundRoot}>
-              {isMember ? '续费' : '开通'}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+          <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+        </TouchableOpacity>
 
         {/* General Settings */}
         <View style={styles.section}>

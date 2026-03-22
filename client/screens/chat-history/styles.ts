@@ -13,6 +13,26 @@ export const createStyles = (theme: Theme) => {
       paddingTop: Spacing.md,
       paddingBottom: Spacing['5xl'],
     },
+    // 导航栏
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.backgroundTertiary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: Spacing.md,
+    },
+    navTitle: {
+      flex: 1,
+    },
     header: {
       marginBottom: Spacing.xl,
     },

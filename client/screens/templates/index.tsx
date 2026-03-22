@@ -160,6 +160,14 @@ export default function TemplatesScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      {/* 导航栏 */}
+      <View style={styles.navBar}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+        </TouchableOpacity>
+        <ThemedText variant="h4" color={theme.textPrimary} style={styles.navTitle}>模板市场</ThemedText>
+      </View>
+      
       {/* Header */}
       <View style={styles.header}>
         <ThemedText variant="h4" color={theme.textPrimary}>模板市场</ThemedText>

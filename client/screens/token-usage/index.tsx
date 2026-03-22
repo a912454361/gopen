@@ -153,6 +153,14 @@ export default function TokenUsageScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      {/* 导航栏 */}
+      <View style={styles.navBar}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+        </TouchableOpacity>
+        <ThemedText variant="h4" color={theme.textPrimary} style={styles.navTitle}>Token 用量</ThemedText>
+      </View>
+      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={

@@ -7,6 +7,27 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       backgroundColor: theme.backgroundRoot,
     },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: BorderRadius.md,
+      backgroundColor: `${theme.primary}10`,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: `${theme.primary}30`,
+    },
+    navTitle: {
+      marginLeft: Spacing.md,
+    },
     header: {
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.md,

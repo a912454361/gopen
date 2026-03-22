@@ -9,6 +9,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
@@ -41,6 +42,7 @@ const NOTIFICATION_ICONS: Record<string, { icon: string; color: string }> = {
 export default function NotificationsScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,6 +132,14 @@ export default function NotificationsScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      {/* 导航栏 */}
+      <View style={styles.navBar}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+        </TouchableOpacity>
+        <ThemedText variant="h4" color={theme.textPrimary} style={styles.navTitle}>消息通知</ThemedText>
+      </View>
+      
       {/* Header */}
       <View style={styles.header}>
         <ThemedText variant="h4" color={theme.textPrimary}>消息通知</ThemedText>

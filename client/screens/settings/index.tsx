@@ -107,6 +107,12 @@ export default function SettingsScreen() {
   const shareMenuItems: MenuItem[] = [
     {
       icon: 'gift',
+      title: '奖励中心',
+      subtitle: '签到、任务、邀请赚奖励',
+      onPress: () => router.push('/rewards'),
+    },
+    {
+      icon: 'user-plus',
       title: '邀请好友',
       subtitle: '邀请好友，双方各得奖励',
       onPress: () => router.push('/invite'),

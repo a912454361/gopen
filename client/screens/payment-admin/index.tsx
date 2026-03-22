@@ -43,6 +43,8 @@ interface PendingOrder {
   confirmed_at: string;
 }
 
+type PayMethodType = 'alipay' | 'wechat' | 'jdpay';
+
 interface PaymentAccount {
   name: string;
   account: string;
@@ -81,7 +83,7 @@ export default function PaymentAdminScreen() {
   // 收款码管理
   const [paymentAccounts, setPaymentAccounts] = useState<Record<string, PaymentAccount> | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingPayType, setEditingPayType] = useState<'alipay' | 'wechat'>('alipay');
+  const [editingPayType, setEditingPayType] = useState<PayMethodType>('alipay');
   const [editForm, setEditForm] = useState({
     account: '',
     qrcodeUrl: '',
@@ -180,7 +182,7 @@ export default function PaymentAdminScreen() {
   };
 
   // 编辑收款码
-  const openEditModal = (payType: 'alipay' | 'wechat') => {
+  const openEditModal = (payType: PayMethodType) => {
     const account = paymentAccounts?.[payType];
     setEditingPayType(payType);
     setEditForm({
@@ -400,9 +402,14 @@ export default function PaymentAdminScreen() {
         ) : activeTab === 'qrcode' ? (
           // 收款码管理
           <View style={{ gap: Spacing.lg }}>
-            {['alipay', 'wechat'].map(payType => {
-              const account = paymentAccounts?.[payType as 'alipay' | 'wechat'];
-              const isAlipay = payType === 'alipay';
+            {(['alipay', 'wechat', 'jdpay'] as PayMethodType[]).map(payType => {
+              const account = paymentAccounts?.[payType];
+              const payMethodInfo = {
+                alipay: { name: '支付宝收款', icon: 'wallet', color: '#1677FF', bgColor: 'rgba(22,119,255,0.1)' },
+                wechat: { name: '微信收款', icon: 'message', color: '#07C160', bgColor: 'rgba(7,193,96,0.1)' },
+                jdpay: { name: '京东支付', icon: 'wallet', color: '#E1251B', bgColor: 'rgba(225,37,27,0.1)' },
+              };
+              const info = payMethodInfo[payType];
               return (
                 <View
                   key={payType}
@@ -419,14 +426,14 @@ export default function PaymentAdminScreen() {
                       width: 48,
                       height: 48,
                       borderRadius: BorderRadius.lg,
-                      backgroundColor: isAlipay ? 'rgba(22,119,255,0.1)' : 'rgba(7,193,96,0.1)',
+                      backgroundColor: info.bgColor,
                       justifyContent: 'center',
                       alignItems: 'center',
                     }}>
-                      <FontAwesome6 name={isAlipay ? 'wallet' : 'message'} size={24} color={isAlipay ? '#1677FF' : '#07C160'} />
+                      <FontAwesome6 name={info.icon as any} size={24} color={info.color} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <ThemedText variant="smallMedium" color={theme.textPrimary}>{account?.name || (isAlipay ? '支付宝收款' : '微信收款')}</ThemedText>
+                      <ThemedText variant="smallMedium" color={theme.textPrimary}>{account?.name || info.name}</ThemedText>
                       <ThemedText variant="caption" color={theme.textMuted}>{account?.account || '未配置账号'}</ThemedText>
                     </View>
                   </View>
@@ -461,7 +468,7 @@ export default function PaymentAdminScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, padding: Spacing.md, backgroundColor: theme.backgroundTertiary, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.border }}
-                      onPress={() => openEditModal(payType as 'alipay' | 'wechat')}
+                      onPress={() => openEditModal(payType)}
                     >
                       <FontAwesome6 name="pen" size={14} color={theme.textPrimary} />
                       <ThemedText variant="smallMedium" color={theme.textPrimary}>编辑</ThemedText>

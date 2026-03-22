@@ -764,7 +764,7 @@ router.get('/admin/info', async (req: Request, res: Response) => {
 // ==================== 管理员更新收款账户 ====================
 
 const updateAccountSchema = z.object({
-  payType: z.enum(['alipay', 'wechat']),
+  payType: z.enum(['alipay', 'wechat', 'jdpay']),
   account: z.string().min(1),
   qrcodeUrl: z.string().url(),
   realName: z.string().optional(),
@@ -787,13 +787,20 @@ router.post('/admin/accounts', async (req: Request, res: Response) => {
     
     const body = updateAccountSchema.parse(req.body);
     
+    // 获取支付方式名称
+    const payTypeNames: Record<string, string> = {
+      alipay: '支付宝收款',
+      wechat: '微信收款',
+      jdpay: '京东支付',
+    };
+    
     // 更新收款账户
     PAYMENT_ACCOUNTS[body.payType] = {
-      name: body.payType === 'alipay' ? '支付宝收款' : '微信收款',
+      name: payTypeNames[body.payType] || body.payType,
       account: body.account,
       qrcodeUrl: body.qrcodeUrl,
       realName: body.realName || PAYMENT_ACCOUNTS[body.payType].realName,
-      desc: body.desc || `请使用${body.payType === 'alipay' ? '支付宝' : '微信'}扫码支付`,
+      desc: body.desc || `请使用${payTypeNames[body.payType]}扫码支付`,
       color: PAYMENT_ACCOUNTS[body.payType].color,
       icon: PAYMENT_ACCOUNTS[body.payType].icon,
     };
@@ -824,13 +831,13 @@ router.post('/admin/accounts', async (req: Request, res: Response) => {
 router.post('/admin/qrcode/refresh', async (req: Request, res: Response) => {
   try {
     const adminKey = req.query.adminKey as string;
-    const payType = req.query.payType as 'alipay' | 'wechat';
+    const payType = req.query.payType as 'alipay' | 'wechat' | 'jdpay';
     
     if (!verifyAdmin(adminKey)) {
       return res.status(403).json({ error: '无权限' });
     }
     
-    if (!payType || !['alipay', 'wechat'].includes(payType)) {
+    if (!payType || !['alipay', 'wechat', 'jdpay'].includes(payType)) {
       return res.status(400).json({ error: '无效的支付类型' });
     }
     

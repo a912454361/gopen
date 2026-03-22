@@ -397,6 +397,7 @@ const PAYMENT_ACCOUNTS = {
     name: '京东支付',
     account: '',
     realName: '郭涛',
+    qrcodeUrl: 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F99.png&nonce=158b9b89-7d16-4189-a375-e38b5590cc7c&project_id=7618582614399647794&sign=c37e8836dcb32d4c9bc16de1bd8e7cc4f3e03a01d3a50543841f1d1208dc2aab',
   },
   bank: {
     name: '银行转账',
@@ -404,6 +405,7 @@ const PAYMENT_ACCOUNTS = {
     realName: '郭涛',
     bankName: '中国银行',
     bankBranch: '上海市黄渡支行',
+    qrcodeUrl: 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F99.png&nonce=158b9b89-7d16-4189-a375-e38b5590cc7c&project_id=7618582614399647794&sign=c37e8836dcb32d4c9bc16de1bd8e7cc4f3e03a01d3a50543841f1d1208dc2aab',
   },
 };
 

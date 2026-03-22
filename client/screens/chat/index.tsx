@@ -10,10 +10,12 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Text,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 // @ts-ignore - react-native-sse lacks proper type definitions
 import RNSSE from 'react-native-sse';
@@ -22,6 +24,7 @@ import { useMembership } from '@/contexts/MembershipContext';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
+import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
@@ -29,12 +32,19 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  saved?: boolean; // 是否已保存到作品库
+  saved?: boolean;
+}
+
+interface SelectedModel {
+  code: string;
+  name: string;
+  provider: string;
+  providerName: string;
+  pricing: { input: number; output: number; tier: string };
 }
 
 // 根据项目类型和服务类型生成创作提示词
 const generateProjectPrompt = (title: string, type: string, serviceType?: string): string => {
-  // 服务类型前缀
   const servicePrefix: Record<string, string> = {
     'scene': '【场景创作】',
     'character': '【角色设计】',
@@ -44,9 +54,8 @@ const generateProjectPrompt = (title: string, type: string, serviceType?: string
   
   const prefix = serviceType ? (servicePrefix[serviceType] || '') : '';
   
-  // 根据服务类型调整提示词
   if (serviceType === 'character') {
-    return `${prefix}请为《${title}》项目设计一个${type.replace(/场景|剧情/g, '角色')}。
+    return `${prefix}请为《${title}》项目设计一个角色。
 
 要求：
 1. 造型：符合${type}风格，细节精致
@@ -63,7 +72,7 @@ const generateProjectPrompt = (title: string, type: string, serviceType?: string
   }
   
   if (serviceType === 'story') {
-    return `${prefix}请为《${title}》项目构思一段${type.replace(/场景|角色/g, '剧情')}。
+    return `${prefix}请为《${title}》项目构思一段剧情。
 
 要求：
 1. 背景：符合${type}的世界观设定
@@ -90,189 +99,8 @@ const generateProjectPrompt = (title: string, type: string, serviceType?: string
 3. 音效设计建议（环境音、特效音）
 4. 整体音乐风格定位`;
   }
-  const stylePrompts: Record<string, string> = {
-    '古风场景': `请为《${title}》项目创作一个古风场景设计方案。
 
-要求：
-1. 场景氛围：江南水乡、青砖黛瓦、小桥流水
-2. 色调：以青灰、水墨色为主，点缀朱红
-3. 元素：古建筑、石桥、柳树、荷花、远山
-4. 光影：晨雾朦胧、夕照余晖可选
-5. 风格：写实与写意结合，富有诗意
-
-请输出：
-- 场景描述（200字）
-- 主要元素清单
-- 色彩搭配方案
-- 氛围营造建议`,
-
-    '古风角色': `请为《${title}》项目设计一个古风角色。
-
-要求：
-1. 造型：汉服风格，细节精致
-2. 配色：传统中国色，如黛青、绛紫、缃色
-3. 配饰：发簪、玉佩、折扇等
-4. 气质：温婉如玉或英气逼人
-5. 背景：与角色气质相符的场景暗示
-
-请输出：
-- 角色设定（姓名、性格、背景）
-- 外貌描述
-- 服装设计方案
-- 标志性特征`,
-
-    '国风热血': `请为《${title}》项目设计一个热血战斗场景。
-
-要求：
-1. 氛围：气势磅礴、热血沸腾
-2. 元素：刀光剑影、战旗飘扬、骏马奔腾
-3. 色调：以红黑金为主，突出热血感
-4. 动作：动态感强，张力十足
-5. 背景：战场、古城、山川可选
-
-请输出：
-- 战斗场景描述
-- 角色动作设计
-- 武器装备设定
-- 特效表现建议`,
-
-    '唯美风': `请为《${title}》项目设计一个唯美意境场景。
-
-要求：
-1. 氛围：空灵唯美、如梦似幻
-2. 元素：花瓣、流光、薄雾、月色
-3. 色调：淡粉、浅紫、月白为主
-4. 构图：留白与细节结合
-5. 情感：温婉、缱绻、诗意
-
-请输出：
-- 意境描述（诗意表达）
-- 视觉元素清单
-- 色彩情感分析
-- 光影设计`,
-
-    '仙侠唯美': `请为《${title}》项目设计一个仙侠唯美场景。
-
-要求：
-1. 氛围：仙气飘渺、超凡脱俗
-2. 元素：仙山、云海、瑶台、仙鹤
-3. 色调：以白、青、金为主，仙气感
-4. 光效：流光溢彩、祥云瑞气
-5. 风格：仙侠风，如梦如幻
-
-请输出：
-- 仙境场景描述
-- 仙家元素设计
-- 法术特效建议
-- 灵气氛围营造`,
-
-    '水墨场景': `请为《${title}》项目设计一个水墨风格场景。
-
-要求：
-1. 风格：传统水墨画风格
-2. 笔法：浓淡干湿、虚实结合
-3. 元素：山水、竹林、扁舟、渔翁
-4. 意境：淡泊宁静、禅意悠远
-5. 留白：适当留白，意境深远
-
-请输出：
-- 水墨场景构图
-- 笔墨技法建议
-- 意境表达
-- 题款位置建议`,
-
-    '古风剧情': `请为《${title}》项目构思一段古风剧情。
-
-要求：
-1. 背景：古代中国，朝代可选
-2. 人物：才子佳人、帝王将相
-3. 情节：曲折动人、情感真挚
-4. 语言：古风韵味，诗词点缀
-5. 主题：爱情、权谋、江湖可选
-
-请输出：
-- 故事梗概
-- 主要人物设定
-- 关键情节设计
-- 情感线索`,
-
-    '国风城池': `请为《${title}》项目设计一座国风古城。
-
-要求：
-1. 规模：皇城、府城、县城可选
-2. 布局：中轴对称、棋盘格局
-3. 建筑：宫殿、官署、民居、市井
-4. 防御：城墙、城门、角楼、护城河
-5. 氛围：繁华或萧瑟，符合剧情需要
-
-请输出：
-- 城池整体布局
-- 主要建筑群设计
-- 城市功能分区
-- 特色地标`,
-
-    '仙侠场景': `请为《${title}》项目设计一个仙侠场景。
-
-要求：
-1. 类型：仙山、洞府、秘境、战场
-2. 元素：灵气、仙草、阵法、法宝
-3. 氛围：神秘、庄严或激烈
-4. 光效：仙光流转、灵气氤氲
-5. 交互：修仙、斗法、探索功能
-
-请输出：
-- 场景整体描述
-- 灵气分布设定
-- 交互玩法设计
-- 特效表现方案`,
-
-    '国风场景': `请为《${title}》项目设计一个国风场景。
-
-要求：
-1. 风格：中国传统文化元素
-2. 元素：根据主题选择合适元素
-3. 色调：传统中国色系
-4. 氛围：典雅、大气或婉约
-5. 细节：传统纹样、书法题词
-
-请输出：
-- 场景设计理念
-- 文化元素运用
-- 色彩搭配方案
-- 细节装饰建议`,
-
-    '游戏角色': `请为《${title}》项目设计一个游戏角色。
-
-要求：
-1. 风格：符合游戏整体美术风格
-2. 特征：辨识度高，记忆点明确
-3. 动作：战斗姿态或休闲姿态
-4. 装备：武器、防具、配饰
-5. 背景：简要人物背景
-
-请输出：
-- 角色设定（姓名、职业、性格）
-- 外貌特征设计
-- 装备武器设计
-- 技能特效建议`,
-
-    '动漫场景': `请为《${title}》项目设计一个动漫场景。
-
-要求：
-1. 风格：日系动漫或国漫风格
-2. 透视：动态构图，视觉冲击力
-3. 色彩：饱和度高，明快或深沉
-4. 氛围：根据剧情需要
-5. 细节：精良的背景绘制
-
-请输出：
-- 场景构图设计
-- 色彩氛围设定
-- 光影处理方案
-- 细节绘制要点`,
-  };
-
-  return stylePrompts[type] || `请为《${title}》项目进行创作设计。
+  return `请为《${title}》项目进行创作设计。
 
 项目类型：${type}
 
@@ -283,10 +111,22 @@ const generateProjectPrompt = (title: string, type: string, serviceType?: string
 - 实施方案`;
 };
 
+// 提供商颜色
+const PROVIDER_COLORS: Record<string, string> = {
+  openai: '#10A37F',
+  anthropic: '#D97706',
+  google: '#4285F4',
+  deepseek: '#0066FF',
+  doubao: '#3370FF',
+  qwen: '#FF6A00',
+  zhipu: '#1A73E8',
+  moonshot: '#6366F1',
+};
+
 export default function ChatScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { isMember, dailyChatCount, maxFreeChatsPerDay, incrementChatCount, canChat } = useMembership();
+  const { isMember, isSuperMember, dailyChatCount, maxFreeChatsPerDay, incrementChatCount } = useMembership();
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ 
     projectId?: string; 
@@ -297,7 +137,7 @@ export default function ChatScreen() {
   }>();
   const { projectTitle, projectType, serviceType, autoCreate } = params;
 
-  // 计算初始提示词和项目信息
+  // 计算初始提示词
   const initialGuideData = useMemo(() => {
     if (autoCreate && projectTitle && projectType) {
       return {
@@ -311,25 +151,80 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  
-  // 引导模式状态 - 显示提示词预览，等待用户确认
   const [showGuide, setShowGuide] = useState(initialGuideData.shouldShow);
   const [guidePrompt, setGuidePrompt] = useState(initialGuideData.prompt);
-  
   const [isLoading, setIsLoading] = useState(false);
   const [currentProject, setCurrentProject] = useState<{title: string; type: string} | null>(initialGuideData.project);
-  const [savingMessageId, setSavingMessageId] = useState<string | null>(null); // 正在保存的消息ID
+  const [savingMessageId, setSavingMessageId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // 模型选择相关状态
+  const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [availableModels, setAvailableModels] = useState<SelectedModel[]>([]);
+  
   const scrollViewRef = useRef<ScrollView>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sseRef = useRef<any>(null);
   const typingAnim = useMemo(() => new Animated.Value(1), []);
 
-  // 获取用户ID
+  // 获取用户ID和模型
   useEffect(() => {
     AsyncStorage.getItem('userId').then(setUserId);
+    loadSelectedModel();
+    fetchAvailableModels();
   }, []);
 
+  // 页面获得焦点时刷新选中的模型
+  useFocusEffect(
+    useCallback(() => {
+      loadSelectedModel();
+    }, [])
+  );
+
+  /**
+   * 加载用户选择的模型
+   */
+  const loadSelectedModel = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('selectedModel');
+      if (saved) {
+        setSelectedModel(JSON.parse(saved));
+      } else {
+        // 默认使用豆包模型
+        setSelectedModel({
+          code: 'doubao-pro-32k',
+          name: '豆包 Pro 32K',
+          provider: 'doubao',
+          providerName: '豆包',
+          pricing: { input: 80, output: 200, tier: 'standard' },
+        });
+      }
+    } catch (error) {
+      console.error('Load selected model error:', error);
+    }
+  };
+
+  /**
+   * 获取可用模型列表
+   * 服务端文件：server/src/routes/ai-gateway.ts
+   * 接口：GET /api/v1/ai/models?type=text
+   */
+  const fetchAvailableModels = async () => {
+    try {
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ai/models?type=text`);
+      const data = await res.json();
+      
+      if (data.success && data.data) {
+        setAvailableModels(data.data.filter((m: any) => 
+          m.category === 'text' || m.category === 'multimodal'
+        ));
+      }
+    } catch (error) {
+      console.error('Fetch models error:', error);
+    }
+  };
+
+  // 打字动画
   useEffect(() => {
     if (isLoading) {
       Animated.loop(
@@ -351,6 +246,7 @@ export default function ChatScreen() {
     }
   }, [isLoading]);
 
+  // 清理SSE连接
   useEffect(() => {
     return () => {
       if (sseRef.current) {
@@ -359,11 +255,46 @@ export default function ChatScreen() {
     };
   }, []);
 
-  // 确认发送 - 用户点击确认后开始创作
+  // 检查模型权限
+  const checkModelAccess = (model: SelectedModel): boolean => {
+    if (model.pricing.tier === 'enterprise' && !isSuperMember) {
+      Alert.alert(
+        '需要超级会员',
+        '该模型需要超级会员才能使用',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '升级会员', onPress: () => router.push('/membership') },
+        ]
+      );
+      return false;
+    }
+    if (model.pricing.tier === 'premium' && !isMember) {
+      Alert.alert(
+        '需要会员',
+        '该模型需要普通会员才能使用',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '升级会员', onPress: () => router.push('/membership') },
+        ]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  // 选择模型
+  const handleSelectModel = (model: SelectedModel) => {
+    if (!checkModelAccess(model)) return;
+    
+    setSelectedModel(model);
+    AsyncStorage.setItem('selectedModel', JSON.stringify(model));
+    setShowModelPicker(false);
+  };
+
+  // 确认发送
   const handleConfirmGuide = () => {
     setShowGuide(false);
     setInputText(guidePrompt);
-    // 短暂延迟后发送
     setTimeout(() => {
       handleSendWithText(guidePrompt);
     }, 100);
@@ -375,7 +306,7 @@ export default function ChatScreen() {
     setGuidePrompt('');
   };
 
-  // 新对话 - 清空历史记录
+  // 新对话
   const handleNewChat = () => {
     if (messages.length === 0) return;
     
@@ -388,11 +319,9 @@ export default function ChatScreen() {
           text: '确定', 
           style: 'destructive',
           onPress: () => {
-            // 关闭可能存在的SSE连接
             if (sseRef.current) {
               sseRef.current.close();
             }
-            // 清空消息和状态
             setMessages([]);
             setInputText('');
             setIsLoading(false);
@@ -405,11 +334,10 @@ export default function ChatScreen() {
     );
   };
 
-  // 带文本参数的发送函数
+  // 发送消息
   const handleSendWithText = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() || isLoading || !selectedModel) return;
 
-    // Check if user can chat (member or has free chats left)
     const allowed = await incrementChatCount();
     if (!allowed) {
       Alert.alert(
@@ -426,7 +354,7 @@ export default function ChatScreen() {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputText.trim(),
+      content: text.trim(),
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -437,19 +365,31 @@ export default function ChatScreen() {
     setMessages(prev => [...prev, { id: aiMessageId, role: 'assistant', content: '' }]);
 
     try {
-      const url = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/chat/stream`;
+      // 使用新的统一AI网关接口
+      const url = `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ai/chat/stream`;
 
       const sse = new RNSSE(url, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: userMessage.content }),
+        body: JSON.stringify({ 
+          userId: userId || 'anonymous',
+          model: selectedModel.code,
+          messages: [
+            { 
+              role: 'system', 
+              content: '你是 G open AI，一个专业的游戏和动漫创作助手。你帮助用户设计角色、场景、剧情和游戏机制。你要富有创意、详细具体、充满启发性。请使用中文回复用户。'
+            },
+            ...messages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content: userMessage.content }
+          ],
+          stream: true,
+        }),
         method: 'POST',
       });
 
       sseRef.current = sse;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sse.addEventListener('message', (event: any) => {
         const data = event.data;
         if (data === '[DONE]') {
@@ -470,7 +410,6 @@ export default function ChatScreen() {
             );
           }
         } catch {
-          // Handle plain text chunks
           if (data && data !== '[DONE]') {
             setMessages(prev =>
               prev.map(msg =>
@@ -483,7 +422,6 @@ export default function ChatScreen() {
         }
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sse.addEventListener('error', (_event: any) => {
         setMessages(prev =>
           prev.map(msg =>
@@ -499,17 +437,12 @@ export default function ChatScreen() {
       console.error('Chat error:', error);
       setMessages(prev => [
         ...prev.slice(0, -1),
-        {
-          id: aiMessageId,
-          role: 'assistant',
-          content: '连接错误，请重试',
-        },
+        { id: aiMessageId, role: 'assistant', content: '连接错误，请重试' },
       ]);
       setIsLoading(false);
     }
   };
 
-  // 普通发送 - 从输入框发送
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
     const textToSend = inputText;
@@ -517,18 +450,13 @@ export default function ChatScreen() {
     await handleSendWithText(textToSend);
   };
 
-  // 保存作品到作品库
+  // 保存作品
   const handleSaveWork = async (message: Message) => {
     if (!userId || message.saved || savingMessageId === message.id) return;
 
     setSavingMessageId(message.id);
 
     try {
-      /**
-       * 服务端文件：server/src/routes/works.ts
-       * 接口：POST /api/v1/works
-       * Body 参数：user_id: string, project_id?: string, project_title?: string, project_type?: string, service_type?: string, service_name?: string, content: string, content_type?: string, image_url?: string
-       */
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -547,7 +475,6 @@ export default function ChatScreen() {
       const result = await response.json();
 
       if (result.success) {
-        // 标记消息已保存
         setMessages(prev =>
           prev.map(msg =>
             msg.id === message.id ? { ...msg, saved: true } : msg
@@ -580,19 +507,14 @@ export default function ChatScreen() {
   ];
 
   const remainingChats = isMember ? '无限' : maxFreeChatsPerDay - dailyChatCount;
+  const providerColor = selectedModel ? (PROVIDER_COLORS[selectedModel.provider] || theme.primary) : theme.primary;
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
       {/* 引导确认Modal */}
-      <Modal
-        visible={showGuide}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCancelGuide}
-      >
+      <Modal visible={showGuide} transparent animationType="slide" onRequestClose={handleCancelGuide}>
         <View style={styles.guideOverlay}>
           <View style={[styles.guideModal, { backgroundColor: theme.backgroundDefault }]}>
-            {/* 标题 */}
             <View style={styles.guideHeader}>
               <View style={[styles.guideIconWrap, { backgroundColor: `${theme.primary}20` }]}>
                 <FontAwesome6 name="wand-magic-sparkles" size={24} color={theme.primary} />
@@ -607,19 +529,15 @@ export default function ChatScreen() {
               </View>
             </View>
 
-            {/* 提示词预览 */}
             <View style={styles.guideContent}>
               <ThemedText variant="labelSmall" color={theme.textMuted}>
                 即将发送的创作提示：
               </ThemedText>
               <ScrollView style={styles.guidePromptWrap} nestedScrollEnabled>
-                <ThemedText variant="body" color={theme.textPrimary}>
-                  {guidePrompt}
-                </ThemedText>
+                <ThemedText variant="body" color={theme.textPrimary}>{guidePrompt}</ThemedText>
               </ScrollView>
             </View>
 
-            {/* 提示信息 */}
             <View style={[styles.guideTip, { backgroundColor: theme.backgroundTertiary }]}>
               <FontAwesome6 name="lightbulb" size={16} color={theme.accent} />
               <ThemedText variant="caption" color={theme.textSecondary}>
@@ -627,7 +545,6 @@ export default function ChatScreen() {
               </ThemedText>
             </View>
 
-            {/* 操作按钮 */}
             <View style={styles.guideActions}>
               <TouchableOpacity 
                 style={[styles.guideButton, styles.guideCancelButton, { borderColor: theme.border }]}
@@ -643,6 +560,86 @@ export default function ChatScreen() {
                 <ThemedText variant="label" color="#fff">确认开始创作</ThemedText>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 模型选择Modal */}
+      <Modal visible={showModelPicker} transparent animationType="slide" onRequestClose={() => setShowModelPicker(false)}>
+        <View style={styles.guideOverlay}>
+          <View style={[styles.guideModal, { backgroundColor: theme.backgroundDefault, maxHeight: '80%' }]}>
+            <View style={styles.guideHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>选择模型</ThemedText>
+              <TouchableOpacity onPress={() => setShowModelPicker(false)}>
+                <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 400 }}>
+              {availableModels.map((model) => {
+                const color = PROVIDER_COLORS[model.provider] || theme.primary;
+                const isSelected = selectedModel?.code === model.code;
+                const isLocked = (model.pricing.tier === 'enterprise' && !isSuperMember) ||
+                                (model.pricing.tier === 'premium' && !isMember);
+                
+                return (
+                  <TouchableOpacity
+                    key={model.code}
+                    style={[
+                      styles.modelPickerItem,
+                      { borderColor: isSelected ? color : theme.border, borderWidth: isSelected ? 2 : 1 },
+                    ]}
+                    onPress={() => handleSelectModel(model)}
+                    disabled={isLocked}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={[styles.modelPickerIcon, { backgroundColor: color + '20' }]}>
+                        <FontAwesome6 name="brain" size={16} color={color} />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.name}</ThemedText>
+                          {model.pricing.tier === 'free' && (
+                            <View style={[styles.tierBadge, { backgroundColor: theme.success + '20' }]}>
+                              <Text style={{ color: theme.success, fontSize: 10 }}>免费</Text>
+                            </View>
+                          )}
+                          {model.pricing.tier === 'premium' && (
+                            <View style={[styles.tierBadge, { backgroundColor: '#D9770620' }]}>
+                              <Text style={{ color: '#D97706', fontSize: 10 }}>会员</Text>
+                            </View>
+                          )}
+                          {model.pricing.tier === 'enterprise' && (
+                            <View style={[styles.tierBadge, { backgroundColor: '#7C3AED20' }]}>
+                              <Text style={{ color: '#7C3AED', fontSize: 10 }}>超级会员</Text>
+                            </View>
+                          )}
+                        </View>
+                        <ThemedText variant="caption" color={theme.textMuted}>{model.providerName}</ThemedText>
+                      </View>
+                      {isLocked && <FontAwesome6 name="lock" size={14} color={theme.textMuted} />}
+                      {isSelected && !isLocked && <FontAwesome6 name="check" size={16} color={color} />}
+                    </View>
+                    <View style={{ flexDirection: 'row', marginTop: 8, gap: 16 }}>
+                      <ThemedText variant="caption" color={theme.textMuted}>
+                        输入: ¥{(model.pricing.input / 100).toFixed(2)}/百万
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>
+                        输出: ¥{(model.pricing.output / 100).toFixed(2)}/百万
+                      </ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={[styles.guideButton, { backgroundColor: theme.primary, marginTop: 16 }]}
+              onPress={() => router.push('/models')}
+            >
+              <FontAwesome6 name="grip" size={14} color="#fff" style={{ marginRight: 8 }} />
+              <ThemedText variant="label" color="#fff">查看全部模型</ThemedText>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -664,7 +661,6 @@ export default function ChatScreen() {
                   G open AI 创作助手
                 </ThemedText>
               </View>
-              {/* 新对话按钮 */}
               {messages.length > 0 && (
                 <TouchableOpacity 
                   style={[styles.newChatButton, { borderColor: theme.border }]}
@@ -682,9 +678,7 @@ export default function ChatScreen() {
               {isMember && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <FontAwesome6 name="crown" size={10} color={theme.primary} />
-                  <ThemedText variant="tiny" color={theme.primary}>
-                    会员
-                  </ThemedText>
+                  <ThemedText variant="tiny" color={theme.primary}>会员</ThemedText>
                 </View>
               )}
             </View>
@@ -696,16 +690,35 @@ export default function ChatScreen() {
             />
           </View>
 
-          {/* Usage indicator for free users */}
+          {/* 模型选择器 */}
+          <TouchableOpacity 
+            style={[styles.modelSelector, { borderColor: providerColor }]}
+            onPress={() => setShowModelPicker(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={[styles.modelSelectorIcon, { backgroundColor: providerColor + '20' }]}>
+                <FontAwesome6 name="brain" size={16} color={providerColor} />
+              </View>
+              <View style={{ marginLeft: 10 }}>
+                <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                  {selectedModel?.name || '选择模型'}
+                </ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  {selectedModel?.providerName || '点击选择'}
+                </ThemedText>
+              </View>
+            </View>
+            <FontAwesome6 name="chevron-down" size={14} color={theme.textMuted} />
+          </TouchableOpacity>
+
+          {/* Usage indicator */}
           {!isMember && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <ThemedText variant="caption" color={theme.textMuted}>
                 今日剩余对话：{remainingChats} 次
               </ThemedText>
               <TouchableOpacity onPress={() => router.push('/membership')}>
-                <ThemedText variant="captionMedium" color={theme.primary}>
-                  升级会员
-                </ThemedText>
+                <ThemedText variant="captionMedium" color={theme.primary}>升级会员</ThemedText>
               </TouchableOpacity>
             </View>
           )}
@@ -716,9 +729,7 @@ export default function ChatScreen() {
               <View style={styles.emptyIcon}>
                 <FontAwesome6 name="robot" size={32} color={theme.primary} />
               </View>
-              <ThemedText variant="h3" color={theme.textPrimary}>
-                准备开始创作
-              </ThemedText>
+              <ThemedText variant="h3" color={theme.textPrimary}>准备开始创作</ThemedText>
               <ThemedText variant="body" color={theme.textMuted}>
                 描述你的游戏或动漫项目，让 AI 为你实现创意愿景
               </ThemedText>
@@ -729,9 +740,7 @@ export default function ChatScreen() {
                     style={styles.quickAction}
                     onPress={() => handleQuickAction(action)}
                   >
-                    <ThemedText variant="small" color={theme.textSecondary}>
-                      {action}
-                    </ThemedText>
+                    <ThemedText variant="small" color={theme.textSecondary}>{action}</ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -762,7 +771,6 @@ export default function ChatScreen() {
                       {message.content}
                     </ThemedText>
                   </View>
-                  {/* AI消息下方显示保存按钮 */}
                   {message.role === 'assistant' && message.content.length > 50 && !isLoading && (
                     <View style={styles.messageActions}>
                       <TouchableOpacity
@@ -783,10 +791,7 @@ export default function ChatScreen() {
                               size={12}
                               color={message.saved ? theme.success : theme.primary}
                             />
-                            <ThemedText
-                              variant="captionMedium"
-                              color={message.saved ? theme.success : theme.primary}
-                            >
+                            <ThemedText variant="captionMedium" color={message.saved ? theme.success : theme.primary}>
                               {message.saved ? '已保存' : '保存到作品库'}
                             </ThemedText>
                           </>
@@ -798,9 +803,7 @@ export default function ChatScreen() {
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
                 <View style={[styles.messageWrapper, styles.aiMessageWrapper]}>
-                  <ThemedText variant="labelSmall" color={theme.primary}>
-                    G open AI
-                  </ThemedText>
+                  <ThemedText variant="labelSmall" color={theme.primary}>G open AI</ThemedText>
                   <View style={[styles.messageBubble, styles.aiMessage, styles.typingIndicator]}>
                     <Animated.View style={[styles.typingDot, { opacity: typingAnim }]} />
                     <Animated.View style={[styles.typingDot, { opacity: typingAnim }]} />

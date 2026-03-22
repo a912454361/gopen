@@ -23,11 +23,32 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'space-between',
       marginBottom: Spacing.xl,
     },
+    statsOverview: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+    statItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    statDivider: {
+      width: 1,
+      height: 30,
+      backgroundColor: theme.border,
+    },
     filterRow: {
       flexDirection: 'row',
       gap: Spacing.sm,
     },
     filterChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
       borderRadius: BorderRadius.full,
@@ -80,6 +101,13 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.xs,
       paddingVertical: 2,
       borderRadius: BorderRadius.xs,
+    },
+    selectedBadge: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     modelFooter: {
       flexDirection: 'row',

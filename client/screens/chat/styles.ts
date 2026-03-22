@@ -294,5 +294,41 @@ export const createStyles = (theme: Theme) => {
     saveButtonSaved: {
       backgroundColor: 'rgba(16,185,129,0.1)',
     },
+    // 模型选择器
+    modelSelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.md,
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.md,
+      borderWidth: 2,
+      marginBottom: Spacing.lg,
+    },
+    modelSelectorIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: BorderRadius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    // 模型选择器弹窗
+    modelPickerItem: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.md,
+      backgroundColor: theme.backgroundDefault,
+      marginBottom: Spacing.sm,
+    },
+    modelPickerIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: BorderRadius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    tierBadge: {
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.xs,
+    },
   });
 };

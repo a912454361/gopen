@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -9,12 +9,15 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Text,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
@@ -24,6 +27,16 @@ import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+// 图像模型接口
+interface ImageModel {
+  code: string;
+  name: string;
+  provider: string;
+  providerName: string;
+  pricing: { input: number; output: number; tier: string };
+  description?: string;
+}
 
 // 图像风格配置
 const IMAGE_STYLES = [
@@ -37,9 +50,9 @@ const IMAGE_STYLES = [
 
 // 图像尺寸配置
 const IMAGE_SIZES = [
-  { id: 'square', name: '1:1', width: 512, height: 512, desc: '方形' },
-  { id: 'portrait', name: '3:4', width: 512, height: 682, desc: '竖版' },
-  { id: 'landscape', name: '4:3', width: 682, height: 512, desc: '横版' },
+  { id: '1024x1024', name: '1:1', width: 1024, height: 1024, desc: '方形' },
+  { id: '1024x1792', name: '9:16', width: 1024, height: 1792, desc: '竖版' },
+  { id: '1792x1024', name: '16:9', width: 1792, height: 1024, desc: '横版' },
 ];
 
 // 示例提示词
@@ -50,26 +63,146 @@ const EXAMPLE_PROMPTS = [
   '国风热血战斗场景，剑气纵横，火焰环绕，气势磅礴',
 ];
 
+// 提供商颜色
+const PROVIDER_COLORS: Record<string, string> = {
+  openai: '#10A37F',
+  stability: '#9333EA',
+  zhipu: '#1A73E8',
+  qwen: '#FF6A00',
+};
+
 interface GeneratedImage {
   id: string;
   url: string;
   prompt: string;
   style: string;
+  model: string;
   createdAt: string;
 }
 
 export default function ImageGenScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { isMember } = useMembership();
+  const { isMember, isSuperMember } = useMembership();
   const router = useSafeRouter();
 
   const [prompt, setPrompt] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('guofeng');
-  const [selectedSize, setSelectedSize] = useState('square');
+  const [selectedSize, setSelectedSize] = useState('1024x1024');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // 模型选择
+  const [availableModels, setAvailableModels] = useState<ImageModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState<ImageModel | null>(null);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // 获取用户ID和模型列表
+  useEffect(() => {
+    AsyncStorage.getItem('userId').then(setUserId);
+    fetchImageModels();
+  }, []);
+
+  // 页面获得焦点时刷新模型
+  useFocusEffect(
+    useCallback(() => {
+      loadSelectedModel();
+    }, [])
+  );
+
+  /**
+   * 获取图像模型列表
+   * 服务端文件：server/src/routes/ai-gateway.ts
+   * 接口：GET /api/v1/ai/models?type=image
+   */
+  const fetchImageModels = async () => {
+    try {
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ai/models?type=image`);
+      const data = await res.json();
+      
+      if (data.success && data.data) {
+        setAvailableModels(data.data);
+        // 默认选择第一个可用模型
+        if (data.data.length > 0) {
+          loadSelectedModel(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Fetch image models error:', error);
+    }
+  };
+
+  // 加载用户选择的模型
+  const loadSelectedModel = async (models?: ImageModel[]) => {
+    try {
+      const saved = await AsyncStorage.getItem('selectedImageModel');
+      if (saved) {
+        const model = JSON.parse(saved);
+        setSelectedModel(model);
+      } else if (models && models.length > 0) {
+        // 默认选择第一个模型
+        setSelectedModel(models[0]);
+      }
+    } catch (error) {
+      console.error('Load selected image model error:', error);
+    }
+  };
+
+  // 选择模型
+  const handleSelectModel = (model: ImageModel) => {
+    // 检查权限
+    if (model.pricing.tier === 'enterprise' && !isSuperMember) {
+      Alert.alert(
+        '需要超级会员',
+        '该模型需要超级会员才能使用',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '升级会员', onPress: () => router.push('/membership') },
+        ]
+      );
+      return;
+    }
+    if (model.pricing.tier === 'premium' && !isMember) {
+      Alert.alert(
+        '需要会员',
+        '该模型需要普通会员才能使用',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '升级会员', onPress: () => router.push('/membership') },
+        ]
+      );
+      return;
+    }
+    
+    setSelectedModel(model);
+    AsyncStorage.setItem('selectedImageModel', JSON.stringify(model));
+    setShowModelPicker(false);
+  };
+
+  // 检查模型权限
+  const checkModelAccess = (): boolean => {
+    if (!selectedModel) {
+      Alert.alert('提示', '请先选择一个图像模型');
+      return false;
+    }
+    if (selectedModel.pricing.tier === 'enterprise' && !isSuperMember) {
+      Alert.alert('需要超级会员', '当前模型需要超级会员才能使用', [
+        { text: '取消', style: 'cancel' },
+        { text: '升级会员', onPress: () => router.push('/membership') },
+      ]);
+      return false;
+    }
+    if (selectedModel.pricing.tier === 'premium' && !isMember) {
+      Alert.alert('需要会员', '当前模型需要普通会员才能使用', [
+        { text: '取消', style: 'cancel' },
+        { text: '升级会员', onPress: () => router.push('/membership') },
+      ]);
+      return false;
+    }
+    return true;
+  };
 
   // 生成图像
   const handleGenerate = useCallback(async () => {
@@ -78,63 +211,65 @@ export default function ImageGenScreen() {
       return;
     }
 
-    // 会员检查
-    if (!isMember) {
-      Alert.alert(
-        '会员专享',
-        'AI图像生成功能仅限会员使用，升级会员解锁更多创作能力',
-        [
-          { text: '稍后再说', style: 'cancel' },
-          { text: '升级会员', onPress: () => router.push('/membership') },
-        ]
-      );
-      return;
-    }
+    if (!checkModelAccess()) return;
 
     setIsGenerating(true);
     setGeneratedImage(null);
 
     try {
-      const userId = await AsyncStorage.getItem('userId');
-      const sizeConfig = IMAGE_SIZES.find(s => s.id === selectedSize);
+      const styleInfo = IMAGE_STYLES.find(s => s.id === selectedStyle);
+      
+      // 构建增强后的提示词
+      const enhancedPrompt = `${styleInfo?.name || ''}风格：${prompt.trim()}`;
 
       /**
-       * 服务端文件：server/src/routes/image-gen.ts
-       * 接口：POST /api/v1/image-gen/generate
-       * Body 参数：prompt: string, style: string, width: number, height: number, user_id: string
+       * 服务端文件：server/src/routes/ai-gateway.ts
+       * 接口：POST /api/v1/ai/image
+       * Body 参数：userId: string, model: string, prompt: string, size: string, n: number, quality: string
        */
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/image-gen/generate`, {
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ai/image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: prompt.trim(),
-          style: selectedStyle,
-          width: sizeConfig?.width || 512,
-          height: sizeConfig?.height || 512,
-          user_id: userId,
+          userId: userId || 'anonymous',
+          model: selectedModel?.code,
+          prompt: enhancedPrompt,
+          size: selectedSize,
+          n: 1,
+          quality: 'standard',
         }),
       });
 
       const result = await response.json();
 
-      if (result.success && result.data?.image_url) {
-        setGeneratedImage({
-          id: result.data.id || Date.now().toString(),
-          url: result.data.image_url,
-          prompt: prompt.trim(),
-          style: selectedStyle,
-          createdAt: new Date().toISOString(),
-        });
+      if (result.success && result.data) {
+        // 根据不同模型处理返回数据
+        const imageUrl = result.data.url || 
+                        result.data.data?.[0]?.url || 
+                        result.data.image_url;
+        
+        if (imageUrl) {
+          setGeneratedImage({
+            id: Date.now().toString(),
+            url: imageUrl,
+            prompt: prompt.trim(),
+            style: selectedStyle,
+            model: selectedModel?.name || 'unknown',
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          throw new Error('未获取到图像URL');
+        }
       } else {
         throw new Error(result.error || '生成失败');
       }
     } catch (error) {
       console.error('Generate image error:', error);
-      Alert.alert('生成失败', '请稍后重试，或检查网络连接');
+      Alert.alert('生成失败', error instanceof Error ? error.message : '请稍后重试');
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, selectedStyle, selectedSize, isMember, router]);
+  }, [prompt, selectedStyle, selectedSize, selectedModel, userId]);
 
   // 保存到相册
   const handleSaveToGallery = useCallback(async () => {
@@ -142,18 +277,14 @@ export default function ImageGenScreen() {
 
     setIsSaving(true);
     try {
-      // 请求相册权限
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('权限不足', '需要相册权限才能保存图片');
         return;
       }
 
-      // 下载图片到本地
       const localUri = `${(FileSystem as any).documentDirectory}image_${Date.now()}.jpg`;
       const downloadResult = await (FileSystem as any).downloadAsync(generatedImage.url, localUri);
-
-      // 保存到相册
       await MediaLibrary.createAssetAsync(downloadResult.uri);
 
       Alert.alert('保存成功', '图片已保存到相册');
@@ -171,14 +302,8 @@ export default function ImageGenScreen() {
 
     setIsSaving(true);
     try {
-      const userId = await AsyncStorage.getItem('userId');
       const styleName = IMAGE_STYLES.find(s => s.id === selectedStyle)?.name || selectedStyle;
 
-      /**
-       * 服务端文件：server/src/routes/works.ts
-       * 接口：POST /api/v1/works
-       * Body 参数：user_id: string, project_title: string, project_type: string, content: string, content_type: string, image_url: string
-       */
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/works`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,7 +312,7 @@ export default function ImageGenScreen() {
           project_title: `AI图像 - ${styleName}`,
           project_type: 'AI图像生成',
           service_type: 'image-gen',
-          service_name: 'AI图像创作',
+          service_name: `${generatedImage.model}图像创作`,
           content: generatedImage.prompt,
           content_type: 'image',
           image_url: generatedImage.url,
@@ -210,15 +335,93 @@ export default function ImageGenScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [generatedImage, selectedStyle, router]);
+  }, [generatedImage, selectedStyle, userId, router]);
 
-  // 使用示例提示词
   const handleUseExample = (example: string) => {
     setPrompt(example);
   };
 
+  const providerColor = selectedModel ? (PROVIDER_COLORS[selectedModel.provider] || theme.primary) : theme.primary;
+
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      {/* 模型选择Modal */}
+      <Modal visible={showModelPicker} transparent animationType="slide" onRequestClose={() => setShowModelPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h3" color={theme.textPrimary}>选择图像模型</ThemedText>
+              <TouchableOpacity onPress={() => setShowModelPicker(false)}>
+                <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 400 }}>
+              {availableModels.map((model) => {
+                const color = PROVIDER_COLORS[model.provider] || theme.primary;
+                const isSelected = selectedModel?.code === model.code;
+                const isLocked = (model.pricing.tier === 'enterprise' && !isSuperMember) ||
+                                (model.pricing.tier === 'premium' && !isMember);
+                
+                return (
+                  <TouchableOpacity
+                    key={model.code}
+                    style={[
+                      styles.modelPickerItem,
+                      { borderColor: isSelected ? color : theme.border, borderWidth: isSelected ? 2 : 1 },
+                    ]}
+                    onPress={() => handleSelectModel(model)}
+                    disabled={isLocked}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={[styles.modelPickerIcon, { backgroundColor: color + '20' }]}>
+                        <FontAwesome6 name="image" size={16} color={color} />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.name}</ThemedText>
+                          {model.pricing.tier === 'free' && (
+                            <View style={[styles.tierBadge, { backgroundColor: theme.success + '20' }]}>
+                              <Text style={{ color: theme.success, fontSize: 10 }}>免费</Text>
+                            </View>
+                          )}
+                          {model.pricing.tier === 'premium' && (
+                            <View style={[styles.tierBadge, { backgroundColor: '#D9770620' }]}>
+                              <Text style={{ color: '#D97706', fontSize: 10 }}>会员</Text>
+                            </View>
+                          )}
+                          {model.pricing.tier === 'enterprise' && (
+                            <View style={[styles.tierBadge, { backgroundColor: '#7C3AED20' }]}>
+                              <Text style={{ color: '#7C3AED', fontSize: 10 }}>超级会员</Text>
+                            </View>
+                          )}
+                        </View>
+                        <ThemedText variant="caption" color={theme.textMuted}>{model.providerName}</ThemedText>
+                      </View>
+                      {isLocked && <FontAwesome6 name="lock" size={14} color={theme.textMuted} />}
+                      {isSelected && !isLocked && <FontAwesome6 name="check" size={16} color={color} />}
+                    </View>
+                    <View style={{ marginTop: 8 }}>
+                      <ThemedText variant="caption" color={theme.textMuted}>
+                        约 ¥{(model.pricing.input / 100).toFixed(2)}/张
+                      </ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={[styles.modalButton, { backgroundColor: theme.primary }]}
+              onPress={() => router.push('/models')}
+            >
+              <FontAwesome6 name="grip" size={14} color="#fff" style={{ marginRight: 8 }} />
+              <ThemedText variant="label" color="#fff">查看全部模型</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -248,18 +451,26 @@ export default function ImageGenScreen() {
             />
           </View>
 
-          {/* 会员提示 */}
-          {!isMember && (
-            <View style={[styles.memberTip, { backgroundColor: theme.backgroundTertiary, borderColor: theme.border }]}>
-              <FontAwesome6 name="crown" size={16} color={theme.primary} />
-              <ThemedText variant="small" color={theme.textSecondary} style={{ flex: 1, marginLeft: 8 }}>
-                AI图像生成功能仅限会员使用
-              </ThemedText>
-              <TouchableOpacity onPress={() => router.push('/membership')}>
-                <ThemedText variant="smallMedium" color={theme.primary}>升级</ThemedText>
-              </TouchableOpacity>
+          {/* 模型选择器 */}
+          <TouchableOpacity 
+            style={[styles.modelSelector, { borderColor: providerColor }]}
+            onPress={() => setShowModelPicker(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <View style={[styles.modelSelectorIcon, { backgroundColor: providerColor + '20' }]}>
+                <FontAwesome6 name="image" size={16} color={providerColor} />
+              </View>
+              <View style={{ marginLeft: 10 }}>
+                <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                  {selectedModel?.name || '选择模型'}
+                </ThemedText>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  {selectedModel?.providerName || '点击选择'}
+                </ThemedText>
+              </View>
             </View>
-          )}
+            <FontAwesome6 name="chevron-down" size={14} color={theme.textMuted} />
+          </TouchableOpacity>
 
           {/* 输入区域 */}
           <View style={styles.inputSection}>
@@ -352,12 +563,12 @@ export default function ImageGenScreen() {
 
           {/* 生成按钮 */}
           <TouchableOpacity
-            style={[styles.generateButton, !prompt.trim() && styles.generateButtonDisabled]}
+            style={[styles.generateButton, (!prompt.trim() || !selectedModel) && styles.generateButtonDisabled]}
             onPress={handleGenerate}
-            disabled={!prompt.trim() || isGenerating}
+            disabled={!prompt.trim() || isGenerating || !selectedModel}
           >
             <LinearGradient
-              colors={prompt.trim() ? [theme.primary, theme.accent] : ['#374151', '#4B5563']}
+              colors={prompt.trim() && selectedModel ? [theme.primary, theme.accent] : ['#374151', '#4B5563']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.generateButtonGradient}
@@ -373,6 +584,16 @@ export default function ImageGenScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
+          {/* 价格提示 */}
+          {selectedModel && (
+            <View style={styles.priceHint}>
+              <FontAwesome6 name="circle-info" size={12} color={theme.textMuted} />
+              <ThemedText variant="caption" color={theme.textMuted}>
+                预计消费：约 ¥{(selectedModel.pricing.input / 100).toFixed(2)}/张
+              </ThemedText>
+            </View>
+          )}
+
           {/* 生成结果 */}
           {generatedImage && (
             <View style={styles.resultSection}>
@@ -387,9 +608,14 @@ export default function ImageGenScreen() {
                   <ThemedText variant="small" color={theme.textPrimary} numberOfLines={2}>
                     {generatedImage.prompt}
                   </ThemedText>
-                  <ThemedText variant="tiny" color={theme.textMuted}>
-                    {IMAGE_STYLES.find(s => s.id === generatedImage.style)?.name || generatedImage.style}
-                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                    <ThemedText variant="tiny" color={theme.textMuted}>
+                      {IMAGE_STYLES.find(s => s.id === generatedImage.style)?.name}
+                    </ThemedText>
+                    <ThemedText variant="tiny" color={theme.textMuted}>
+                      | {generatedImage.model}
+                    </ThemedText>
+                  </View>
                 </View>
                 <View style={styles.resultActions}>
                   <TouchableOpacity

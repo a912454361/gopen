@@ -1,39 +1,16 @@
+/**
+ * AI 网关路由（升级版）
+ * 整合统一模型适配器架构，保留会员权限和计费逻辑
+ */
+
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { getSupabaseClient } from '../storage/database/supabase-client.js';
+import ModelService, { type ChatRequest } from '../services/model-service.js';
+import { AVAILABLE_MODELS, MODEL_PROVIDERS } from '../config/model-providers.js';
 
 const router = Router();
 const client = getSupabaseClient();
-
-// ==================== AI 提供商配置 ====================
-
-interface AIProviderConfig {
-  name: string;
-  baseUrl: string;
-  apiKey: string;
-  models: string[];
-}
-
-const AI_PROVIDERS: Record<string, AIProviderConfig> = {
-  doubao: {
-    name: '豆包',
-    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-    apiKey: process.env.DOUBAO_API_KEY || '',
-    models: ['doubao-pro-32k', 'doubao-lite-4k', 'doubao-pro-128k'],
-  },
-  openai: {
-    name: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-    apiKey: process.env.OPENAI_API_KEY || '',
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  },
-  anthropic: {
-    name: 'Anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
-    models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-  },
-};
 
 // ==================== 聊天补全 ====================
 
@@ -42,7 +19,14 @@ const chatSchema = z.object({
   model: z.string(),
   messages: z.array(z.object({
     role: z.enum(['system', 'user', 'assistant']),
-    content: z.string(),
+    content: z.union([
+      z.string(),
+      z.array(z.object({
+        type: z.enum(['text', 'image_url']),
+        text: z.string().optional(),
+        image_url: z.object({ url: z.string() }).optional(),
+      })),
+    ]),
   })),
   temperature: z.number().min(0).max(2).optional().default(0.7),
   maxTokens: z.number().int().min(1).max(128000).optional().default(4096),
@@ -59,15 +43,9 @@ router.post('/chat', async (req: Request, res: Response) => {
     const body = chatSchema.parse(req.body);
     
     // 1. 获取模型配置
-    const { data: modelConfig, error: modelError } = await client
-      .from('ai_models')
-      .select('*')
-      .eq('code', body.model)
-      .eq('status', 'active')
-      .single();
-    
-    if (modelError || !modelConfig) {
-      return res.status(404).json({ error: 'Model not found or unavailable' });
+    const modelInfo = AVAILABLE_MODELS.find(m => m.code === body.model);
+    if (!modelInfo) {
+      return res.status(404).json({ error: 'Model not found' });
     }
     
     // 2. 检查用户会员权限
@@ -81,45 +59,44 @@ router.post('/chat', async (req: Request, res: Response) => {
       (!user?.member_expire_at || new Date(user.member_expire_at) > new Date());
     const isSuperMember = user?.member_level === 'super';
     
-    if (modelConfig.super_member_only && !isSuperMember) {
-      return res.status(403).json({ error: 'This model requires Super Member' });
+    // 根据会员等级限制
+    if (modelInfo.superMemberOnly && !isSuperMember) {
+      return res.status(403).json({ error: '此模型仅限超级会员使用' });
     }
-    if (modelConfig.member_only && !isMember) {
-      return res.status(403).json({ error: 'This model requires Member' });
+    if (modelInfo.memberOnly && !isMember) {
+      return res.status(403).json({ error: '此模型需要会员权限' });
     }
     
     // 3. 检查余额（非免费模型）
-    if (!modelConfig.is_free) {
+    if (!modelInfo.isFree) {
       const { data: balance } = await client
         .from('user_balances')
         .select('balance')
         .eq('user_id', body.userId)
         .single();
       
-      if (!balance || balance.balance < 100) { // 至少1元
-        return res.status(402).json({ error: 'Insufficient balance' });
+      // 至少需要 1 元余额
+      if (!balance || balance.balance < 100) {
+        return res.status(402).json({ error: '余额不足，请充值' });
       }
     }
     
-    // 4. 获取提供商配置
-    const provider = AI_PROVIDERS[modelConfig.provider];
-    if (!provider || !provider.apiKey) {
-      return res.status(503).json({ error: 'AI provider not configured' });
-    }
-    
-    // 5. 调用 AI API
-    const requestBody = {
-      model: modelConfig.code,
-      messages: body.messages,
+    // 4. 调用统一模型服务
+    const request: ChatRequest = {
+      model: body.model,
+      messages: body.messages.map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : m.content,
+      })),
       temperature: body.temperature,
-      max_tokens: body.maxTokens,
+      maxTokens: body.maxTokens,
       stream: body.stream,
     };
     
     if (body.stream) {
       // 流式响应
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, no-transform, must-revalidate');
       res.setHeader('Connection', 'keep-alive');
       
       let inputTokens = 0;
@@ -127,115 +104,63 @@ router.post('/chat', async (req: Request, res: Response) => {
       let fullContent = '';
       
       try {
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${provider.apiKey}`,
+        await ModelService.chatStream(
+          request,
+          (chunk) => {
+            fullContent += chunk.content;
+            outputTokens = Math.ceil(fullContent.length / 4);
+            
+            res.write(`data: ${JSON.stringify({
+              content: chunk.content,
+              model: body.model,
+            })}\n\n`);
           },
-          body: JSON.stringify(requestBody),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`AI API error: ${response.status}`);
-        }
-        
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('No response body');
-        }
-        
-        const decoder = new TextDecoder();
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n').filter(line => line.trim() !== '');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') {
-                res.write('data: [DONE]\n\n');
-              } else {
-                try {
-                  const json = JSON.parse(data);
-                  const content = json.choices?.[0]?.delta?.content || '';
-                  fullContent += content;
-                  
-                  // 估算 token
-                  outputTokens = Math.ceil(fullContent.length / 4);
-                  
-                  // 转发给客户端
-                  res.write(`data: ${JSON.stringify({
-                    content,
-                    model: body.model,
-                  })}\n\n`);
-                } catch (e) {
-                  // 忽略解析错误
-                }
-              }
+          async () => {
+            // 估算输入 token
+            inputTokens = Math.ceil(JSON.stringify(body.messages).length / 4);
+            
+            // 扣费
+            if (!modelInfo.isFree) {
+              await deductFee(body.userId, modelInfo, inputTokens, outputTokens, body.projectId);
             }
+            
+            res.write('data: [DONE]\n\n');
+            res.end();
+          },
+          (error) => {
+            console.error('Stream error:', error);
+            res.write(`data: ${JSON.stringify({ error: '处理失败' })}\n\n`);
+            res.end();
           }
-        }
-        
-        // 估算输入 token
-        inputTokens = Math.ceil(JSON.stringify(body.messages).length / 4);
-        
-        // 扣费
-        if (!modelConfig.is_free) {
-          await deductFee(body.userId, modelConfig, inputTokens, outputTokens, body.projectId);
-        }
-        
-        res.end();
+        );
       } catch (error) {
-        console.error('Stream error:', error);
-        res.write(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`);
+        console.error('Chat stream error:', error);
+        res.write(`data: ${JSON.stringify({ error: '处理失败' })}\n\n`);
         res.end();
       }
     } else {
       // 非流式响应
-      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${provider.apiKey}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      if (!response.ok) {
-        return res.status(response.status).json({ error: 'AI API error' });
-      }
-      
-      const data = await response.json() as any;
-      
-      // 提取 token 使用量
-      const inputTokens = (data as any).usage?.prompt_tokens || 0;
-      const outputTokens = (data as any).usage?.completion_tokens || 0;
+      const response = await ModelService.chat(request);
       
       // 扣费
-      if (!modelConfig.is_free) {
-        await deductFee(body.userId, modelConfig, inputTokens, outputTokens, body.projectId);
+      if (!modelInfo.isFree) {
+        await deductFee(
+          body.userId, 
+          modelInfo, 
+          response.usage?.promptTokens || 0, 
+          response.usage?.completionTokens || 0, 
+          body.projectId
+        );
       }
       
       res.json({
         success: true,
-        data: {
-          content: (data as any).choices[0].message.content,
-          model: body.model,
-          usage: {
-            inputTokens,
-            outputTokens,
-          },
-        },
+        data: response,
       });
     }
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+    res.status(400).json({ error: error instanceof Error ? error.message : '请求无效' });
   }
 });
 
@@ -247,6 +172,7 @@ const imageSchema = z.object({
   prompt: z.string().min(1).max(4000),
   size: z.enum(['256x256', '512x512', '1024x1024', '1792x1024', '1024x1792']).optional().default('1024x1024'),
   n: z.number().int().min(1).max(4).optional().default(1),
+  quality: z.enum(['standard', 'hd']).optional().default('standard'),
   projectId: z.string().optional(),
 });
 
@@ -259,68 +185,45 @@ router.post('/image', async (req: Request, res: Response) => {
     const body = imageSchema.parse(req.body);
     
     // 1. 获取模型配置
-    const { data: modelConfig } = await client
-      .from('ai_models')
-      .select('*')
-      .eq('code', body.model)
-      .eq('category', 'image')
-      .eq('status', 'active')
-      .single();
-    
-    if (!modelConfig) {
-      return res.status(404).json({ error: 'Image model not found' });
+    const modelInfo = AVAILABLE_MODELS.find(m => m.code === body.model && m.category === 'image');
+    if (!modelInfo) {
+      return res.status(404).json({ error: '图像模型未找到' });
     }
     
-    // 2. 检查权限和余额
+    // 2. 检查余额
     const { data: balance } = await client
       .from('user_balances')
       .select('balance')
       .eq('user_id', body.userId)
       .single();
     
-    if (!balance || balance.balance < modelConfig.sell_input_price) {
-      return res.status(402).json({ error: 'Insufficient balance' });
+    // 计算费用（每张图按模型定价）
+    const feePerImage = modelInfo.outputPrice || 100; // 默认 1 元/张
+    const totalFee = feePerImage * body.n;
+    
+    if (!balance || balance.balance < totalFee) {
+      return res.status(402).json({ error: '余额不足' });
     }
     
-    // 3. 调用图像生成 API
-    const provider = AI_PROVIDERS[modelConfig.provider];
-    
-    const response = await fetch(`${provider.baseUrl}/images/generations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${provider.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: body.model,
-        prompt: body.prompt,
-        size: body.size,
-        n: body.n,
-      }),
+    // 3. 调用模型服务
+    const adapter = ModelService.getAdapter(modelInfo.provider);
+    const result = await adapter.imageGeneration(body.prompt, {
+      model: body.model,
+      size: body.size,
+      n: body.n,
+      quality: body.quality,
     });
     
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'Image generation failed' });
-    }
-    
-    const data = await response.json() as any;
-    
     // 4. 扣费
-    const fee = modelConfig.sell_input_price * body.n;
-    await deductFeeSimple(body.userId, fee, 'image', modelConfig.name, body.projectId);
+    await deductFeeSimple(body.userId, totalFee, 'image', modelInfo.name, body.projectId);
     
     res.json({
       success: true,
-      data: {
-        images: (data as any).data.map((img: any) => ({
-          url: img.url,
-          revisedPrompt: img.revised_prompt,
-        })),
-      },
+      data: result,
     });
   } catch (error) {
     console.error('Image generation error:', error);
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+    res.status(400).json({ error: error instanceof Error ? error.message : '请求无效' });
   }
 });
 
@@ -330,6 +233,7 @@ const audioTranscribeSchema = z.object({
   userId: z.string(),
   model: z.string().optional().default('whisper-1'),
   audioUrl: z.string().url(),
+  language: z.string().optional(),
   projectId: z.string().optional(),
 });
 
@@ -341,46 +245,145 @@ router.post('/audio/transcribe', async (req: Request, res: Response) => {
   try {
     const body = audioTranscribeSchema.parse(req.body);
     
-    // 获取音频文件
-    const audioResponse = await fetch(body.audioUrl);
-    const audioBuffer = await audioResponse.arrayBuffer();
-    
-    // 调用 Whisper API
-    const formData = new FormData();
-    formData.append('file', new Blob([audioBuffer]), 'audio.mp3');
-    formData.append('model', body.model);
-    
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'Transcription failed' });
+    // 1. 获取模型配置
+    const modelInfo = AVAILABLE_MODELS.find(m => m.code === body.model && m.category === 'audio');
+    if (!modelInfo) {
+      return res.status(404).json({ error: '音频模型未找到' });
     }
     
-    const data = await response.json() as any;
+    // 2. 调用模型服务
+    const adapter = ModelService.getAdapter(modelInfo.provider);
+    const result = await adapter.audioTranscription(body.audioUrl, {
+      model: body.model,
+      language: body.language,
+    });
     
-    // 计算费用（按时长或文件大小）
-    const audioSize = audioBuffer.byteLength;
-    const fee = Math.ceil(audioSize / 1024 / 1024 * 42); // ¥0.42/MB
-    
-    await deductFeeSimple(body.userId, fee, 'audio', 'Whisper', body.projectId);
+    // 3. 计费（按时长，这里简化处理）
+    const fee = 50; // 假设固定 0.5 元
+    await deductFeeSimple(body.userId, fee, 'audio', modelInfo.name, body.projectId);
     
     res.json({
       success: true,
-      data: {
-        text: (data as any).text,
-        duration: (data as any).duration,
-      },
+      data: result,
     });
   } catch (error) {
     console.error('Audio transcription error:', error);
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+    res.status(400).json({ error: error instanceof Error ? error.message : '请求无效' });
   }
+});
+
+// ==================== 文字转语音 ====================
+
+const ttsSchema = z.object({
+  userId: z.string(),
+  model: z.string().optional().default('tts-1'),
+  text: z.string().min(1).max(4000),
+  voice: z.string().optional().default('alloy'),
+  projectId: z.string().optional(),
+});
+
+/**
+ * 文字转语音
+ * POST /api/v1/ai/audio/synthesize
+ */
+router.post('/audio/synthesize', async (req: Request, res: Response) => {
+  try {
+    const body = ttsSchema.parse(req.body);
+    
+    // 1. 获取模型配置
+    const modelInfo = AVAILABLE_MODELS.find(m => m.code === body.model && m.category === 'audio');
+    if (!modelInfo) {
+      return res.status(404).json({ error: 'TTS 模型未找到' });
+    }
+    
+    // 2. 调用模型服务
+    const adapter = ModelService.getAdapter(modelInfo.provider);
+    const audioBuffer = await adapter.textToSpeech(body.text, {
+      model: body.model,
+      voice: body.voice,
+    });
+    
+    // 3. 计费
+    const fee = Math.ceil(body.text.length / 100); // 每 100 字符 1 分钱
+    await deductFeeSimple(body.userId, fee, 'tts', modelInfo.name, body.projectId);
+    
+    // 4. 返回音频数据
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(Buffer.from(audioBuffer));
+  } catch (error) {
+    console.error('TTS error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : '请求无效' });
+  }
+});
+
+// ==================== 模型列表 ====================
+
+/**
+ * 获取可用模型列表
+ * GET /api/v1/ai/models
+ * Query: type?: 'text' | 'image' | 'audio' | 'video' | 'embedding'
+ */
+router.get('/models', async (req: Request, res: Response) => {
+  try {
+    const { type, provider } = req.query;
+    
+    let models = AVAILABLE_MODELS;
+    
+    // 按类型筛选（type 参数实际对应 category 字段）
+    if (type && typeof type === 'string') {
+      models = models.filter(m => m.category === type);
+    }
+    
+    // 按提供商筛选
+    if (provider && typeof provider === 'string') {
+      models = models.filter(m => m.provider === provider);
+    }
+    
+    // 转换为前端友好格式
+    const result = models.map(m => ({
+      code: m.code,
+      name: m.name,
+      provider: m.provider,
+      providerName: MODEL_PROVIDERS[m.provider]?.name || m.provider,
+      type: m.type,
+      category: m.category,
+      description: m.description || `${m.name} - ${m.provider}`,
+      pricing: {
+        input: m.inputPrice,
+        output: m.outputPrice,
+        tier: m.isFree ? 'free' : m.superMemberOnly ? 'enterprise' : m.memberOnly ? 'premium' : 'standard',
+      },
+    }));
+    
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Get models error:', error);
+    res.status(500).json({ error: '获取模型列表失败' });
+  }
+});
+
+/**
+ * 获取所有提供商
+ * GET /api/v1/ai/providers
+ */
+router.get('/providers', (req: Request, res: Response) => {
+  const providers = Object.entries(MODEL_PROVIDERS).map(([id, provider]) => ({
+    id,
+    name: provider.name,
+    models: AVAILABLE_MODELS.filter(m => m.provider === id).map(m => ({
+      code: m.code,
+      name: m.name,
+      type: m.type,
+    })),
+  }));
+  
+  res.json({
+    success: true,
+    data: providers,
+  });
 });
 
 // ==================== 辅助函数 ====================
@@ -390,49 +393,47 @@ router.post('/audio/transcribe', async (req: Request, res: Response) => {
  */
 async function deductFee(
   userId: string,
-  modelConfig: any,
+  modelInfo: any,
   inputTokens: number,
   outputTokens: number,
   projectId?: string
 ) {
-  // 计算成本价
-  const costInputFee = Math.ceil((inputTokens / 1000000) * modelConfig.cost_input_price);
-  const costOutputFee = Math.ceil((outputTokens / 1000000) * modelConfig.cost_output_price);
-  const costTotal = costInputFee + costOutputFee;
+  // 计算费用（厘为单位）
+  const inputFee = Math.ceil((inputTokens / 1000000) * (modelInfo.inputPrice || 0));
+  const outputFee = Math.ceil((outputTokens / 1000000) * (modelInfo.outputPrice || 0));
+  const totalFee = inputFee + outputFee;
   
-  // 计算售价
-  const sellInputFee = Math.ceil((inputTokens / 1000000) * modelConfig.sell_input_price);
-  const sellOutputFee = Math.ceil((outputTokens / 1000000) * modelConfig.sell_output_price);
-  const sellTotal = sellInputFee + sellOutputFee;
-  
-  // 利润
-  const profit = sellTotal - costTotal;
+  if (totalFee <= 0) return;
   
   // 扣除余额
-  await client
+  const { data: balance } = await client
     .from('user_balances')
-    .update({
-      balance: client.rpc('decrement_balance', { amount: sellTotal }),
-      total_consumed: client.rpc('increment', { amount: sellTotal }),
-      monthly_consumed: client.rpc('increment', { amount: sellTotal }),
-    })
-    .eq('user_id', userId);
+    .select('balance, total_consumed, monthly_consumed')
+    .eq('user_id', userId)
+    .single();
+  
+  if (balance) {
+    await client
+      .from('user_balances')
+      .update({
+        balance: Math.max(0, (balance as any).balance - totalFee),
+        total_consumed: ((balance as any).total_consumed || 0) + totalFee,
+        monthly_consumed: ((balance as any).monthly_consumed || 0) + totalFee,
+      })
+      .eq('user_id', userId);
+  }
   
   // 记录消费
   await client.from('consumption_records').insert([{
     user_id: userId,
     consumption_type: 'model',
-    resource_id: modelConfig.id,
-    resource_name: modelConfig.name,
+    resource_id: modelInfo.code,
+    resource_name: modelInfo.name,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
-    cost_input_fee: costInputFee,
-    cost_output_fee: costOutputFee,
-    cost_total: costTotal,
-    sell_input_fee: sellInputFee,
-    sell_output_fee: sellOutputFee,
-    sell_total: sellTotal,
-    profit,
+    sell_input_fee: inputFee,
+    sell_output_fee: outputFee,
+    sell_total: totalFee,
     project_id: projectId,
   }]);
 }
@@ -455,14 +456,11 @@ async function deductFeeSimple(
     .single();
   
   if (balance) {
-    const currentBalance = (balance as any).balance || 0;
-    const currentConsumed = (balance as any).total_consumed || 0;
-    
     await client
       .from('user_balances')
       .update({
-        balance: currentBalance - fee,
-        total_consumed: currentConsumed + fee,
+        balance: Math.max(0, (balance as any).balance - fee),
+        total_consumed: ((balance as any).total_consumed || 0) + fee,
       })
       .eq('user_id', userId);
   }
@@ -473,44 +471,8 @@ async function deductFeeSimple(
     consumption_type: type,
     resource_name: resourceName,
     sell_total: fee,
-    profit: Math.ceil(fee * 0.3), // 假设30%利润率
     project_id: projectId,
   }]);
 }
-
-// ==================== 模型列表 ====================
-
-/**
- * 获取可用模型列表（带调用状态）
- * GET /api/v1/ai/models
- */
-router.get('/models', async (req: Request, res: Response) => {
-  try {
-    const { data: models, error } = await client
-      .from('ai_models')
-      .select('id, code, name, provider, category, is_free, member_only, super_member_only, status')
-      .eq('status', 'active')
-      .eq('is_public', true)
-      .order('sort_order');
-    
-    if (error) {
-      return res.status(500).json({ error: 'Failed to fetch models' });
-    }
-    
-    // 标记可用性
-    const availableModels = models?.map(m => ({
-      ...m,
-      available: AI_PROVIDERS[m.provider]?.apiKey ? true : false,
-    }));
-    
-    res.json({
-      success: true,
-      data: availableModels,
-    });
-  } catch (error) {
-    console.error('Get models error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 export default router;

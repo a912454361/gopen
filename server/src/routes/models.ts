@@ -44,9 +44,9 @@ router.get('/', async (req: Request, res: Response) => {
     const publicModels = models?.map(model => ({
       ...model,
       // 价格格式化为：元/百万tokens
-      // 数据库存储：厘/千tokens，转换为：厘/千tokens × 1000 = 厘/百万tokens = 元/百万tokens
-      inputPrice: Number((model.sell_input_price).toFixed(2)),
-      outputPrice: Number((model.sell_output_price).toFixed(2)),
+      // 数据库存储：厘/千tokens，直接返回数值即为元/百万tokens
+      inputPrice: model.sell_input_price != null ? Number(model.sell_input_price.toFixed(2)) : null,
+      outputPrice: model.sell_output_price != null ? Number(model.sell_output_price.toFixed(2)) : null,
       max_tokens: model.max_output_tokens,
       // 不暴露成本价
       sell_input_price: undefined,
@@ -86,9 +86,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       success: true,
       data: {
         ...model,
-        inputPrice: Number((model.sell_input_price / 100).toFixed(4)),
-        outputPrice: Number((model.sell_output_price / 100).toFixed(4)),
-        gpuHourPrice: model.sell_gpu_hour ? Number((model.sell_gpu_hour / 100).toFixed(2)) : null,
+        inputPrice: model.sell_input_price != null ? Number(model.sell_input_price.toFixed(2)) : null,
+        outputPrice: model.sell_output_price != null ? Number(model.sell_output_price.toFixed(2)) : null,
+        gpuHourPrice: model.sell_gpu_hour != null ? Number(model.sell_gpu_hour.toFixed(2)) : null,
       },
     });
   } catch (error) {

@@ -365,9 +365,9 @@ router.get('/models', async (req: Request, res: Response) => {
       type: m.type,
       category: m.category,
       description: m.description || `${m.name} - ${m.provider}`,
-      // 价格（厘/千tokens）- 数据库单位是厘/百万tokens，转换为厘/千tokens
-      sellInputPrice: m.sell_input_price / 1000,
-      sellOutputPrice: m.sell_output_price / 1000,
+      // 价格（元/百万tokens）- 数据库存储厘/千tokens，直接返回即为元/百万tokens
+      inputPrice: m.sell_input_price ?? 0,
+      outputPrice: m.sell_output_price ?? 0,
       // 上下文信息
       contextWindow: m.max_context_tokens,
       maxOutputTokens: m.max_output_tokens,

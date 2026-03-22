@@ -300,7 +300,8 @@ export default function ModelsScreen() {
   };
 
   // 格式化价格（元/百万tokens）
-  const formatPrice = (priceInYuan: number) => {
+  const formatPrice = (priceInYuan: number | undefined) => {
+    if (priceInYuan === undefined || priceInYuan === null) return '-';
     if (priceInYuan === 0) return '免费';
     if (priceInYuan < 0.01) return `¥${priceInYuan.toFixed(4)}`;
     if (priceInYuan < 1) return `¥${priceInYuan.toFixed(3)}`;

@@ -1,17 +1,144 @@
 /**
  * 充值管理路由
  * 处理用户充值申请和管理员审核
+ * 
+ * ⚠️ 安全机制：
+ * 1. 强制上传支付凭证（截图）
+ * 2. 只允许预设金额选项
+ * 3. 流水号全局唯一性检查
+ * 4. 防刷机制：每用户每分钟最多提交3次
+ * 5. 管理员密钥通过请求头传递
+ * 6. 记录提交IP便于追踪
  */
 
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
+import { S3Storage } from 'coze-coding-dev-sdk';
 import { getSupabaseClient } from '../storage/database/supabase-client.js';
 
 const router = Router();
 const client = getSupabaseClient();
 
-// 管理员密钥
-const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+// 初始化对象存储
+const s3Storage = new S3Storage({
+  endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
+  accessKey: '',
+  secretKey: '',
+  bucketName: process.env.COZE_BUCKET_NAME,
+  region: 'cn-beijing',
+});
+
+// 配置 multer 用于文件上传
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('仅支持 JPG、PNG、WebP 格式的图片'));
+    }
+  }
+});
+
+// ==================== 安全配置 ====================
+
+// 管理员密钥 - 必须通过环境变量设置，禁止使用默认值
+const ADMIN_KEY = process.env.ADMIN_KEY;
+if (!ADMIN_KEY) {
+  console.error('⚠️ SECURITY WARNING: ADMIN_KEY environment variable is not set!');
+  console.error('Please set ADMIN_KEY in your environment variables.');
+}
+
+// 防刷配置
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1分钟窗口
+const RATE_LIMIT_MAX = 3; // 每窗口最多提交次数
+const submitHistory = new Map<string, { count: number; resetAt: number }>();
+
+/**
+ * 验证管理员权限
+ * 从请求头获取密钥，避免URL参数泄露
+ */
+const verifyAdmin = (req: Request): boolean => {
+  const adminKey = req.headers['x-admin-key'] as string || req.body.adminKey;
+  if (!ADMIN_KEY) {
+    console.error('[Security] ADMIN_KEY not configured');
+    return false;
+  }
+  return adminKey === ADMIN_KEY;
+};
+
+/**
+ * 防刷检查
+ */
+const checkRateLimit = (userId: string): { allowed: boolean; remaining: number; resetIn: number } => {
+  const now = Date.now();
+  const record = submitHistory.get(userId);
+  
+  if (!record || now > record.resetAt) {
+    // 新窗口
+    submitHistory.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, resetIn: RATE_LIMIT_WINDOW };
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX) {
+    // 超出限制
+    return { allowed: false, remaining: 0, resetIn: record.resetAt - now };
+  }
+  
+  // 增加计数
+  record.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - record.count, resetIn: record.resetAt - now };
+};
+
+/**
+ * 验证支付凭证是否上传
+ */
+const validateProofImages = (proofImages: string[] | undefined): { valid: boolean; error?: string } => {
+  if (!proofImages || proofImages.length === 0) {
+    return { valid: false, error: '请上传支付截图作为凭证' };
+  }
+  
+  if (proofImages.length > 5) {
+    return { valid: false, error: '最多上传5张截图' };
+  }
+  
+  // 验证URL格式
+  for (const url of proofImages) {
+    if (!url.startsWith('http')) {
+      return { valid: false, error: '支付凭证格式无效' };
+    }
+  }
+  
+  return { valid: true };
+};
+
+/**
+ * 验证流水号格式
+ */
+const validateTransactionId = (transactionId: string, payMethod: string): { valid: boolean; error?: string } => {
+  const cleanId = transactionId.trim();
+  
+  if (cleanId.length < 10 || cleanId.length > 50) {
+    return { valid: false, error: '流水号长度应为10-50位' };
+  }
+  
+  if (payMethod === 'alipay') {
+    // 支付宝流水号：纯数字，通常以年份开头
+    if (!/^\d{10,50}$/.test(cleanId)) {
+      return { valid: false, error: '支付宝流水号应为10-50位数字' };
+    }
+  } else if (payMethod === 'wechat') {
+    // 微信流水号：字母数字组合
+    if (!/^[a-zA-Z0-9]{10,50}$/.test(cleanId)) {
+      return { valid: false, error: '微信流水号应为10-50位字母数字' };
+    }
+  }
+  
+  return { valid: true };
+};
 
 // 充值金额选项（分）- 优化后的赠送策略，确保平台利润率在13-15%
 const RECHARGE_OPTIONS = [
@@ -28,44 +155,97 @@ const RECHARGE_OPTIONS = [
 const submitRechargeSchema = z.object({
   userId: z.string().min(1),
   amount: z.number().int().positive(),
-  rechargeType: z.enum(['balance', 'membership', 'super_member']),
+  rechargeType: z.enum(['balance', 'membership', 'super_member', 'g_points']),
   payMethod: z.enum(['alipay', 'wechat', 'jdpay', 'bank_transfer']),
-  transactionId: z.string().optional(),
-  proofImages: z.array(z.string()).optional(),
+  transactionId: z.string().min(1), // 必填
+  proofImages: z.array(z.string().min(1)).min(1).max(5), // 必须上传至少1张凭证
   remark: z.string().optional(),
 });
 
 /**
  * 用户提交充值申请
  * POST /api/v1/recharge/submit
+ * 
+ * 安全机制：
+ * 1. 强制上传支付凭证
+ * 2. 验证金额是否在预设选项中
+ * 3. 验证流水号格式
+ * 4. 流水号全局唯一性检查（所有状态）
+ * 5. 防刷检查
+ * 6. 记录客户端IP
  */
 router.post('/submit', async (req: Request, res: Response) => {
   try {
     const body = submitRechargeSchema.parse(req.body);
     
-    // 生成订单号
-    const orderNo = `RCH${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // 1. 防刷检查
+    const rateLimit = checkRateLimit(body.userId);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({ 
+        error: `提交过于频繁，请${Math.ceil(rateLimit.resetIn / 1000)}秒后再试`,
+        resetIn: rateLimit.resetIn 
+      });
+    }
     
-    // 查找是否有相同的流水号待审核
-    if (body.transactionId) {
-      const { data: existingRecharge } = await client
-        .from('recharge_records')
-        .select('id, status')
-        .eq('transaction_id', body.transactionId)
-        .eq('status', 'pending')
-        .single();
-      
-      if (existingRecharge) {
+    // 2. 验证金额是否在预设选项中（防止用户随意填写金额）
+    const rechargeOption = RECHARGE_OPTIONS.find(opt => opt.amount === body.amount);
+    if (!rechargeOption) {
+      return res.status(400).json({ 
+        error: '请选择有效的充值金额',
+        validAmounts: RECHARGE_OPTIONS.map(o => ({ amount: o.amount, label: o.label }))
+      });
+    }
+    
+    // 3. 验证支付凭证
+    const proofValidation = validateProofImages(body.proofImages);
+    if (!proofValidation.valid) {
+      return res.status(400).json({ error: proofValidation.error });
+    }
+    
+    // 4. 验证流水号格式
+    const transValidation = validateTransactionId(body.transactionId, body.payMethod);
+    if (!transValidation.valid) {
+      return res.status(400).json({ error: transValidation.error });
+    }
+    
+    // 5. 流水号全局唯一性检查（检查所有状态，不仅仅是pending）
+    const { data: existingRecharge } = await client
+      .from('recharge_records')
+      .select('id, status, created_at')
+      .eq('transaction_id', body.transactionId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (existingRecharge) {
+      // 如果是已拒绝的记录，允许重新提交（但需要间隔24小时）
+      if (existingRecharge.status === 'rejected') {
+        const rejectedAt = new Date(existingRecharge.created_at);
+        const hoursSinceRejected = (Date.now() - rejectedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceRejected < 24) {
+          return res.status(400).json({ 
+            error: '该流水号曾被拒绝，请24小时后再试或使用新的流水号' 
+          });
+        }
+      } else {
+        // pending 或 approved 状态，不允许重复提交
+        const statusMsg = existingRecharge.status === 'pending' ? '待审核' : '已通过';
         return res.status(400).json({ 
-          error: '该流水号已提交，请等待审核',
-          orderNo: existingRecharge.id 
+          error: `该流水号${statusMsg}，请勿重复提交` 
         });
       }
     }
     
+    // 6. 获取客户端IP（用于安全审计，记录在日志中）
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+      || req.socket.remoteAddress 
+      || 'unknown';
+    
+    // 生成订单号
+    const orderNo = `RCH${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
     // 计算赠送金额
-    const rechargeOption = RECHARGE_OPTIONS.find(opt => opt.amount === body.amount);
-    const bonusAmount = rechargeOption?.bonus || 0;
+    const bonusAmount = rechargeOption.bonus;
     
     // 创建充值记录
     const { data: recharge, error } = await client
@@ -77,13 +257,16 @@ router.post('/submit', async (req: Request, res: Response) => {
         recharge_type: body.rechargeType,
         pay_method: body.payMethod,
         transaction_id: body.transactionId,
-        proof_images: body.proofImages ? JSON.stringify(body.proofImages) : null,
+        proof_images: JSON.stringify(body.proofImages),
         status: 'pending',
         bonus_amount: bonusAmount,
         admin_remark: body.remark,
       }])
       .select()
       .single();
+    
+    // 记录安全日志
+    console.log(`[Security] Recharge submitted - User: ${body.userId}, IP: ${clientIp}, Order: ${orderNo}, Amount: ${body.amount}`);
     
     if (error) {
       console.error('Create recharge error:', error);
@@ -198,7 +381,6 @@ router.get('/:orderNo', async (req: Request, res: Response) => {
 
 const adminReviewSchema = z.object({
   orderNo: z.string().min(1),
-  adminKey: z.string().min(1),
   action: z.enum(['approve', 'reject']),
   rejectReason: z.string().optional(),
   adminRemark: z.string().optional(),
@@ -207,15 +389,16 @@ const adminReviewSchema = z.object({
 /**
  * 管理员审核充值
  * POST /api/v1/recharge/admin/review
+ * Headers: x-admin-key: <管理员密钥>
  */
 router.post('/admin/review', async (req: Request, res: Response) => {
   try {
-    const body = adminReviewSchema.parse(req.body);
-    
-    // 验证管理员权限
-    if (body.adminKey !== ADMIN_KEY) {
+    // 验证管理员权限（从请求头获取）
+    if (!verifyAdmin(req)) {
       return res.status(403).json({ error: '无权限，您不是管理员' });
     }
+    
+    const body = adminReviewSchema.parse(req.body);
     
     // 查询充值记录
     const { data: record, error: recordError } = await client
@@ -528,12 +711,11 @@ router.post('/admin/review', async (req: Request, res: Response) => {
 /**
  * 获取待审核充值列表
  * GET /api/v1/recharge/admin/pending
+ * Headers: x-admin-key: <管理员密钥>
  */
 router.get('/admin/pending', async (req: Request, res: Response) => {
   try {
-    const adminKey = req.query.adminKey as string;
-    
-    if (adminKey !== ADMIN_KEY) {
+    if (!verifyAdmin(req)) {
       return res.status(403).json({ error: '无权限' });
     }
     
@@ -574,12 +756,11 @@ router.get('/admin/pending', async (req: Request, res: Response) => {
 /**
  * 获取充值统计
  * GET /api/v1/recharge/admin/stats
+ * Headers: x-admin-key: <管理员密钥>
  */
 router.get('/admin/stats', async (req: Request, res: Response) => {
   try {
-    const adminKey = req.query.adminKey as string;
-    
-    if (adminKey !== ADMIN_KEY) {
+    if (!verifyAdmin(req)) {
       return res.status(403).json({ error: '无权限' });
     }
     
@@ -631,16 +812,16 @@ router.get('/admin/stats', async (req: Request, res: Response) => {
 /**
  * 获取所有充值记录（管理员）
  * GET /api/v1/recharge/admin/list
+ * Headers: x-admin-key: <管理员密钥>
  */
 router.get('/admin/list', async (req: Request, res: Response) => {
   try {
-    const adminKey = req.query.adminKey as string;
-    const status = req.query.status as string;
-    const limit = parseInt(req.query.limit as string) || 50;
-    
-    if (adminKey !== ADMIN_KEY) {
+    if (!verifyAdmin(req)) {
       return res.status(403).json({ error: '无权限' });
     }
+    
+    const status = req.query.status as string;
+    const limit = parseInt(req.query.limit as string) || 50;
     
     let query = client
       .from('recharge_records')
@@ -665,6 +846,54 @@ router.get('/admin/list', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get recharge list error:', error);
     res.status(500).json({ error: '查询失败' });
+  }
+});
+
+// ==================== 支付凭证上传 ====================
+
+/**
+ * 上传支付凭证图片
+ * POST /api/v1/recharge/upload-proof
+ * Content-Type: multipart/form-data
+ * Body: file (图片文件)
+ * 
+ * 安全机制：
+ * 1. 限制文件大小为 5MB
+ * 2. 仅支持 JPG、PNG、WebP 格式
+ * 3. 文件上传到对象存储，返回签名URL
+ */
+router.post('/upload-proof', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    
+    if (!file) {
+      return res.status(400).json({ error: '请选择要上传的支付凭证图片' });
+    }
+    
+    // 上传到对象存储
+    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    const fileName = `payment-proofs/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
+    
+    const objectKey = await s3Storage.uploadFile({
+      fileContent: file.buffer,
+      fileName,
+      contentType: file.mimetype,
+    });
+    
+    // 返回签名URL（有效期24小时）
+    const signedUrl = await s3Storage.generatePresignedUrl({ key: objectKey, expireTime: 86400 });
+    
+    res.json({
+      success: true,
+      data: { 
+        proofUrl: signedUrl, 
+        proofKey: objectKey 
+      },
+      message: '支付凭证上传成功',
+    });
+  } catch (error) {
+    console.error('Upload payment proof error:', error);
+    res.status(500).json({ error: '上传失败' });
   }
 });
 

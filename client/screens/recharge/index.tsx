@@ -1,6 +1,11 @@
 /**
  * 用户充值页面
  * 支持余额充值和会员充值
+ * 
+ * 安全机制：
+ * 1. 必须上传支付凭证截图
+ * 2. 只能选择预设金额
+ * 3. 流水号格式验证
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -13,10 +18,12 @@ import {
   Alert,
   TextInput,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -96,8 +103,83 @@ export default function RechargeScreen() {
   const [transactionId, setTransactionId] = useState('');
   const [rechargeType, setRechargeType] = useState<'balance' | 'membership' | 'super_member'>('balance');
   
+  // 支付凭证（安全机制：必须上传）
+  const [proofImages, setProofImages] = useState<string[]>([]);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  
   // 充值记录
   const [records, setRecords] = useState<RechargeRecord[]>([]);
+
+  /**
+   * 选择支付凭证图片
+   */
+  const handlePickProofImage = useCallback(async () => {
+    // 请求相册权限
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('权限不足', '需要相册访问权限才能上传支付凭证');
+      return;
+    }
+    
+    // 限制最多上传5张
+    if (proofImages.length >= 5) {
+      Alert.alert('提示', '最多上传5张支付凭证');
+      return;
+    }
+    
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.8,
+    });
+    
+    if (!result.canceled && result.assets[0]) {
+      // 上传图片
+      await uploadProofImage(result.assets[0].uri);
+    }
+  }, [proofImages.length]);
+
+  /**
+   * 上传支付凭证到服务器
+   */
+  const uploadProofImage = useCallback(async (localUri: string) => {
+    setIsUploadingProof(true);
+    try {
+      const formData = new FormData();
+      const fileName = localUri.split('/').pop() || 'proof.jpg';
+      const mimeType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      
+      // 创建文件对象
+      const response = await fetch(localUri);
+      const blob = await response.blob();
+      formData.append('file', new File([blob], fileName, { type: mimeType }));
+      
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/recharge/upload-proof`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setProofImages(prev => [...prev, data.data.proofUrl]);
+      } else {
+        Alert.alert('上传失败', data.error || '请稍后重试');
+      }
+    } catch (error) {
+      console.error('Upload proof error:', error);
+      Alert.alert('上传失败', '网络错误，请稍后重试');
+    } finally {
+      setIsUploadingProof(false);
+    }
+  }, []);
+
+  /**
+   * 删除支付凭证
+   */
+  const handleRemoveProof = useCallback((index: number) => {
+    setProofImages(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   /**
    * 获取用户ID
@@ -180,6 +262,7 @@ export default function RechargeScreen() {
 
   /**
    * 提交充值申请
+   * 安全机制：必须上传支付凭证
    */
   const handleSubmit = useCallback(async () => {
     const amount = selectedAmount || parseInt(customAmount) * 100;
@@ -191,6 +274,12 @@ export default function RechargeScreen() {
     
     if (!transactionId.trim()) {
       Alert.alert('提示', '请输入支付流水号');
+      return;
+    }
+    
+    // 安全机制：必须上传支付凭证
+    if (proofImages.length === 0) {
+      Alert.alert('提示', '请上传支付截图作为凭证');
       return;
     }
     
@@ -210,6 +299,7 @@ export default function RechargeScreen() {
           rechargeType,
           payMethod: selectedPayMethod,
           transactionId,
+          proofImages, // 传递支付凭证URL数组
         }),
       });
       
@@ -226,6 +316,7 @@ export default function RechargeScreen() {
                 setTransactionId('');
                 setSelectedAmount(null);
                 setCustomAmount('');
+                setProofImages([]); // 清除支付凭证
                 loadAllData();
               },
             },
@@ -240,7 +331,7 @@ export default function RechargeScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedAmount, customAmount, transactionId, userId, rechargeType, selectedPayMethod, loadAllData]);
+  }, [selectedAmount, customAmount, transactionId, userId, rechargeType, selectedPayMethod, proofImages, loadAllData]);
 
   // 格式化金额
   const formatAmount = (amount: number) => `¥${(amount / 100).toFixed(2)}`;
@@ -467,7 +558,7 @@ export default function RechargeScreen() {
           </ThemedText>
           
           <ThemedText variant="small" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
-            请先扫码支付，然后填写支付流水号
+            请先扫码支付，然后填写支付流水号并上传支付截图
           </ThemedText>
           
           <TextInput
@@ -481,6 +572,81 @@ export default function RechargeScreen() {
             value={transactionId}
             onChangeText={setTransactionId}
           />
+          
+          {/* 支付凭证上传区域 */}
+          <View style={{ marginTop: Spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                支付截图 <Text style={{ color: theme.error }}>*</Text>
+              </ThemedText>
+              <ThemedText variant="tiny" color={theme.textMuted}>
+                {proofImages.length}/5张
+              </ThemedText>
+            </View>
+            
+            {/* 已上传的图片 */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+              {proofImages.map((url, index) => (
+                <View key={index} style={{ position: 'relative' }}>
+                  <Image 
+                    source={{ uri: url }} 
+                    style={{ 
+                      width: 80, 
+                      height: 80, 
+                      borderRadius: BorderRadius.md,
+                      backgroundColor: theme.backgroundTertiary,
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={{
+                      position: 'absolute',
+                      top: -8,
+                      right: -8,
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      backgroundColor: theme.error,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                    onPress={() => handleRemoveProof(index)}
+                  >
+                    <FontAwesome6 name="xmark" size={12} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              
+              {/* 上传按钮 */}
+              {proofImages.length < 5 && (
+                <TouchableOpacity
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: BorderRadius.md,
+                    backgroundColor: theme.backgroundTertiary,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    borderStyle: 'dashed',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  onPress={handlePickProofImage}
+                  disabled={isUploadingProof}
+                >
+                  {isUploadingProof ? (
+                    <ActivityIndicator size="small" color={theme.primary} />
+                  ) : (
+                    <>
+                      <FontAwesome6 name="plus" size={24} color={theme.textMuted} />
+                      <ThemedText variant="tiny" color={theme.textMuted} style={{ marginTop: 4 }}>
+                        上传截图
+                      </ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* 提交按钮 */}
@@ -504,7 +670,7 @@ export default function RechargeScreen() {
           <TouchableOpacity
             style={[styles.submitButton, { backgroundColor: theme.primary }]}
             onPress={handleSubmit}
-            disabled={isSubmitting || !currentAmount || !transactionId.trim()}
+            disabled={isSubmitting || !currentAmount || !transactionId.trim() || proofImages.length === 0}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -519,6 +685,12 @@ export default function RechargeScreen() {
           <ThemedText variant="tiny" color={theme.textMuted} style={styles.submitHint}>
             提交后请等待管理员审核，通常5分钟内完成
           </ThemedText>
+          
+          {proofImages.length === 0 && (
+            <ThemedText variant="tiny" color={theme.error} style={{ marginTop: Spacing.sm }}>
+              ⚠️ 请上传支付截图作为凭证
+            </ThemedText>
+          )}
         </View>
 
         {/* 充值记录 */}

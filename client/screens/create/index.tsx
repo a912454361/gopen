@@ -128,9 +128,8 @@ const PRIVILEGED_RESOLUTIONS = [
   { value: '4K', label: '4K UHD' },
   { value: '8K', label: '8K UHD' },
 ];
-];
 
-// 主流视频生成模型推荐
+// 主流视频生成模型推荐（支持特权用户高质量输出）
 const RECOMMENDED_VIDEO_MODELS = [
   { 
     id: 'seedance-1.5-pro',
@@ -527,10 +526,11 @@ export default function CreateScreen() {
                   userId,
                   gPoints: requiredGPoints,
                   description: '视频生成失败，退还G点',
-              }),
-            }
-          );
-          setGPointsBalance(prev => prev + requiredGPoints);
+                }),
+              }
+            );
+            setGPointsBalance(prev => prev + requiredGPoints);
+          }
           throw new Error(videoData.error || '视频生成失败');
         }
       }

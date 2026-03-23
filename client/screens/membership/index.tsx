@@ -1,14 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ScrollView,
   View,
   TouchableOpacity,
   Modal,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership, type MemberLevel } from '@/contexts/MembershipContext';
@@ -16,6 +19,8 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 interface TierPlan {
   level: MemberLevel;
@@ -55,7 +60,7 @@ const tierPlans: TierPlan[] = [
     name: '普通会员',
     nameEn: 'MEMBER',
     price: '¥29',
-    priceNote: '/月',
+    priceNote: '/月起',
     icon: 'crown',
     color: ['#00F0FF', '#BF00FF'],
     features: [
@@ -75,7 +80,7 @@ const tierPlans: TierPlan[] = [
     name: '超级会员',
     nameEn: 'SUPER',
     price: '¥99',
-    priceNote: '/月',
+    priceNote: '/月起',
     icon: 'rocket',
     color: ['#FFD700', '#FF6B00'],
     features: [
@@ -91,6 +96,19 @@ const tierPlans: TierPlan[] = [
   },
 ];
 
+// 会员时长选项
+const DURATION_OPTIONS = [
+  { value: 'monthly', label: '月度', discount: '' },
+  { value: 'quarterly', label: '季度', discount: '省10%' },
+  { value: 'yearly', label: '年度', discount: '省17%' },
+];
+
+// 会员价格配置（单位：分）
+const MEMBER_PRICES = {
+  member: { monthly: 2900, quarterly: 7900, yearly: 29000 },
+  super: { monthly: 9900, quarterly: 26900, yearly: 99000 },
+};
+
 const ALIPAY_ACCOUNT = '18321337942';
 
 export default function MembershipScreen() {
@@ -100,9 +118,42 @@ export default function MembershipScreen() {
   const { level, isMember, isSuperMember, expireDate } = useMembership();
 
   const [selectedTier, setSelectedTier] = useState<MemberLevel>('member');
+  const [selectedDuration, setSelectedDuration] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
   const [showPayModal, setShowPayModal] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  // 获取用户ID和余额
+  useEffect(() => {
+    AsyncStorage.getItem('userId').then(setUserId);
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchBalance();
+    }
+  }, [userId]);
+
+  const fetchBalance = async () => {
+    if (!userId) return;
+    try {
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/balance/${userId}`
+      );
+      const data = await response.json();
+      if (data.success) {
+        setBalance(data.data.balance || 0);
+      }
+    } catch (error) {
+      console.error('Fetch balance error:', error);
+    }
+  };
 
   const selectedPlan = tierPlans.find(t => t.level === selectedTier);
+  const selectedPrice = selectedTier !== 'free' ? MEMBER_PRICES[selectedTier as keyof typeof MEMBER_PRICES][selectedDuration] : 0;
+  const balanceYuan = (balance / 100).toFixed(2);
+  const isBalanceEnough = balance >= selectedPrice;
 
   const handleCopyAccount = async () => {
     await Clipboard.setStringAsync(ALIPAY_ACCOUNT);
@@ -128,9 +179,63 @@ export default function MembershipScreen() {
 
   const handleQRCodePay = () => {
     setShowPayModal(false);
-    const amount = selectedTier === 'member' ? 2900 : 9900;
+    const amount = selectedPrice;
     const productType = selectedTier === 'member' ? 'membership' : 'super_member';
     router.push('/payment', { amount, productType });
+  };
+
+  // 余额开通会员
+  const handleBalancePay = async () => {
+    if (!userId) {
+      Alert.alert('提示', '请先登录');
+      return;
+    }
+
+    if (!isBalanceEnough) {
+      Alert.alert('余额不足', `当前余额 ¥${balanceYuan}，需要 ¥${(selectedPrice / 100).toFixed(2)}`, [
+        { text: '取消', style: 'cancel' },
+        { text: '去充值', onPress: () => router.push('/wallet') },
+      ]);
+      return;
+    }
+
+    setIsUpgrading(true);
+    try {
+      /**
+       * 服务端文件：server/src/routes/user.ts
+       * 接口：POST /api/v1/user/:userId/membership/upgrade
+       * Body 参数：memberLevel: 'member' | 'super', duration: 'monthly' | 'quarterly' | 'yearly'
+       */
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}/membership/upgrade`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            memberLevel: selectedTier,
+            duration: selectedDuration,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowPayModal(false);
+        Alert.alert(
+          '开通成功',
+          `恭喜您成为${selectedPlan?.name}！有效期至：${new Date(data.data.expireAt).toLocaleDateString('zh-CN')}`,
+          [{ text: '确定', onPress: () => fetchBalance() }]
+        );
+      } else {
+        Alert.alert('开通失败', data.error || '请稍后重试');
+      }
+    } catch (error) {
+      console.error('Upgrade membership error:', error);
+      Alert.alert('开通失败', '网络错误，请稍后重试');
+    } finally {
+      setIsUpgrading(false);
+    }
   };
 
   const handleTransferPay = async () => {
@@ -398,12 +503,89 @@ export default function MembershipScreen() {
                 开通 {selectedPlan?.name}
               </ThemedText>
               <ThemedText variant="title" color="#fff" style={{ marginTop: Spacing.xs }}>
-                {selectedPlan?.price}{selectedPlan?.priceNote}
+                ¥{(selectedPrice / 100).toFixed(0)}
               </ThemedText>
             </LinearGradient>
 
-            {/* Options */}
+            {/* Duration Selection */}
             <View style={styles.modalBody}>
+              <ThemedText variant="labelSmall" color={theme.textMuted} style={{ marginBottom: Spacing.sm }}>
+                选择时长
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
+                {DURATION_OPTIONS.map((option) => {
+                  const price = MEMBER_PRICES[selectedTier as keyof typeof MEMBER_PRICES][option.value as keyof typeof MEMBER_PRICES.member];
+                  const isSelected = selectedDuration === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={{
+                        flex: 1,
+                        paddingVertical: Spacing.md,
+                        paddingHorizontal: Spacing.sm,
+                        borderRadius: BorderRadius.lg,
+                        borderWidth: 2,
+                        borderColor: isSelected ? (selectedPlan?.color[0] || theme.primary) : theme.border,
+                        backgroundColor: isSelected ? `${selectedPlan?.color[0] || theme.primary}15` : theme.backgroundTertiary,
+                        alignItems: 'center',
+                      }}
+                      onPress={() => setSelectedDuration(option.value as any)}
+                    >
+                      {option.discount && (
+                        <View style={{
+                          position: 'absolute',
+                          top: -8,
+                          right: -8,
+                          backgroundColor: '#FF6B00',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 4,
+                        }}>
+                          <ThemedText variant="tiny" color="#fff">{option.discount}</ThemedText>
+                        </View>
+                      )}
+                      <ThemedText variant="smallMedium" color={isSelected ? (selectedPlan?.color[0] || theme.primary) : theme.textPrimary}>
+                        {option.label}
+                      </ThemedText>
+                      <ThemedText variant="caption" color={theme.textMuted}>
+                        ¥{(price / 100).toFixed(0)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Balance Payment */}
+              <TouchableOpacity
+                style={[styles.payOption, !isBalanceEnough && { opacity: 0.5 }]}
+                onPress={handleBalancePay}
+                disabled={!isBalanceEnough || isUpgrading}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.payOptionIcon, { backgroundColor: '#10B981' }]}>
+                  <FontAwesome6 name="coins" size={22} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                      余额支付
+                    </ThemedText>
+                    <ThemedText variant="small" color={isBalanceEnough ? '#10B981' : theme.error}>
+                      余额 ¥{balanceYuan}
+                    </ThemedText>
+                  </View>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {isBalanceEnough ? '使用账户余额即时开通' : '余额不足，请先充值'}
+                  </ThemedText>
+                </View>
+                {isUpgrading ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+                )}
+              </TouchableOpacity>
+
+              {/* QR Code Payment */}
               <TouchableOpacity
                 style={styles.payOption}
                 onPress={handleQRCodePay}
@@ -417,31 +599,13 @@ export default function MembershipScreen() {
                     扫码支付
                   </ThemedText>
                   <ThemedText variant="caption" color={theme.textMuted}>
-                    支付宝/微信/银联扫码，即时开通
+                    支付宝/微信/银联扫码
                   </ThemedText>
                 </View>
                 <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.payOption}
-                onPress={handleTransferPay}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.payOptionIcon, { backgroundColor: '#E1251B' }]}>
-                  <FontAwesome6 name="wallet" size={22} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
-                    京东支付
-                  </ThemedText>
-                  <ThemedText variant="caption" color={theme.textMuted}>
-                    使用京东钱包付款
-                  </ThemedText>
-                </View>
-                <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
-              </TouchableOpacity>
-
+              {/* Bank Transfer */}
               <TouchableOpacity
                 style={styles.payOption}
                 onPress={handleTransferPay}

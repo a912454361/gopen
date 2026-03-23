@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -186,7 +186,12 @@ interface Project {
   progress: number;
   assets: number;
   lastUpdated: string;
+  status?: string;
+  description?: string;
+  coverImage?: string;
 }
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 // 根据项目类型和服务类型生成创作提示词
 const generateProjectPrompt = (title: string, type: string, serviceType?: string): string => {
@@ -1385,18 +1390,107 @@ export default function ProjectsScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'pending'>('all');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statsFromApi, setStatsFromApi] = useState({ total: 0, active: 0, pending: 0 });
+
+  // 获取用户ID
+  useEffect(() => {
+    AsyncStorage.getItem('userId').then(id => {
+      setUserId(id);
+    });
+  }, []);
+
+  // 从API获取项目列表
+  const fetchProjects = useCallback(async () => {
+    if (!userId) {
+      // 未登录时使用示例数据
+      setProjects([...PROJECT_DATA.active, ...PROJECT_DATA.pending]);
+      setStatsFromApi({
+        active: PROJECT_DATA.active.length,
+        pending: PROJECT_DATA.pending.length,
+        total: PROJECT_DATA.active.length + PROJECT_DATA.pending.length,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      /**
+       * 服务端文件：server/src/routes/projects.ts
+       * 接口：GET /api/v1/projects
+       * Query 参数：userId: string, status?: string, type?: string, page?: number, limit?: number
+       */
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/projects?userId=${userId}&limit=100`
+      );
+      const data = await response.json();
+      
+      if (data.success) {
+        // 转换API数据格式
+        const apiProjects = data.data.projects.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          progress: p.progress || 0,
+          assets: p.assets_count || 0,
+          lastUpdated: formatLastUpdated(p.updated_at),
+          status: p.status,
+          description: p.description,
+          coverImage: p.cover_image,
+        }));
+        
+        setProjects(apiProjects);
+        setStatsFromApi(data.data.stats || { total: 0, active: 0, pending: 0 });
+      }
+    } catch (error) {
+      console.error('Fetch projects error:', error);
+      // 失败时使用示例数据
+      setProjects([...PROJECT_DATA.active, ...PROJECT_DATA.pending]);
+      setStatsFromApi({
+        active: PROJECT_DATA.active.length,
+        pending: PROJECT_DATA.pending.length,
+        total: PROJECT_DATA.active.length + PROJECT_DATA.pending.length,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  // 格式化最后更新时间
+  const formatLastUpdated = (dateStr: string): string => {
+    if (!dateStr) return '刚刚';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return '刚刚';
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  // 加载项目数据
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   // 按类型分组项目
   const groupedProjects = useMemo(() => {
-    const projects = activeTab === 'all' 
-      ? [...PROJECT_DATA.active, ...PROJECT_DATA.pending]
-      : activeTab === 'active' 
-        ? PROJECT_DATA.active 
-        : PROJECT_DATA.pending;
+    let filteredProjects = projects;
+    
+    if (activeTab === 'active') {
+      filteredProjects = projects.filter(p => p.status === 'active' || (p.progress > 0 && p.progress < 100));
+    } else if (activeTab === 'pending') {
+      filteredProjects = projects.filter(p => p.status === 'pending' || p.progress === 0);
+    }
     
     // 按类型分组
     const groups: Record<string, Project[]> = {};
-    projects.forEach(project => {
+    filteredProjects.forEach(project => {
       if (!groups[project.type]) {
         groups[project.type] = [];
       }
@@ -1404,18 +1498,46 @@ export default function ProjectsScreen() {
     });
     
     return groups;
-  }, [activeTab]);
+  }, [activeTab, projects]);
 
   // 统计数据
-  const stats = useMemo(() => ({
-    active: PROJECT_DATA.active.length,
-    pending: PROJECT_DATA.pending.length,
-    total: PROJECT_DATA.active.length + PROJECT_DATA.pending.length,
-  }), []);
+  const stats = useMemo(() => statsFromApi, [statsFromApi]);
 
   const handleProjectPress = (project: Project) => {
     setSelectedProject(project);
     setModalVisible(true);
+  };
+
+  // 创建新项目
+  const handleCreateProject = async (title: string, type: string) => {
+    if (!userId) {
+      Alert.alert('提示', '请先登录');
+      return;
+    }
+
+    try {
+      /**
+       * 服务端文件：server/src/routes/projects.ts
+       * 接口：POST /api/v1/projects
+       * Body 参数：userId: string, title: string, type: string, description?: string
+       */
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, title, type }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        Alert.alert('成功', '项目创建成功');
+        fetchProjects(); // 刷新列表
+      } else {
+        Alert.alert('失败', data.error || '创建失败');
+      }
+    } catch (error) {
+      console.error('Create project error:', error);
+      Alert.alert('错误', '网络错误');
+    }
   };
 
   const tabs = [

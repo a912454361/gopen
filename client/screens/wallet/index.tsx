@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -144,13 +145,19 @@ export default function WalletScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // 加载数据 - 使用 useFocusEffect 确保页面返回时刷新
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   const handleRecharge = async () => {
     if (!userId) {
-      Alert.alert('请先登录', '您需要登录后才能充值');
+      Alert.alert('请先登录', '您需要登录后才能充值', [
+        { text: '取消', style: 'cancel' },
+        { text: '去登录', onPress: () => router.push('/login') }
+      ]);
       return;
     }
 
@@ -164,13 +171,19 @@ export default function WalletScreen() {
     }
 
     setRechargeModal(false);
-    router.push('/payment', { amount, productType: 'recharge' });
+    // 延迟跳转，确保弹窗关闭动画完成
+    setTimeout(() => {
+      router.push('/payment', { amount: String(amount), productType: 'recharge' });
+    }, 300);
   };
 
   // G点充值
   const handleGPointRecharge = async (option: typeof GPOINT_RECHARGE_OPTIONS[0]) => {
     if (!userId) {
-      Alert.alert('请先登录', '您需要登录后才能充值');
+      Alert.alert('请先登录', '您需要登录后才能充值', [
+        { text: '取消', style: 'cancel' },
+        { text: '去登录', onPress: () => router.push('/login') }
+      ]);
       return;
     }
 

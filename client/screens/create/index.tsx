@@ -484,6 +484,88 @@ export default function CreateScreen() {
         } else {
           throw new Error(data.error || '生成失败');
         }
+      } else if (activeType === 'anime') {
+        // 动漫创作 - 使用Kimi生成剧本
+        /**
+         * 服务端文件：server/src/routes/anime.ts
+         * 接口：POST /api/v1/anime/generate
+         * Body 参数：user_id: string, prompt: string, style?: string, theme?: string
+         */
+        const response = await fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime/generate`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userId,
+              prompt: prompt,
+              style: 'japanese',
+              theme: 'fantasy',
+              generate_images: isPrivilegedUser,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          // 提示用户任务已启动
+          Alert.alert(
+            '动漫创作已启动',
+            '剧本正在生成中，请查看创作进度面板',
+            [{ text: '好的' }]
+          );
+          
+          // 刷新活动任务列表
+          fetchActiveTasks();
+          
+          setResult({
+            type: 'text',
+            content: `动漫创作任务已创建！\n任务ID: ${data.data.task_id}\n\n提示词: ${prompt}\n\n剧本生成中，请稍后查看进度面板...`,
+            model: 'Kimi (Moonshot)',
+            prompt: prompt,
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          throw new Error(data.error || '动漫创作启动失败');
+        }
+      } else if (activeType === 'game') {
+        // 游戏创作 - 使用Kimi生成游戏场景
+        /**
+         * 服务端文件：server/src/routes/anime.ts
+         * 接口：POST /api/v1/anime/script
+         * Body 参数：user_id: string, prompt: string, style?: string, theme?: string
+         */
+        const response = await fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime/script`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userId,
+              prompt: `游戏场景设定：${prompt}`,
+              style: 'fantasy',
+              theme: 'action',
+              character_count: 2,
+              scene_count: 3,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success && data.data?.script) {
+          const script = data.data.script;
+          setResult({
+            type: 'text',
+            content: `【${script.title}】\n\n${script.synopsis}\n\n角色：\n${script.characters?.map((c: any) => `• ${c.name}(${c.role})：${c.personality}`).join('\n') || '暂无'}\n\n场景：\n${script.scenes?.map((s: any) => `• ${s.location}(${s.timeOfDay})`).join('\n') || '暂无'}`,
+            model: 'Kimi (Moonshot)',
+            prompt: prompt,
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          throw new Error(data.error || '游戏场景生成失败');
+        }
       } else if (activeType === 'image') {
         // 图像生成
         const response = await fetch(
@@ -621,7 +703,7 @@ export default function CreateScreen() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, selectedModel, activeType, userId, isMember, isSuperMember, router, videoDuration, gPointsBalance, videoEffect, videoResolution, isPrivilegedUser]);
+  }, [prompt, selectedModel, activeType, userId, isMember, isSuperMember, router, videoDuration, gPointsBalance, videoEffect, videoResolution, isPrivilegedUser, fetchActiveTasks]);
 
   // 保存到作品库
   const handleSaveToWorks = async () => {

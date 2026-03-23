@@ -26,16 +26,114 @@ interface PromoManagerProps {
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
-// 平台列表
-const ALL_PLATFORMS = [
-  { key: 'weibo', name: '微博', icon: 'weibo', color: '#E6162D' },
-  { key: 'wechat', name: '微信', icon: 'wechat', color: '#07C160' },
-  { key: 'wechat_moments', name: '朋友圈', icon: 'comments', color: '#07C160' },
-  { key: 'douyin', name: '抖音', icon: 'play', color: '#000000' },
-  { key: 'xiaohongshu', name: '小红书', icon: 'book', color: '#FF2442' },
-  { key: 'zhihu', name: '知乎', icon: 'question', color: '#0084FF' },
-  { key: 'bilibili', name: 'B站', icon: 'tv', color: '#00A1D6' },
-  { key: 'toutiao', name: '今日头条', icon: 'newspaper', color: '#F85959' },
+// 平台分类列表
+const PLATFORM_CATEGORIES = [
+  {
+    category: '国内社交',
+    platforms: [
+      { key: 'weibo', name: '微博', icon: 'weibo', color: '#E6162D' },
+      { key: 'wechat', name: '微信', icon: 'wechat', color: '#07C160' },
+      { key: 'wechat_moments', name: '朋友圈', icon: 'comments', color: '#07C160' },
+      { key: 'wechat_mp', name: '公众号', icon: 'newspaper', color: '#07C160' },
+    ],
+  },
+  {
+    category: '短视频/直播',
+    platforms: [
+      { key: 'douyin', name: '抖音', icon: 'play', color: '#000000' },
+      { key: 'kuaishou', name: '快手', icon: 'video', color: '#FF4906' },
+      { key: 'bilibili', name: 'B站', icon: 'tv', color: '#00A1D6' },
+      { key: 'shipinhao', name: '视频号', icon: 'video', color: '#07C160' },
+    ],
+  },
+  {
+    category: '内容社区',
+    platforms: [
+      { key: 'xiaohongshu', name: '小红书', icon: 'book', color: '#FF2442' },
+      { key: 'zhihu', name: '知乎', icon: 'question', color: '#0084FF' },
+      { key: 'tieba', name: '贴吧', icon: 'users', color: '#4879BD' },
+      { key: 'douban', name: '豆瓣', icon: 'leaf', color: '#00B51D' },
+      { key: 'jianshu', name: '简书', icon: 'pen', color: '#EA6F5A' },
+    ],
+  },
+  {
+    category: '自媒体平台',
+    platforms: [
+      { key: 'toutiao', name: '今日头条', icon: 'newspaper', color: '#F85959' },
+      { key: 'baijiahao', name: '百家号', icon: 'pen', color: '#2932E1' },
+      { key: 'dayuhao', name: '大鱼号', icon: 'fish', color: '#FF6A00' },
+      { key: 'souhuhao', name: '搜狐号', icon: 'newspaper', color: '#FF6600' },
+      { key: 'wangyihao', name: '网易号', icon: 'newspaper', color: '#D43C33' },
+      { key: 'qiehao', name: '企鹅号', icon: 'qq', color: '#12B7F5' },
+      { key: 'yidianzixun', name: '一点资讯', icon: 'circle-info', color: '#FF0000' },
+    ],
+  },
+  {
+    category: '电商/生活',
+    platforms: [
+      { key: 'xianyu', name: '闲鱼', icon: 'shopping-bag', color: '#FFE14D' },
+      { key: 'zhuanzhuan', name: '转转', icon: 'recycle', color: '#FFC800' },
+      { key: 'meituan', name: '美团', icon: 'shop', color: '#FFD000' },
+      { key: 'dianping', name: '大众点评', icon: 'star', color: '#FF6633' },
+      { key: 'xiecheng', name: '携程', icon: 'plane', color: '#2577E3' },
+      { key: 'mafengwo', name: '马蜂窝', icon: 'location-dot', color: '#FF9900' },
+    ],
+  },
+  {
+    category: '财经/专业',
+    platforms: [
+      { key: 'xueqiu', name: '雪球', icon: 'chart-line', color: '#0078FF' },
+      { key: 'eastmoney', name: '东方财富', icon: 'coins', color: '#FF6600' },
+    ],
+  },
+  {
+    category: '国际平台',
+    platforms: [
+      { key: 'twitter', name: 'Twitter/X', icon: 'x-twitter', color: '#000000' },
+      { key: 'facebook', name: 'Facebook', icon: 'facebook', color: '#1877F2' },
+      { key: 'instagram', name: 'Instagram', icon: 'instagram', color: '#E4405F' },
+      { key: 'tiktok_global', name: 'TikTok', icon: 'tiktok', color: '#000000' },
+      { key: 'youtube', name: 'YouTube', icon: 'youtube', color: '#FF0000' },
+      { key: 'linkedin', name: 'LinkedIn', icon: 'linkedin', color: '#0A66C2' },
+      { key: 'pinterest', name: 'Pinterest', icon: 'pinterest', color: '#BD081C' },
+      { key: 'reddit', name: 'Reddit', icon: 'reddit', color: '#FF4500' },
+      { key: 'medium', name: 'Medium', icon: 'medium', color: '#000000' },
+      { key: 'quora', name: 'Quora', icon: 'quora', color: '#B92B27' },
+      { key: 'discord', name: 'Discord', icon: 'discord', color: '#5865F2' },
+      { key: 'telegram', name: 'Telegram', icon: 'telegram', color: '#26A5E4' },
+    ],
+  },
+  {
+    category: 'SEO/搜索',
+    platforms: [
+      { key: 'baidu_seo', name: '百度SEO', icon: 'magnifying-glass', color: '#2932E1' },
+      { key: 'google_seo', name: 'Google SEO', icon: 'magnifying-glass', color: '#4285F4' },
+      { key: 'sogou_seo', name: '搜狗SEO', icon: 'magnifying-glass', color: '#FF6600' },
+      { key: 'so_seo', name: '360 SEO', icon: 'magnifying-glass', color: '#00A0E9' },
+      { key: 'bing_seo', name: 'Bing SEO', icon: 'magnifying-glass', color: '#008373' },
+    ],
+  },
+  {
+    category: '其他',
+    platforms: [
+      { key: 'forum', name: '论坛', icon: 'comments', color: '#666666' },
+      { key: 'community', name: '社区', icon: 'users', color: '#666666' },
+      { key: 'blog', name: '博客', icon: 'pen', color: '#666666' },
+    ],
+  },
+];
+
+// 扁平化平台列表
+const ALL_PLATFORMS = PLATFORM_CATEGORIES.flatMap(cat => cat.platforms);
+
+// 平台快捷选择
+const QUICK_SELECT_OPTIONS = [
+  { key: 'all', name: '全选', platforms: ALL_PLATFORMS.map(p => p.key) },
+  { key: 'domestic', name: '国内平台', platforms: PLATFORM_CATEGORIES.slice(0, 6).flatMap(c => c.platforms.map(p => p.key)) },
+  { key: 'international', name: '国际平台', platforms: PLATFORM_CATEGORIES[6].platforms.map(p => p.key) },
+  { key: 'seo', name: 'SEO平台', platforms: PLATFORM_CATEGORIES[7].platforms.map(p => p.key) },
+  { key: 'social', name: '社交平台', platforms: [...PLATFORM_CATEGORIES[0].platforms, ...PLATFORM_CATEGORIES[1].platforms].map(p => p.key) },
+  { key: 'content', name: '内容平台', platforms: PLATFORM_CATEGORIES[2].platforms.map(p => p.key) },
 ];
 
 // 任务类型
@@ -290,6 +388,37 @@ export function PromoManager({ adminKey }: PromoManagerProps) {
       platforms: prev.platforms.includes(platformKey)
         ? prev.platforms.filter(p => p !== platformKey)
         : [...prev.platforms, platformKey],
+    }));
+  };
+
+  // 一键选择平台
+  const quickSelectPlatforms = (optionKey: string) => {
+    const option = QUICK_SELECT_OPTIONS.find(o => o.key === optionKey);
+    if (!option) return;
+
+    setTaskForm(prev => {
+      // 如果当前已选择该组合的所有平台，则取消选择
+      const allSelected = option.platforms.every(p => prev.platforms.includes(p));
+      if (allSelected) {
+        return {
+          ...prev,
+          platforms: prev.platforms.filter(p => !option.platforms.includes(p)),
+        };
+      }
+      // 否则添加选择
+      return {
+        ...prev,
+        platforms: [...new Set([...prev.platforms, ...option.platforms])],
+      };
+    });
+  };
+
+  // 全选/取消全选
+  const toggleSelectAll = () => {
+    const allPlatformKeys = ALL_PLATFORMS.map(p => p.key);
+    setTaskForm(prev => ({
+      ...prev,
+      platforms: prev.platforms.length === allPlatformKeys.length ? [] : allPlatformKeys,
     }));
   };
 
@@ -777,33 +906,79 @@ export function PromoManager({ adminKey }: PromoManagerProps) {
 
               {/* 选择平台 */}
               <View style={{ marginBottom: Spacing.lg }}>
-                <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginBottom: Spacing.sm }}>
-                  推广平台 (已选 {taskForm.platforms.length} 个)
-                </ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
-                  {ALL_PLATFORMS.map((platform) => (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    推广平台 (已选 {taskForm.platforms.length} 个)
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: Spacing.md,
+                      paddingVertical: Spacing.xs,
+                      borderRadius: BorderRadius.md,
+                      backgroundColor: taskForm.platforms.length === ALL_PLATFORMS.length ? theme.error : theme.primary,
+                    }}
+                    onPress={toggleSelectAll}
+                  >
+                    <ThemedText variant="small" color={theme.buttonPrimaryText}>
+                      {taskForm.platforms.length === ALL_PLATFORMS.length ? '取消全选' : '全选'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 快捷选择 */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginBottom: Spacing.md }}>
+                  {QUICK_SELECT_OPTIONS.map((option) => (
                     <TouchableOpacity
-                      key={platform.key}
+                      key={option.key}
                       style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.xs,
-                        paddingHorizontal: Spacing.lg,
-                        paddingVertical: Spacing.sm,
-                        borderRadius: BorderRadius.lg,
-                        backgroundColor: taskForm.platforms.includes(platform.key) ? theme.primary : theme.backgroundDefault,
+                        paddingHorizontal: Spacing.md,
+                        paddingVertical: Spacing.xs,
+                        borderRadius: BorderRadius.md,
+                        backgroundColor: option.platforms.every(p => taskForm.platforms.includes(p)) ? `${theme.primary}20` : theme.backgroundTertiary,
                         borderWidth: 1,
-                        borderColor: taskForm.platforms.includes(platform.key) ? theme.primary : theme.border,
+                        borderColor: option.platforms.every(p => taskForm.platforms.includes(p)) ? theme.primary : theme.borderLight,
                       }}
-                      onPress={() => togglePlatform(platform.key)}
+                      onPress={() => quickSelectPlatforms(option.key)}
                     >
-                      <FontAwesome6 name={platform.icon as any} size={12} color={taskForm.platforms.includes(platform.key) ? theme.buttonPrimaryText : theme.textPrimary} />
-                      <ThemedText variant="small" color={taskForm.platforms.includes(platform.key) ? theme.buttonPrimaryText : theme.textPrimary}>
-                        {platform.name}
+                      <ThemedText variant="caption" color={option.platforms.every(p => taskForm.platforms.includes(p)) ? theme.primary : theme.textSecondary}>
+                        {option.name}
                       </ThemedText>
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                {/* 分类平台选择 */}
+                {PLATFORM_CATEGORIES.map((category) => (
+                  <View key={category.category} style={{ marginBottom: Spacing.md }}>
+                    <ThemedText variant="caption" color={theme.textMuted} style={{ marginBottom: Spacing.xs }}>
+                      {category.category}
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
+                      {category.platforms.map((platform) => (
+                        <TouchableOpacity
+                          key={platform.key}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            paddingHorizontal: Spacing.sm,
+                            paddingVertical: Spacing.xs,
+                            borderRadius: BorderRadius.md,
+                            backgroundColor: taskForm.platforms.includes(platform.key) ? `${platform.color}20` : theme.backgroundDefault,
+                            borderWidth: 1,
+                            borderColor: taskForm.platforms.includes(platform.key) ? platform.color : theme.border,
+                          }}
+                          onPress={() => togglePlatform(platform.key)}
+                        >
+                          <FontAwesome6 name={platform.icon as any} size={10} color={taskForm.platforms.includes(platform.key) ? platform.color : theme.textPrimary} />
+                          <ThemedText variant="caption" color={taskForm.platforms.includes(platform.key) ? platform.color : theme.textPrimary}>
+                            {platform.name}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                ))}
               </View>
 
               {/* 推广内容模板 */}

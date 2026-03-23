@@ -77,6 +77,11 @@ export default function WalletScreen() {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('app');
   const [userId, setUserId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // 余额兑换G点
+  const [exchangeModal, setExchangeModal] = useState(false);
+  const [exchangeAmount, setExchangeAmount] = useState('');
+  const [isExchanging, setIsExchanging] = useState(false);
 
   // 获取用户ID
   useEffect(() => {
@@ -287,6 +292,74 @@ export default function WalletScreen() {
     }
   };
 
+  // 余额兑换G点
+  const handleExchangeToGPoints = async () => {
+    if (!userId) {
+      Alert.alert('请先登录');
+      return;
+    }
+    
+    const yuanAmount = parseFloat(exchangeAmount);
+    if (isNaN(yuanAmount) || yuanAmount < 1) {
+      Alert.alert('提示', '最低兑换1元');
+      return;
+    }
+    
+    // 转换为厘（后端单位）
+    const amountLi = Math.floor(yuanAmount * 100);
+    // 计算可获得的G点：1元 = 100G点
+    const gPoints = Math.floor(yuanAmount * 100);
+    
+    // 检查余额是否充足
+    if (balance && amountLi > balance.balance) {
+      Alert.alert('余额不足', `当前余额 ¥${balance.balanceYuan}，不足 ¥${yuanAmount.toFixed(2)}`);
+      return;
+    }
+    
+    setIsExchanging(true);
+    try {
+      /**
+       * 服务端文件：server/src/routes/billing.ts
+       * 接口：POST /api/v1/billing/balance-to-gpoints
+       * Body 参数：userId: string, amount: number (单位：厘)
+       */
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/balance-to-gpoints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          amount: amountLi,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        Alert.alert(
+          '兑换成功',
+          `成功将 ¥${yuanAmount.toFixed(2)} 兑换为 ${data.data.gPointsReceived} G点`,
+          [
+            {
+              text: '确定',
+              onPress: () => {
+                setExchangeModal(false);
+                setExchangeAmount('');
+                fetchData();
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('兑换失败', data.error || '请稍后重试');
+      }
+    } catch (error) {
+      console.error('Exchange error:', error);
+      Alert.alert('兑换失败', '网络错误，请稍后重试');
+    } finally {
+      setIsExchanging(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
@@ -341,14 +414,31 @@ export default function WalletScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Spacing.lg }}>
-            <FontAwesome6 name="bolt" size={14} color="#FCD34D" solid />
-            <Text style={{ color: '#FCD34D', fontSize: 14 }}>
-              {balance?.gPoints?.toLocaleString() || '0'} G点
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-              (视频生成: 1秒 = 1G点)
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <FontAwesome6 name="bolt" size={14} color="#FCD34D" solid />
+              <Text style={{ color: '#FCD34D', fontSize: 14 }}>
+                {balance?.gPoints?.toLocaleString() || '0'} G点
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                (视频生成: 1秒 = 1G点)
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setExchangeModal(true)}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                gap: 4,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                paddingVertical: 6,
+                paddingHorizontal: 10,
+                borderRadius: BorderRadius.sm,
+              }}
+            >
+              <FontAwesome6 name="arrow-right-arrow-left" size={12} color="#FCD34D" />
+              <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '500' }}>兑换</Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity 
@@ -712,6 +802,160 @@ export default function WalletScreen() {
                   : paymentMode === 'app' 
                     ? '点击后将跳转支付App完成支付' 
                     : '点击充值后将跳转到扫码支付页面'}
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 余额兑换G点弹窗 */}
+      <Modal
+        visible={exchangeModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setExchangeModal(false)}
+      >
+        <View style={styles.modal}>
+          <TouchableOpacity 
+            style={{ flex: 1 }} 
+            activeOpacity={1} 
+            onPress={() => setExchangeModal(false)}
+          />
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+            {/* 标题 */}
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h4" color={theme.textPrimary}>余额兑换G点</ThemedText>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setExchangeModal(false)}>
+                <FontAwesome6 name="xmark" size={16} color={theme.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 兑换说明 */}
+            <View style={{ 
+              backgroundColor: `${theme.accent}15`,
+              padding: Spacing.lg,
+              borderRadius: BorderRadius.md,
+              marginBottom: Spacing.lg,
+              borderWidth: 1,
+              borderColor: `${theme.accent}30`,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
+                <FontAwesome6 name="info-circle" size={16} color={theme.accent} />
+                <ThemedText variant="label" color={theme.accent}>兑换规则</ThemedText>
+              </View>
+              <ThemedText variant="small" color={theme.textSecondary} style={{ lineHeight: 20 }}>
+                • 1元余额 = 100G点{'\n'}
+                • 只能余额→G点，不可反向{'\n'}
+                • 最低兑换1元
+              </ThemedText>
+            </View>
+
+            {/* 当前余额 */}
+            <View style={{ 
+              flexDirection: 'row', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              backgroundColor: theme.backgroundTertiary,
+              padding: Spacing.lg,
+              borderRadius: BorderRadius.md,
+              marginBottom: Spacing.lg,
+            }}>
+              <View>
+                <ThemedText variant="tiny" color={theme.textMuted}>可用余额</ThemedText>
+                <ThemedText variant="h3" color={theme.primary}>¥{balance?.balanceYuan || '0.00'}</ThemedText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText variant="tiny" color={theme.textMuted}>当前G点</ThemedText>
+                <ThemedText variant="h3" color={theme.accent}>{balance?.gPoints?.toLocaleString() || '0'}</ThemedText>
+              </View>
+            </View>
+
+            {/* 兑换金额输入 */}
+            <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: Spacing.sm }}>
+              兑换金额（元）
+            </ThemedText>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center',
+              backgroundColor: theme.backgroundTertiary,
+              borderRadius: BorderRadius.md,
+              borderWidth: 1,
+              borderColor: theme.border,
+              marginBottom: Spacing.md,
+            }}>
+              <Text style={{ paddingHorizontal: Spacing.lg, color: theme.textPrimary, fontSize: 18 }}>¥</Text>
+              <TextInput
+                style={{ 
+                  flex: 1, 
+                  paddingVertical: Spacing.lg,
+                  fontSize: 18,
+                  color: theme.textPrimary,
+                }}
+                placeholder="输入兑换金额"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="numeric"
+                value={exchangeAmount}
+                onChangeText={setExchangeAmount}
+              />
+              <TouchableOpacity 
+                onPress={() => setExchangeAmount(String((balance?.balance || 0) / 100))}
+                style={{ paddingHorizontal: Spacing.lg }}
+              >
+                <ThemedText variant="small" color={theme.primary}>全部</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* 预计获得 */}
+            {exchangeAmount && !isNaN(parseFloat(exchangeAmount)) && (
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: Spacing.md,
+                backgroundColor: `${theme.success}10`,
+                borderRadius: BorderRadius.md,
+                marginBottom: Spacing.lg,
+              }}>
+                <ThemedText variant="small" color={theme.textSecondary}>预计获得</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                  <FontAwesome6 name="bolt" size={14} color={theme.success} solid />
+                  <ThemedText variant="h4" color={theme.success}>
+                    {Math.floor(parseFloat(exchangeAmount) * 100).toLocaleString()} G点
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+
+            {/* 兑换按钮 */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: theme.accent,
+                borderRadius: BorderRadius.lg,
+                paddingVertical: Spacing.lg,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: Spacing.sm,
+              }}
+              onPress={handleExchangeToGPoints}
+              disabled={isExchanging || !exchangeAmount}
+            >
+              {isExchanging ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <FontAwesome6 name="arrow-right-arrow-left" size={16} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+                    确认兑换
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* 提示 */}
+            <View style={{ marginTop: Spacing.md, alignItems: 'center' }}>
+              <ThemedText variant="tiny" color={theme.textMuted}>
+                兑换后G点将立即到账，兑换不可撤销
               </ThemedText>
             </View>
           </View>

@@ -700,4 +700,116 @@ router.get('/g-points/records/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== 余额兑换G点 ====================
+
+/**
+ * 余额兑换G点
+ * POST /api/v1/billing/balance-to-gpoints
+ * Body: { userId, amount } // amount单位：厘（分/100）
+ * 
+ * 规则：
+ * - 1元余额 = 100G点
+ * - 只能余额→G点，不可反向
+ * - 最低兑换1元
+ */
+const balanceToGPointsSchema = z.object({
+  userId: z.string(),
+  amount: z.number().min(100), // 最低1元，单位：厘
+});
+
+router.post('/balance-to-gpoints', async (req: Request, res: Response) => {
+  try {
+    const body = balanceToGPointsSchema.parse(req.body);
+    
+    // 计算G点：1元 = 100G点
+    // amount单位是厘，需要先转换为元
+    const yuanAmount = body.amount / 100;
+    const gPoints = Math.floor(yuanAmount * 100);
+    
+    // 获取用户余额
+    const { data: userBalance, error: balanceError } = await client
+      .from('user_balances')
+      .select('balance, g_points')
+      .eq('user_id', body.userId)
+      .single();
+    
+    if (balanceError || !userBalance) {
+      return res.status(400).json({ error: '用户余额信息不存在' });
+    }
+    
+    // 检查余额是否充足
+    if (userBalance.balance < body.amount) {
+      return res.status(400).json({
+        error: '余额不足',
+        data: {
+          balance: userBalance.balance,
+          balanceYuan: (userBalance.balance / 100).toFixed(2),
+          required: body.amount,
+          requiredYuan: yuanAmount.toFixed(2),
+          shortage: body.amount - userBalance.balance,
+        },
+      });
+    }
+    
+    // 执行兑换（事务处理）
+    const balanceBefore = userBalance.balance;
+    const gPointsBefore = userBalance.g_points || 0;
+    const balanceAfter = balanceBefore - body.amount;
+    const gPointsAfter = gPointsBefore + gPoints;
+    
+    // 更新余额和G点
+    const { error: updateError } = await client
+      .from('user_balances')
+      .update({
+        balance: balanceAfter,
+        g_points: gPointsAfter,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', body.userId);
+    
+    if (updateError) {
+      console.error('Failed to update balance and g_points:', updateError);
+      return res.status(500).json({ error: '兑换失败，请稍后重试' });
+    }
+    
+    // 记录余额扣除
+    await client.from('bills').insert([{
+      bill_no: `EXG${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      user_id: body.userId,
+      type: 'exchange',
+      amount: -body.amount,
+      title: `余额兑换G点`,
+      description: `兑换${yuanAmount}元获得${gPoints}G点`,
+      status: 'completed',
+    }]);
+    
+    // 记录G点增加
+    await client.from('g_point_records').insert([{
+      user_id: body.userId,
+      type: 'exchange',
+      amount: gPoints,
+      balance_before: gPointsBefore,
+      balance_after: gPointsAfter,
+      description: `余额兑换：${yuanAmount}元 → ${gPoints}G点`,
+      related_type: 'balance_exchange',
+    }]);
+    
+    res.json({
+      success: true,
+      data: {
+        yuanAmount,
+        gPointsReceived: gPoints,
+        balanceBefore,
+        balanceAfter,
+        gPointsBefore,
+        gPointsAfter,
+        message: `成功兑换${gPoints}G点`,
+      },
+    });
+  } catch (error) {
+    console.error('Balance to G-points exchange error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
 export default router;

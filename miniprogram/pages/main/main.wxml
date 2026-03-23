@@ -1,4 +1,4 @@
-<!--游戏主页面 - 横屏3D粒子效果-->
+<!--主页面 - 横屏3D粒子效果-->
 <view class="landscape-container">
   
   <!-- 左侧游戏画布区域 -->
@@ -52,12 +52,6 @@
         </view>
       </view>
       
-      <!-- 战力显示 -->
-      <view class="power-section">
-        <text class="power-label">战力</text>
-        <text class="power-value">{{user.power}}</text>
-      </view>
-      
       <!-- 货币栏 -->
       <view class="currency-section">
         <view class="currency-item" bindtap="showRecharge">
@@ -80,46 +74,13 @@
 
     <!-- 主功能按钮 -->
     <view class="main-actions">
-      <button class="action-btn large primary" bindtap="goToStage">
-        <text class="btn-icon">⚔️</text>
+      <button class="action-btn large primary" bindtap="showRecharge">
+        <text class="btn-icon">💎</text>
         <view class="btn-content">
-          <text class="btn-title">开始战斗</text>
-          <text class="btn-desc">挑战关卡获取奖励</text>
+          <text class="btn-title">充值中心</text>
+          <text class="btn-desc">获取更多资源</text>
         </view>
       </button>
-    </view>
-
-    <!-- 功能网格 -->
-    <view class="action-grid">
-      <button class="grid-btn" bindtap="goToRanking">
-        <text class="icon">🏆</text>
-        <text class="label">排行榜</text>
-      </button>
-      <button class="grid-btn" bindtap="goToArena">
-        <text class="icon">⚡</text>
-        <text class="label">竞技场</text>
-      </button>
-      <button class="grid-btn" bindtap="goToGuild">
-        <text class="icon">🏯</text>
-        <text class="label">战盟</text>
-      </button>
-      <button class="grid-btn" bindtap="goToPet">
-        <text class="icon">🐉</text>
-        <text class="label">宠物</text>
-      </button>
-      <button class="grid-btn" bindtap="goToFriend">
-        <text class="icon">👥</text>
-        <text class="label">好友</text>
-      </button>
-      <button class="grid-btn" bindtap="showRecharge">
-        <text class="icon">💎</text>
-        <text class="label">充值</text>
-      </button>
-    </view>
-
-    <!-- 底部调试按钮 -->
-    <view class="debug-bar">
-      <button class="debug-btn" bindtap="showGMPanel">🔧 调试</button>
     </view>
   </view>
 
@@ -150,42 +111,6 @@
           </view>
         </view>
       </scroll-view>
-    </view>
-  </view>
-
-  <!-- GM面板 -->
-  <view class="modal-overlay" wx:if="{{showGM}}" bindtap="hideGM">
-    <view class="modal-content gm-modal" catchtap>
-      <view class="modal-header">
-        <text class="modal-title">🔧 GM调试面板</text>
-        <text class="modal-close" bindtap="hideGM">✕</text>
-      </view>
-      
-      <view class="gm-section">
-        <text class="gm-section-title">添加货币</text>
-        <view class="gm-buttons">
-          <button class="gm-btn" data-type="gold" bindtap="gmAddCurrency">+10000 💰</button>
-          <button class="gm-btn" data-type="gem" bindtap="gmAddCurrency">+10000 💎</button>
-          <button class="gm-btn" data-type="energy" bindtap="gmAddCurrency">+100 ⚡</button>
-        </view>
-      </view>
-      
-      <view class="gm-section">
-        <text class="gm-section-title">其他操作</text>
-        <view class="gm-buttons">
-          <button class="gm-btn danger" bindtap="gmReset">重置数据</button>
-        </view>
-      </view>
-      
-      <view class="gm-section">
-        <text class="gm-section-title">用户数据</text>
-        <view class="gm-data">
-          <text>UID: {{user.uid}}</text>
-          <text>等级: {{user.level}}</text>
-          <text>VIP: {{user.vip}}</text>
-          <text>战力: {{user.power}}</text>
-        </view>
-      </view>
     </view>
   </view>
 

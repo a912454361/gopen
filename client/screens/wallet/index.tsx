@@ -514,17 +514,21 @@ export default function WalletScreen() {
         {/* 邀请好友 - 核心获客功能 */}
         <TouchableOpacity 
           onPress={() => router.push('/invite')}
-          style={{
-            backgroundColor: `linear-gradient(135deg, ${theme.success}, #059669)`,
-            borderRadius: BorderRadius.xl,
-            padding: Spacing.lg,
-            marginBottom: Spacing.xl,
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: `${theme.success}30`,
-          }}
         >
+          <LinearGradient
+            colors={[theme.success, '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: BorderRadius.xl,
+              padding: Spacing.lg,
+              marginBottom: Spacing.xl,
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: `${theme.success}30`,
+            }}
+          >
           <View style={{ 
             width: 56, 
             height: 56, 
@@ -541,6 +545,7 @@ export default function WalletScreen() {
             <ThemedText variant="small" color="rgba(255,255,255,0.8)">好友首充再得5%奖励，上不封顶</ThemedText>
           </View>
           <FontAwesome6 name="chevron-right" size={16} color="rgba(255,255,255,0.8)" />
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* 充值说明 */}
@@ -698,7 +703,7 @@ export default function WalletScreen() {
                     borderColor: theme.primary,
                   }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                      <FontAwesome6 name="info-circle" size={16} color={theme.primary} />
+                      <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
                       <ThemedText variant="small" color={theme.textPrimary}>
                         Web端仅支持扫码支付，点击充值后将显示收款码
                       </ThemedText>
@@ -840,7 +845,7 @@ export default function WalletScreen() {
               borderColor: `${theme.accent}30`,
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
-                <FontAwesome6 name="info-circle" size={16} color={theme.accent} />
+                <FontAwesome6 name="circle-info" size={16} color={theme.accent} />
                 <ThemedText variant="label" color={theme.accent}>兑换规则</ThemedText>
               </View>
               <ThemedText variant="small" color={theme.textSecondary} style={{ lineHeight: 20 }}>

@@ -930,7 +930,8 @@ export default function CreateScreen() {
               </View>
               
               {/* 时长选择 */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
+              <View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   {(isPrivilegedUser ? PRIVILEGED_VIDEO_DURATIONS : VIDEO_DURATIONS).map((duration) => (
                     <TouchableOpacity
@@ -957,6 +958,7 @@ export default function CreateScreen() {
                   ))}
                 </View>
               </ScrollView>
+              </View>
 
               {/* 特权用户特效和分辨率选择 */}
               {isPrivilegedUser && (

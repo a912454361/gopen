@@ -60,6 +60,7 @@ import rewardsRouter from "./routes/rewards.js";
 import providersRouter from "./routes/providers.js";
 import videoRouter from "./routes/video.js";
 import projectsRouter from "./routes/projects.js";
+import aliyunDriveRouter from "./routes/aliyun-drive.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -113,6 +114,7 @@ app.use('/api/v1/rewards', rewardsRouter);
 app.use('/api/v1/providers', providersRouter);
 app.use('/api/v1/video', videoRouter);
 app.use('/api/v1/projects', projectsRouter);
+app.use('/api/v1/aliyun-drive', aliyunDriveRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

@@ -688,7 +688,7 @@ export default function RechargeScreen() {
           
           {proofImages.length === 0 && (
             <ThemedText variant="tiny" color={theme.error} style={{ marginTop: Spacing.sm }}>
-              ⚠️ 请上传支付截图作为凭证
+              请上传支付截图作为凭证
             </ThemedText>
           )}
         </View>

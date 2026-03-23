@@ -47,6 +47,9 @@ export const createStyles = (theme: Theme) => {
       textTransform: 'uppercase',
       marginBottom: Spacing.md,
     },
+    platformGrid: {
+      gap: Spacing.md,
+    },
     loginButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -54,16 +57,7 @@ export const createStyles = (theme: Theme) => {
       gap: Spacing.md,
       padding: Spacing.lg,
       borderRadius: BorderRadius.sm,
-      marginBottom: Spacing.md,
-    },
-    alipayButton: {
-      backgroundColor: '#1677FF',
-    },
-    wechatButton: {
-      backgroundColor: '#07C160',
-    },
-    douyinButton: {
-      backgroundColor: '#000000',
+      marginBottom: Spacing.sm,
     },
     loginButtonText: {
       color: '#FFFFFF',
@@ -85,6 +79,20 @@ export const createStyles = (theme: Theme) => {
       fontSize: 12,
       marginHorizontal: Spacing.md,
     },
+    morePlatforms: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    iconButton: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     terms: {
       alignItems: 'center',
       marginTop: Spacing.xl,
@@ -98,7 +106,7 @@ export const createStyles = (theme: Theme) => {
       color: theme.primary,
     },
     bindingsSection: {
-      marginTop: Spacing['2xl'],
+      marginTop: Spacing.xl,
     },
     bindingCard: {
       flexDirection: 'row',

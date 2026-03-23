@@ -9,30 +9,125 @@ const client = getSupabaseClient();
 // ==================== OAuth 登录配置 ====================
 
 const OAUTH_CONFIG = {
+  // 国内平台
   alipay: {
     authUrl: 'https://openauth.alipay.com/oauth2/publicAppAuthorize.htm',
     tokenUrl: 'https://openapi.alipay.com/gateway.do',
     appId: process.env.ALIPAY_APP_ID || 'YOUR_ALIPAY_APP_ID',
     scope: 'auth_user',
+    icon: 'alipay',
+    color: '#1677FF',
+    name: '支付宝',
   },
   wechat: {
     authUrl: 'https://open.weixin.qq.com/connect/qrconnect',
     tokenUrl: 'https://api.weixin.qq.com/sns/oauth2/access_token',
     appId: process.env.WECHAT_APP_ID || 'YOUR_WECHAT_APPID',
     scope: 'snsapi_login',
+    icon: 'wechat',
+    color: '#07C160',
+    name: '微信',
   },
   douyin: {
     authUrl: 'https://open.douyin.com/platform/oauth/connect/',
     tokenUrl: 'https://open.douyin.com/oauth/access_token/',
     appId: process.env.DOUYIN_APP_ID || 'YOUR_DOUYIN_APPID',
     scope: 'user_info',
+    icon: 'tiktok',
+    color: '#000000',
+    name: '抖音',
+  },
+  qq: {
+    authUrl: 'https://graph.qq.com/oauth2.0/authorize',
+    tokenUrl: 'https://graph.qq.com/oauth2.0/token',
+    appId: process.env.QQ_APP_ID || 'YOUR_QQ_APPID',
+    scope: 'get_user_info',
+    icon: 'qq',
+    color: '#12B7F5',
+    name: 'QQ',
+  },
+  weibo: {
+    authUrl: 'https://api.weibo.com/oauth2/authorize',
+    tokenUrl: 'https://api.weibo.com/oauth2/access_token',
+    appId: process.env.WEIBO_APP_KEY || 'YOUR_WEIBO_APPKEY',
+    scope: 'all',
+    icon: 'weibo',
+    color: '#E6162D',
+    name: '微博',
+  },
+  // 国际平台
+  github: {
+    authUrl: 'https://github.com/login/oauth/authorize',
+    tokenUrl: 'https://github.com/login/oauth/access_token',
+    appId: process.env.GITHUB_CLIENT_ID || 'YOUR_GITHUB_CLIENT_ID',
+    scope: 'read:user user:email',
+    icon: 'github',
+    color: '#24292F',
+    name: 'GitHub',
+  },
+  google: {
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    appId: process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
+    scope: 'openid email profile',
+    icon: 'google',
+    color: '#4285F4',
+    name: 'Google',
+  },
+  apple: {
+    authUrl: 'https://appleid.apple.com/auth/authorize',
+    tokenUrl: 'https://appleid.apple.com/auth/token',
+    appId: process.env.APPLE_CLIENT_ID || 'YOUR_APPLE_CLIENT_ID',
+    scope: 'email name',
+    icon: 'apple',
+    color: '#000000',
+    name: 'Apple',
+  },
+  microsoft: {
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    appId: process.env.MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID',
+    scope: 'openid email profile',
+    icon: 'microsoft',
+    color: '#00A4EF',
+    name: 'Microsoft',
+  },
+  twitter: {
+    authUrl: 'https://twitter.com/i/oauth2/authorize',
+    tokenUrl: 'https://api.twitter.com/2/oauth2/token',
+    appId: process.env.TWITTER_CLIENT_ID || 'YOUR_TWITTER_CLIENT_ID',
+    scope: 'tweet.read users.read',
+    icon: 'x-twitter',
+    color: '#000000',
+    name: 'Twitter/X',
+  },
+  discord: {
+    authUrl: 'https://discord.com/api/oauth2/authorize',
+    tokenUrl: 'https://discord.com/api/oauth2/token',
+    appId: process.env.DISCORD_CLIENT_ID || 'YOUR_DISCORD_CLIENT_ID',
+    scope: 'identify email',
+    icon: 'discord',
+    color: '#5865F2',
+    name: 'Discord',
+  },
+  telegram: {
+    authUrl: 'https://oauth.telegram.org/auth',
+    tokenUrl: 'https://api.telegram.org',
+    appId: process.env.TELEGRAM_BOT_TOKEN || 'YOUR_TELEGRAM_BOT_TOKEN',
+    scope: 'login',
+    icon: 'telegram',
+    color: '#26A5E4',
+    name: 'Telegram',
   },
 };
+
+// 支持的平台列表
+const SUPPORTED_PLATFORMS = Object.keys(OAUTH_CONFIG) as (keyof typeof OAUTH_CONFIG)[];
 
 // ==================== 生成授权URL ====================
 
 const generateAuthUrlSchema = z.object({
-  platform: z.enum(['alipay', 'wechat', 'douyin']),
+  platform: z.enum(SUPPORTED_PLATFORMS as [string, ...string[]]),
   redirectUri: z.string().url(),
   state: z.string().optional(),
 });
@@ -45,14 +140,16 @@ const generateAuthUrlSchema = z.object({
 router.post('/auth-url', async (req: Request, res: Response) => {
   try {
     const body = generateAuthUrlSchema.parse(req.body);
-    const config = OAUTH_CONFIG[body.platform];
+    const platform = body.platform as keyof typeof OAUTH_CONFIG;
+    const config = OAUTH_CONFIG[platform];
     
     // 生成state参数（用于防CSRF攻击）
     const state = body.state || crypto.randomBytes(16).toString('hex');
     
     let authUrl = '';
     
-    switch (body.platform) {
+    switch (platform) {
+      // 国内平台
       case 'alipay':
         authUrl = `${config.authUrl}?app_id=${config.appId}&scope=${config.scope}&redirect_uri=${encodeURIComponent(body.redirectUri)}&state=${state}`;
         break;
@@ -61,6 +158,34 @@ router.post('/auth-url', async (req: Request, res: Response) => {
         break;
       case 'douyin':
         authUrl = `${config.authUrl}?app_id=${config.appId}&scope=${config.scope}&redirect_uri=${encodeURIComponent(body.redirectUri)}&state=${state}`;
+        break;
+      case 'qq':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${config.scope}&state=${state}`;
+        break;
+      case 'weibo':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${config.scope}&state=${state}`;
+        break;
+      // 国际平台
+      case 'github':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+        break;
+      case 'google':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+        break;
+      case 'apple':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+        break;
+      case 'microsoft':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+        break;
+      case 'twitter':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}&code_challenge=plain&code_challenge_method=plain`;
+        break;
+      case 'discord':
+        authUrl = `${config.authUrl}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+        break;
+      case 'telegram':
+        authUrl = `${config.authUrl}?bot_id=${config.appId}&redirect_uri=${encodeURIComponent(body.redirectUri)}&state=${state}`;
         break;
     }
     
@@ -81,7 +206,7 @@ router.post('/auth-url', async (req: Request, res: Response) => {
 // ==================== OAuth 回调处理 ====================
 
 const callbackSchema = z.object({
-  platform: z.enum(['alipay', 'wechat', 'douyin']),
+  platform: z.enum(SUPPORTED_PLATFORMS as [string, ...string[]]),
   code: z.string(),
   state: z.string().optional(),
   referrerCode: z.string().optional(), // 推广码，用于推广追踪
@@ -217,7 +342,7 @@ router.post('/callback', async (req: Request, res: Response) => {
 
 const bindAccountSchema = z.object({
   userId: z.string(),
-  platform: z.enum(['alipay', 'wechat', 'douyin']),
+  platform: z.enum(SUPPORTED_PLATFORMS as [string, ...string[]]),
   code: z.string(),
 });
 
@@ -302,7 +427,7 @@ router.post('/bind', async (req: Request, res: Response) => {
 
 const unbindAccountSchema = z.object({
   userId: z.string(),
-  platform: z.enum(['alipay', 'wechat', 'douyin']),
+  platform: z.enum(SUPPORTED_PLATFORMS as [string, ...string[]]),
 });
 
 /**
@@ -378,7 +503,7 @@ router.get('/bindings/:userId', async (req: Request, res: Response) => {
 
 const refreshTokenSchema = z.object({
   userId: z.string(),
-  platform: z.enum(['alipay', 'wechat', 'douyin']),
+  platform: z.enum(SUPPORTED_PLATFORMS as [string, ...string[]]),
 });
 
 /**
@@ -424,6 +549,44 @@ router.post('/refresh', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Refresh token error:', error);
     res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// ==================== 获取支持的平台列表 ====================
+
+/**
+ * 获取所有支持的OAuth登录平台
+ * GET /api/v1/oauth/platforms
+ */
+router.get('/platforms', async (req: Request, res: Response) => {
+  try {
+    const platforms = Object.entries(OAUTH_CONFIG).map(([key, config]) => ({
+      id: key,
+      name: config.name,
+      icon: config.icon,
+      color: config.color,
+    }));
+
+    // 分类返回
+    const domesticPlatforms = platforms.filter(p => 
+      ['alipay', 'wechat', 'douyin', 'qq', 'weibo'].includes(p.id)
+    );
+    
+    const internationalPlatforms = platforms.filter(p => 
+      ['github', 'google', 'apple', 'microsoft', 'twitter', 'discord', 'telegram'].includes(p.id)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        all: platforms,
+        domestic: domesticPlatforms,
+        international: internationalPlatforms,
+      },
+    });
+  } catch (error) {
+    console.error('Get platforms error:', error);
+    res.status(500).json({ error: 'Failed to get platforms' });
   }
 });
 

@@ -35,6 +35,34 @@ interface OAuthBinding {
   avatar?: string;
 }
 
+interface PlatformInfo {
+  id: string;
+  name: string;
+  icon: keyof typeof FontAwesome6.glyphMap;
+  color: string;
+}
+
+// 所有支持的平台配置
+const PLATFORMS_CONFIG: Record<string, PlatformInfo> = {
+  // 国内平台
+  alipay: { id: 'alipay', name: '支付宝', icon: 'alipay', color: '#1677FF' },
+  wechat: { id: 'wechat', name: '微信', icon: 'wechat', color: '#07C160' },
+  douyin: { id: 'douyin', name: '抖音', icon: 'tiktok', color: '#000000' },
+  qq: { id: 'qq', name: 'QQ', icon: 'qq', color: '#12B7F5' },
+  weibo: { id: 'weibo', name: '微博', icon: 'weibo', color: '#E6162D' },
+  // 国际平台
+  github: { id: 'github', name: 'GitHub', icon: 'github', color: '#24292F' },
+  google: { id: 'google', name: 'Google', icon: 'google', color: '#4285F4' },
+  apple: { id: 'apple', name: 'Apple', icon: 'apple', color: '#000000' },
+  microsoft: { id: 'microsoft', name: 'Microsoft', icon: 'microsoft', color: '#00A4EF' },
+  twitter: { id: 'twitter', name: 'Twitter/X', icon: 'x-twitter', color: '#000000' },
+  discord: { id: 'discord', name: 'Discord', icon: 'discord', color: '#5865F2' },
+  telegram: { id: 'telegram', name: 'Telegram', icon: 'telegram', color: '#26A5E4' },
+};
+
+const DOMESTIC_PLATFORMS = ['alipay', 'wechat', 'douyin', 'qq', 'weibo'];
+const INTERNATIONAL_PLATFORMS = ['github', 'google', 'apple', 'microsoft', 'twitter', 'discord', 'telegram'];
+
 export default function LoginScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -96,7 +124,7 @@ export default function LoginScreen() {
       /**
        * 服务端文件：server/src/routes/oauth.ts
        * 接口：POST /api/v1/oauth/callback
-       * Body 参数：platform: 'alipay'|'wechat'|'douyin', code: string
+       * Body 参数：platform: string, code: string
        */
       const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/oauth/callback`, {
         method: 'POST',
@@ -169,7 +197,7 @@ export default function LoginScreen() {
       const result = await response.json();
 
       if (result.success) {
-        Alert.alert('绑定成功', `${getPlatformName(platform)}已成功绑定`);
+        Alert.alert('绑定成功', `${PLATFORMS_CONFIG[platform]?.name || platform}已成功绑定`);
         fetchUserInfo();
       } else {
         Alert.alert('绑定失败', result.message);
@@ -187,7 +215,7 @@ export default function LoginScreen() {
     
     Alert.alert(
       '确认解绑',
-      `确定要解绑${getPlatformName(binding.platform)}吗？`,
+      `确定要解绑${PLATFORMS_CONFIG[binding.platform]?.name || binding.platform}吗？`,
       [
         { text: '取消', style: 'cancel' },
         {
@@ -244,27 +272,81 @@ export default function LoginScreen() {
     );
   };
 
-  const getPlatformName = (platform: string) => {
-    const names: Record<string, string> = {
-      alipay: '支付宝',
-      wechat: '微信',
-      douyin: '抖音',
-    };
-    return names[platform] || platform;
-  };
-
-  const getPlatformIcon = (platform: string) => {
-    const icons: Record<string, keyof typeof FontAwesome6.glyphMap> = {
-      alipay: 'alipay',
-      wechat: 'wechat',
-      douyin: 'tiktok',
-    };
-    return icons[platform] || 'link';
-  };
-
   const getMembershipName = (level: number) => {
     const names = ['免费用户', '普通会员', '超级会员'];
     return names[level] || '免费用户';
+  };
+
+  // 渲染平台绑定项
+  const renderBindingItem = (platformId: string) => {
+    const config = PLATFORMS_CONFIG[platformId];
+    if (!config) return null;
+
+    const binding = bindings.find(b => b.platform === platformId);
+    const isCurrentLoading = loadingPlatform === platformId;
+
+    return (
+      <View key={platformId} style={styles.bindingCard}>
+        <View style={[styles.bindingIcon, { backgroundColor: config.color }]}>
+          <FontAwesome6 name={config.icon} size={20} color="#FFFFFF" />
+        </View>
+        <View style={styles.bindingInfo}>
+          <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.bindingPlatform}>
+            {config.name}
+          </ThemedText>
+          <ThemedText variant="caption" color={theme.textMuted} style={styles.bindingStatus}>
+            {binding ? `已绑定：${binding.nickname || binding.open_id}` : '未绑定'}
+          </ThemedText>
+        </View>
+        {isCurrentLoading ? (
+          <ActivityIndicator size="small" color={theme.primary} />
+        ) : binding ? (
+          <TouchableOpacity
+            style={[styles.bindingAction, styles.unbindAction]}
+            onPress={() => handleUnbind(binding)}
+          >
+            <ThemedText variant="caption" color="#FFFFFF" style={styles.bindingActionText}>
+              解绑
+            </ThemedText>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.bindingAction, styles.bindAction]}
+            onPress={() => handleBind(platformId)}
+          >
+            <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.bindingActionText}>
+              绑定
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  // 渲染登录按钮
+  const renderLoginButton = (platformId: string) => {
+    const config = PLATFORMS_CONFIG[platformId];
+    if (!config) return null;
+
+    return (
+      <TouchableOpacity
+        key={platformId}
+        style={[styles.loginButton, { backgroundColor: config.color }]}
+        onPress={() => handleOAuthLogin(platformId)}
+        disabled={isLoading}
+      >
+        {loadingPlatform === platformId ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <>
+            <FontAwesome6 name={config.icon} size={20} color="#FFFFFF" />
+            <ThemedText variant="smallMedium" color="#FFFFFF" style={styles.loginButtonText}>
+              {config.name}登录
+            </ThemedText>
+          </>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   if (user) {
@@ -298,52 +380,20 @@ export default function LoginScreen() {
             </ThemedText>
           </ThemedView>
 
+          {/* 国内平台绑定 */}
           <View style={styles.bindingsSection}>
             <ThemedText variant="caption" color={theme.textSecondary} style={styles.sectionTitle}>
-              第三方账号绑定
+              国内平台
             </ThemedText>
+            {DOMESTIC_PLATFORMS.map(renderBindingItem)}
+          </View>
 
-            {['alipay', 'wechat', 'douyin'].map((platform) => {
-              const binding = bindings.find(b => b.platform === platform);
-              const isCurrentLoading = loadingPlatform === platform;
-
-              return (
-                <View key={platform} style={styles.bindingCard}>
-                  <View style={[styles.bindingIcon, { backgroundColor: platform === 'alipay' ? '#1677FF' : platform === 'wechat' ? '#07C160' : '#000000' }]}>
-                    <FontAwesome6 name={getPlatformIcon(platform)} size={20} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.bindingInfo}>
-                    <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.bindingPlatform}>
-                      {getPlatformName(platform)}
-                    </ThemedText>
-                    <ThemedText variant="caption" color={theme.textMuted} style={styles.bindingStatus}>
-                      {binding ? `已绑定：${binding.nickname || binding.open_id}` : '未绑定'}
-                    </ThemedText>
-                  </View>
-                  {isCurrentLoading ? (
-                    <ActivityIndicator size="small" color={theme.primary} />
-                  ) : binding ? (
-                    <TouchableOpacity
-                      style={[styles.bindingAction, styles.unbindAction]}
-                      onPress={() => handleUnbind(binding)}
-                    >
-                      <ThemedText variant="caption" color="#FFFFFF" style={styles.bindingActionText}>
-                        解绑
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.bindingAction, styles.bindAction]}
-                      onPress={() => handleBind(platform)}
-                    >
-                      <ThemedText variant="caption" color={theme.buttonPrimaryText} style={styles.bindingActionText}>
-                        绑定
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
+          {/* 国际平台绑定 */}
+          <View style={styles.bindingsSection}>
+            <ThemedText variant="caption" color={theme.textSecondary} style={styles.sectionTitle}>
+              国际平台
+            </ThemedText>
+            {INTERNATIONAL_PLATFORMS.map(renderBindingItem)}
           </View>
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -386,72 +436,55 @@ export default function LoginScreen() {
           </ThemedText>
         </View>
 
+        {/* 国内平台登录 */}
         <View style={styles.section}>
           <ThemedText variant="caption" color={theme.textSecondary} style={styles.sectionTitle}>
-            快捷登录
+            国内平台快捷登录
           </ThemedText>
+          <View style={styles.platformGrid}>
+            {DOMESTIC_PLATFORMS.slice(0, 3).map(renderLoginButton)}
+          </View>
+        </View>
 
-          {/* 支付宝登录 */}
-          <TouchableOpacity
-            style={[styles.loginButton, styles.alipayButton]}
-            onPress={() => handleOAuthLogin('alipay')}
-            disabled={isLoading}
-          >
-            {loadingPlatform === 'alipay' ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <FontAwesome6 name="alipay" size={20} color="#FFFFFF" />
-                <ThemedText variant="smallMedium" color="#FFFFFF" style={styles.loginButtonText}>
-                  支付宝登录
-                </ThemedText>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* 微信登录 */}
-          <TouchableOpacity
-            style={[styles.loginButton, styles.wechatButton]}
-            onPress={() => handleOAuthLogin('wechat')}
-            disabled={isLoading}
-          >
-            {loadingPlatform === 'wechat' ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <FontAwesome6 name="comments" size={20} color="#FFFFFF" />
-                <ThemedText variant="smallMedium" color="#FFFFFF" style={styles.loginButtonText}>
-                  微信登录
-                </ThemedText>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* 抖音登录 */}
-          <TouchableOpacity
-            style={[styles.loginButton, styles.douyinButton]}
-            onPress={() => handleOAuthLogin('douyin')}
-            disabled={isLoading}
-          >
-            {loadingPlatform === 'douyin' ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <FontAwesome6 name="tiktok" size={20} color="#FFFFFF" />
-                <ThemedText variant="smallMedium" color="#FFFFFF" style={styles.loginButtonText}>
-                  抖音登录
-                </ThemedText>
-              </>
-            )}
-          </TouchableOpacity>
+        {/* 国际平台登录 */}
+        <View style={styles.section}>
+          <ThemedText variant="caption" color={theme.textSecondary} style={styles.sectionTitle}>
+            国际平台快捷登录
+          </ThemedText>
+          <View style={styles.platformGrid}>
+            {INTERNATIONAL_PLATFORMS.slice(0, 3).map(renderLoginButton)}
+          </View>
         </View>
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
           <ThemedText variant="caption" color={theme.textMuted} style={styles.dividerText}>
-            其他方式
+            更多平台
           </ThemedText>
           <View style={styles.dividerLine} />
+        </View>
+
+        {/* 更多平台图标 */}
+        <View style={styles.morePlatforms}>
+          {[...DOMESTIC_PLATFORMS.slice(3), ...INTERNATIONAL_PLATFORMS.slice(3)].map(platformId => {
+            const config = PLATFORMS_CONFIG[platformId];
+            if (!config) return null;
+            
+            return (
+              <TouchableOpacity
+                key={platformId}
+                style={[styles.iconButton, { backgroundColor: config.color }]}
+                onPress={() => handleOAuthLogin(platformId)}
+                disabled={isLoading}
+              >
+                {loadingPlatform === platformId ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <FontAwesome6 name={config.icon} size={18} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.terms}>

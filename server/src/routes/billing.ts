@@ -483,7 +483,7 @@ router.post('/g-points/recharge', async (req: Request, res: Response) => {
     const body = gPointRechargeSchema.parse(req.body);
     
     // 计算G点：1元 = 100G点
-    const gPoints = body.amount * 100;
+    const gPoints = Math.floor(body.amount * 100);
     
     // 获取当前余额
     const { data: userBalance, error: balanceError } = await client
@@ -495,14 +495,14 @@ router.post('/g-points/recharge', async (req: Request, res: Response) => {
     const balanceBefore = userBalance?.g_points || 0;
     const balanceAfter = balanceBefore + gPoints;
     
-    // 更新G点余额
+    // 更新G点余额 - 使用update而不是upsert
     const { error: updateError } = await client
       .from('user_balances')
-      .upsert({
-        user_id: body.userId,
+      .update({
         g_points: balanceAfter,
         updated_at: new Date().toISOString(),
-      });
+      })
+      .eq('user_id', body.userId);
     
     if (updateError) {
       return res.status(500).json({ error: 'Failed to update g_points' });

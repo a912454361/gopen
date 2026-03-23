@@ -255,5 +255,19 @@ export const createStyles = (theme: Theme) => {
       paddingVertical: 2,
       borderRadius: BorderRadius.full,
     },
+    favoriteSection: {
+      marginBottom: Spacing.md,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+      paddingHorizontal: Spacing.xs,
+    },
+    sectionDivider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginVertical: Spacing.md,
+    },
   });
 };

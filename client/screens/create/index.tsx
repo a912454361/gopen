@@ -116,10 +116,24 @@ export default function CreateScreen() {
   const [videoDuration, setVideoDuration] = useState(30);
   const [gPointsBalance, setGPointsBalance] = useState(0);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteModels, setFavoriteModels] = useState<Model[]>([]);
 
   // 获取用户ID
   useEffect(() => {
     AsyncStorage.getItem('userId').then(setUserId);
+  }, []);
+
+  // 加载收藏列表
+  useEffect(() => {
+    const loadFavorites = async () => {
+      const saved = await AsyncStorage.getItem('modelFavorites');
+      if (saved) {
+        const favoriteList = JSON.parse(saved);
+        setFavorites(favoriteList);
+      }
+    };
+    loadFavorites();
   }, []);
 
   // 获取G点余额
@@ -170,6 +184,8 @@ export default function CreateScreen() {
         if (data.data?.length > 0 && !selectedModel) {
           setSelectedModel(data.data[0]);
         }
+        // 更新收藏模型列表
+        updateFavoriteModels(data.data || []);
       }
     } catch (error) {
       console.error('Fetch models error:', error);
@@ -177,6 +193,19 @@ export default function CreateScreen() {
       setLoadingModels(false);
     }
   };
+
+  // 更新收藏模型列表
+  const updateFavoriteModels = (modelList: Model[]) => {
+    const favModels = modelList.filter(m => favorites.includes(m.id));
+    setFavoriteModels(favModels);
+  };
+
+  // 当收藏列表变化时，更新收藏模型
+  useEffect(() => {
+    if (models.length > 0) {
+      updateFavoriteModels(models);
+    }
+  }, [favorites, models]);
 
   // 切换创作类型
   const handleTypeChange = (type: string) => {
@@ -443,8 +472,72 @@ export default function CreateScreen() {
             <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <ScrollView style={styles.pickerList}>
+              {/* 收藏模型区域 */}
+              {favoriteModels.length > 0 && (
+                <View style={styles.favoriteSection}>
+                  <View style={styles.sectionHeader}>
+                    <FontAwesome6 name="star" size={14} color="#FFD700" solid />
+                    <ThemedText variant="label" color={theme.textPrimary} style={{ marginLeft: 6 }}>
+                      我的收藏
+                    </ThemedText>
+                  </View>
+                  {favoriteModels.map((model) => {
+                    const hasPermission = checkModelPermission(model);
+                    return (
+                      <TouchableOpacity
+                        key={`fav-${model.id}`}
+                        style={[
+                          styles.modelItem,
+                          selectedModel?.id === model.id && { borderColor: theme.primary },
+                          !hasPermission && styles.modelItemDisabled,
+                        ]}
+                        onPress={() => {
+                          if (hasPermission) {
+                            setSelectedModel(model);
+                            setShowModelPicker(false);
+                          } else {
+                            Alert.alert(
+                              '权限不足',
+                              model.super_member_only 
+                                ? '该模型仅限超级会员使用' 
+                                : '该模型需要会员权限',
+                              [
+                                { text: '取消', style: 'cancel' },
+                                { text: '升级会员', onPress: () => {
+                                  setShowModelPicker(false);
+                                  router.push('/membership');
+                                }},
+                              ]
+                            );
+                          }
+                        }}
+                      >
+                        <View style={styles.modelInfo}>
+                          <View style={styles.modelNameRow}>
+                            <ThemedText variant="label" color={theme.textPrimary}>{model.name}</ThemedText>
+                            <FontAwesome6 name="star" size={12} color="#FFD700" solid style={{ marginLeft: 6 }} />
+                          </View>
+                          <ThemedText variant="caption" color={theme.textMuted}>
+                            {model.provider} · {model.max_tokens} tokens
+                          </ThemedText>
+                        </View>
+                        {selectedModel?.id === model.id && (
+                          <FontAwesome6 name="check" size={16} color={theme.primary} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <View style={styles.sectionDivider} />
+                </View>
+              )}
+
+              {/* 全部模型 */}
+              <View style={styles.sectionHeader}>
+                <ThemedText variant="label" color={theme.textMuted}>全部模型</ThemedText>
+              </View>
               {models.map((model) => {
                 const hasPermission = checkModelPermission(model);
+                const isFavorite = favorites.includes(model.id);
                 return (
                   <TouchableOpacity
                     key={model.id}

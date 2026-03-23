@@ -201,7 +201,7 @@ export default function DownloadScreen() {
         {/* 底部信息 */}
         <View style={styles.footer}>
           <ThemedText variant="tiny" color={theme.textMuted}>
-            © 2026 G open 智能创作助手
+            Copyright 2026 G open 智能创作助手
           </ThemedText>
           <ThemedText variant="tiny" color={theme.textMuted}>
             支持 35 家主流 AI 模型

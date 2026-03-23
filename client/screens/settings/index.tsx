@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   ScrollView,
   View,
@@ -7,6 +7,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { useMembership } from '@/contexts/MembershipContext';
@@ -14,6 +16,8 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 import { createStyles } from './styles';
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 interface MenuItem {
   icon: string;
@@ -30,10 +34,47 @@ export default function SettingsScreen() {
   const router = useSafeRouter();
   const { isMember, expireDate } = useMembership();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [userId] = useState('demo-user-001'); // 示例用户ID
+  const [userId, setUserId] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string>('用户');
+
+  // 获取用户ID
+  useEffect(() => {
+    AsyncStorage.getItem('userId').then((id) => {
+      if (id) {
+        setUserId(id);
+      }
+    });
+  }, []);
+
+  // 获取用户信息
+  const fetchUserInfo = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}`
+      );
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setNickname(result.data.nickname || '用户');
+        setAvatarUrl(result.data.avatar_url || null);
+      }
+    } catch (error) {
+      console.error('Fetch user info error:', error);
+    }
+  }, [userId]);
+
+  // 页面聚焦时刷新用户信息
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserInfo();
+    }, [fetchUserInfo])
+  );
 
   const handleAvatarChange = (url: string) => {
     setAvatarUrl(url);
+    fetchUserInfo(); // 刷新用户信息
   };
 
   const generalMenuItems: MenuItem[] = [
@@ -292,11 +333,11 @@ export default function SettingsScreen() {
         {/* Profile Card */}
         <TouchableOpacity 
           style={styles.profileCard}
-          onPress={() => router.push('/profile-edit')}
+          onPress={() => router.push(userId ? '/profile-edit' : '/login')}
           activeOpacity={0.7}
         >
           <Avatar 
-            userId={userId}
+            userId={userId || ''}
             size={56}
             avatarUrl={avatarUrl}
             editable={false}
@@ -304,10 +345,10 @@ export default function SettingsScreen() {
           />
           <View style={styles.profileInfo}>
             <ThemedText variant="title" color={theme.textPrimary}>
-              {isMember ? 'G open 会员' : '免费用户'}
+              {nickname || '点击登录'}
             </ThemedText>
             <ThemedText variant="small" color={theme.textMuted}>
-              {isMember ? `到期：${expireDate}` : '升级解锁更多功能'}
+              {userId ? (isMember ? `会员到期：${expireDate}` : '升级解锁更多功能') : '登录享受完整功能'}
             </ThemedText>
           </View>
           <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />

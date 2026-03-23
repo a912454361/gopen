@@ -56,6 +56,9 @@ export default function ProfileEditScreen() {
     AsyncStorage.getItem('userId').then((id) => {
       if (id) {
         setUserId(id);
+      } else {
+        // 未登录，停止loading
+        setIsLoading(false);
       }
     });
   }, []);
@@ -90,8 +93,10 @@ export default function ProfileEditScreen() {
   }, [userId, showToast]);
 
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (userId) {
+      fetchProfile();
+    }
+  }, [fetchProfile, userId]);
 
   // 选择并上传头像
   const handlePickAvatar = async () => {
@@ -214,6 +219,45 @@ export default function ProfileEditScreen() {
       <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </Screen>
+    );
+  }
+
+  // 未登录状态
+  if (!userId) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+        <View style={styles.container}>
+          <View style={styles.navBar}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <FontAwesome6 name="arrow-left" size={18} color={theme.textPrimary} />
+            </TouchableOpacity>
+            <ThemedText variant="h4" color={theme.textPrimary} style={styles.navTitle}>
+              编辑资料
+            </ThemedText>
+          </View>
+          <View style={styles.emptyContainer}>
+            <FontAwesome6 name="user-lock" size={64} color={theme.textMuted} />
+            <ThemedText variant="h4" color={theme.textPrimary} style={styles.emptyText}>
+              请先登录
+            </ThemedText>
+            <ThemedText variant="body" color={theme.textMuted} style={styles.emptyHint}>
+              登录后可编辑个人资料
+            </ThemedText>
+            <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
+              <LinearGradient
+                colors={[theme.primary, theme.accent]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.loginButtonGradient}
+              >
+                <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText}>
+                  去登录
+                </ThemedText>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </Screen>
     );

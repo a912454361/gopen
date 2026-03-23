@@ -132,5 +132,29 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing['2xl'],
+    },
+    emptyText: {
+      marginTop: Spacing.xl,
+    },
+    emptyHint: {
+      marginTop: Spacing.sm,
+      textAlign: 'center',
+    },
+    loginButton: {
+      marginTop: Spacing['2xl'],
+      borderRadius: BorderRadius.md,
+      overflow: 'hidden',
+    },
+    loginButtonGradient: {
+      paddingVertical: Spacing.lg,
+      paddingHorizontal: Spacing['2xl'],
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });
 };

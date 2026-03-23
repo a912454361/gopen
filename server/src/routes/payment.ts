@@ -140,7 +140,7 @@ const PAYMENT_ACCOUNTS = {
   jdpay: {
     name: '京东支付',
     account: '', // 京东账号
-    qrcodeUrl: 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F99.png&nonce=158b9b89-7d16-4189-a375-e38b5590cc7c&project_id=7618582614399647794&sign=c37e8836dcb32d4c9bc16de1bd8e7cc4f3e03a01d3a50543841f1d1208dc2aab', // 微众银行收款码
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/proxy_c5a48d01?sign=1776824518-b8cc6103e3-0-f57d127a35f7da0b039c2354f9b8b8094533020cacfd56bd7525ac23b73beae5', // 微众银行收款码
     realName: '郭涛',
     desc: '请使用京东APP扫码支付',
     color: '#E1251B',
@@ -151,7 +151,7 @@ const PAYMENT_ACCOUNTS = {
     account: '6216600800003247932', // 银行卡号
     bankName: '中国银行',
     bankBranch: '上海市黄渡支行',
-    qrcodeUrl: 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F99.png&nonce=158b9b89-7d16-4189-a375-e38b5590cc7c&project_id=7618582614399647794&sign=c37e8836dcb32d4c9bc16de1bd8e7cc4f3e03a01d3a50543841f1d1208dc2aab', // 微众银行收款码
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/proxy_c5a48d01?sign=1776824518-b8cc6103e3-0-f57d127a35f7da0b039c2354f9b8b8094533020cacfd56bd7525ac23b73beae5', // 微众银行收款码
     realName: '郭涛',
     desc: '请使用网银或柜台转账',
     color: '#C41230',

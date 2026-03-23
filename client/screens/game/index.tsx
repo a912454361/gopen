@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -76,6 +77,7 @@ const PRESET_VIDEOS: Record<string, string> = {
 export default function GameScreen() {
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
 
   // 状态
   const [loading, setLoading] = useState(true);
@@ -399,6 +401,38 @@ export default function GameScreen() {
               </View>
             </View>
           )}
+
+          {/* 特权入口：UE5 引擎创作 */}
+          <TouchableOpacity
+            style={{
+              marginTop: 24,
+              padding: 16,
+              borderRadius: 16,
+              backgroundColor: `${theme.primary}10`,
+              borderWidth: 1,
+              borderColor: `${theme.primary}30`,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+            onPress={() => router.push('/ue-engine')}
+          >
+            <View style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: theme.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <FontAwesome6 name="wand-magic-sparkles" size={20} color={theme.buttonPrimaryText} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="label" color={theme.primary}>UE 5.7.4 引擎创作</ThemedText>
+              <ThemedText variant="tiny" color={theme.textMuted}>多模型协同 · 80GB GPU · 特权用户专属</ThemedText>
+            </View>
+            <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </Screen>

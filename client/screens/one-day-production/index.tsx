@@ -71,6 +71,22 @@ interface ProductionStatus {
   totalTokensUsed?: number;
 }
 
+// UE5 状态
+interface UE5Status {
+  connected: boolean;
+  lastHeartbeat?: string;
+  activeScripts: string[];
+}
+
+// 任务队列状态
+interface QueueStats {
+  total: number;
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+}
+
 // SSE 消息
 interface SSEMessage {
   type: 'init' | 'phase' | 'episode' | 'model' | 'progress' | 'error' | 'complete';
@@ -91,6 +107,8 @@ export default function OneDayProductionScreen() {
   const [sseConnected, setSseConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
+  const [ue5Status, setUE5Status] = useState<UE5Status | null>(null);
+  const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
 
   const sseRef = useRef<any>(null);
   const productionIdRef = useRef<string | null>(null);
@@ -551,6 +569,48 @@ export default function OneDayProductionScreen() {
               ))}
             </View>
           </View>
+        )}
+
+        {/* UE5 & 队列状态 */}
+        {(ue5Status || queueStats) && (
+          <ThemedView level="default" style={styles.statusCard}>
+            <ThemedText variant="label" color={theme.textPrimary} style={styles.sectionTitle}>
+              系统状态
+            </ThemedText>
+            <View style={styles.systemStatusGrid}>
+              {/* UE5 状态 */}
+              <View style={styles.systemStatusItem}>
+                <View style={styles.systemStatusHeader}>
+                  <FontAwesome6 name="gamepad" size={16} color={ue5Status?.connected ? '#10B981' : '#9CA3AF'} />
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>UE5</ThemedText>
+                </View>
+                <ThemedText variant="tiny" color={ue5Status?.connected ? '#10B981' : '#9CA3AF'}>
+                  {ue5Status?.connected ? '已连接' : '模拟模式'}
+                </ThemedText>
+                {ue5Status?.activeScripts && ue5Status.activeScripts.length > 0 && (
+                  <ThemedText variant="tiny" color={theme.textMuted}>
+                    脚本: {ue5Status.activeScripts.length}
+                  </ThemedText>
+                )}
+              </View>
+              
+              {/* 任务队列 */}
+              {queueStats && (
+                <View style={styles.systemStatusItem}>
+                  <View style={styles.systemStatusHeader}>
+                    <FontAwesome6 name="list-check" size={16} color={theme.primary} />
+                    <ThemedText variant="smallMedium" color={theme.textPrimary}>队列</ThemedText>
+                  </View>
+                  <ThemedText variant="tiny" color={theme.textMuted}>
+                    运行: {queueStats.running} | 等待: {queueStats.pending}
+                  </ThemedText>
+                  <ThemedText variant="tiny" color={theme.textMuted}>
+                    完成: {queueStats.completed} | 失败: {queueStats.failed}
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          </ThemedView>
         )}
 
         {/* 实时日志 */}

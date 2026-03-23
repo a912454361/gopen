@@ -88,11 +88,46 @@ interface GeneratedResult {
   gPointsCost?: number;
 }
 
+// 特权用户ID（郭涛）
+const PRIVILEGED_USER_ID = '53714d80-6677-420b-9cf1-cb22a41191ca';
+
 // 视频生成配置
 const VIDEO_DURATIONS = [
   { value: 30, label: '30秒', gPoints: 30 },
   { value: 120, label: '2分钟', gPoints: 120 },
   { value: 300, label: '5分钟', gPoints: 300 },
+];
+
+// 特权用户视频生成配置（更长时长，免费）
+const PRIVILEGED_VIDEO_DURATIONS = [
+  { value: 30, label: '30秒', gPoints: 0 },
+  { value: 60, label: '1分钟', gPoints: 0 },
+  { value: 120, label: '2分钟', gPoints: 0 },
+  { value: 180, label: '3分钟', gPoints: 0 },
+  { value: 300, label: '5分钟', gPoints: 0 },
+  { value: 600, label: '10分钟', gPoints: 0 },
+  { value: 900, label: '15分钟', gPoints: 0 },
+  { value: 1800, label: '30分钟', gPoints: 0 },
+  { value: 3600, label: '1小时', gPoints: 0 },
+];
+
+// 特权用户特效选项
+const VIDEO_EFFECTS = [
+  { value: 'none', label: '无特效', icon: 'ban' },
+  { value: 'particle', label: '粒子效果', icon: 'sparkles' },
+  { value: 'cinematic', label: '电影质感', icon: 'film' },
+  { value: 'anime', label: '动漫风格', icon: 'palette' },
+  { value: 'realistic', label: '超写实', icon: 'camera' },
+];
+
+// 特权用户分辨率选项
+const PRIVILEGED_RESOLUTIONS = [
+  { value: '720p', label: '720p HD' },
+  { value: '1080p', label: '1080p FHD' },
+  { value: '2K', label: '2K QHD' },
+  { value: '4K', label: '4K UHD' },
+  { value: '8K', label: '8K UHD' },
+];
 ];
 
 // 主流视频生成模型推荐
@@ -168,10 +203,15 @@ export default function CreateScreen() {
   
   // 视频生成状态
   const [videoDuration, setVideoDuration] = useState(30);
+  const [videoEffect, setVideoEffect] = useState('none');
+  const [videoResolution, setVideoResolution] = useState('720p');
   const [gPointsBalance, setGPointsBalance] = useState(0);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteModels, setFavoriteModels] = useState<Model[]>([]);
+
+  // 特权用户检查
+  const isPrivilegedUser = userId === PRIVILEGED_USER_ID;
 
   // 获取用户ID
   useEffect(() => {
@@ -397,12 +437,14 @@ export default function CreateScreen() {
         }
       } else if (activeType === 'video') {
         // 视频生成
-        // 计算所需G点
-        const durationConfig = VIDEO_DURATIONS.find(d => d.value === videoDuration);
-        const requiredGPoints = durationConfig?.gPoints || 30;
+        // 特权用户无需检查G点，使用特权配置
+        const durationConfig = isPrivilegedUser 
+          ? PRIVILEGED_VIDEO_DURATIONS.find(d => d.value === videoDuration)
+          : VIDEO_DURATIONS.find(d => d.value === videoDuration);
+        const requiredGPoints = isPrivilegedUser ? 0 : (durationConfig?.gPoints || 30);
         
-        // 检查G点余额
-        if (gPointsBalance < requiredGPoints) {
+        // 非特权用户检查G点余额
+        if (!isPrivilegedUser && gPointsBalance < requiredGPoints) {
           Alert.alert(
             'G点不足',
             `生成${durationConfig?.label}视频需要${requiredGPoints}G点，当前余额${gPointsBalance}G点`,
@@ -415,31 +457,33 @@ export default function CreateScreen() {
           return;
         }
         
-        // 扣除G点
-        const deductResponse = await fetch(
-          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/g-points/deduct`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              gPoints: requiredGPoints,
-              description: `生成${durationConfig?.label}视频`,
-              relatedType: 'video_generation',
-            }),
+        // 非特权用户扣除G点
+        if (!isPrivilegedUser) {
+          const deductResponse = await fetch(
+            `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/g-points/deduct`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId,
+                gPoints: requiredGPoints,
+                description: `生成${durationConfig?.label}视频`,
+                relatedType: 'video_generation',
+              }),
+            }
+          );
+          
+          const deductData = await deductResponse.json();
+          
+          if (!deductData.success) {
+            throw new Error(deductData.error || 'G点扣除失败');
           }
-        );
-        
-        const deductData = await deductResponse.json();
-        
-        if (!deductData.success) {
-          throw new Error(deductData.error || 'G点扣除失败');
+          
+          // 更新G点余额
+          setGPointsBalance(deductData.data.balanceAfter);
         }
         
-        // 更新G点余额
-        setGPointsBalance(deductData.data.balanceAfter);
-        
-        // 调用视频生成API
+        // 调用视频生成API（特权用户可使用特效和更高质量）
         const videoResponse = await fetch(
           `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/video/generate`,
           {
@@ -450,6 +494,10 @@ export default function CreateScreen() {
               duration: videoDuration,
               user_id: userId,
               model: selectedModel?.code,
+              ...(isPrivilegedUser && {
+                resolution: videoResolution,
+                effect: videoEffect,
+              }),
             }),
           }
         );
@@ -465,19 +513,20 @@ export default function CreateScreen() {
             prompt: prompt,
             createdAt: new Date().toISOString(),
             duration: videoDuration,
-            gPointsCost: requiredGPoints,
+            gPointsCost: isPrivilegedUser ? 0 : requiredGPoints,
           });
         } else {
-          // 视频生成失败，退还G点
-          await fetch(
-            `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/g-points/refund`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId,
-                gPoints: requiredGPoints,
-                description: '视频生成失败，退还G点',
+          // 视频生成失败，非特权用户退还G点
+          if (!isPrivilegedUser) {
+            await fetch(
+              `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/g-points/refund`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId,
+                  gPoints: requiredGPoints,
+                  description: '视频生成失败，退还G点',
               }),
             }
           );
@@ -491,7 +540,7 @@ export default function CreateScreen() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, selectedModel, activeType, userId, isMember, isSuperMember, router, videoDuration, gPointsBalance]);
+  }, [prompt, selectedModel, activeType, userId, isMember, isSuperMember, router, videoDuration, gPointsBalance, videoEffect, videoResolution, isPrivilegedUser]);
 
   // 保存到作品库
   const handleSaveToWorks = async () => {
@@ -858,7 +907,20 @@ export default function CreateScreen() {
           {activeType === 'video' && (
             <View style={styles.modelSection}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <ThemedText variant="label" color={theme.textMuted}>选择时长</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <ThemedText variant="label" color={theme.textMuted}>选择时长</ThemedText>
+                  {isPrivilegedUser && (
+                    <View style={{ 
+                      marginLeft: 8, 
+                      paddingHorizontal: 8, 
+                      paddingVertical: 2, 
+                      borderRadius: 4, 
+                      backgroundColor: 'rgba(245, 158, 11, 0.2)' 
+                    }}>
+                      <ThemedText variant="tiny" color="#F59E0B">VIP特权</ThemedText>
+                    </View>
+                  )}
+                </View>
                 <TouchableOpacity onPress={() => setShowRechargeModal(true)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <FontAwesome6 name="coins" size={14} color="#F59E0B" style={{ marginRight: 4 }} />
@@ -866,32 +928,96 @@ export default function CreateScreen() {
                   </View>
                 </TouchableOpacity>
               </View>
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                {VIDEO_DURATIONS.map((duration) => (
-                  <TouchableOpacity
-                    key={duration.value}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 16,
-                      paddingHorizontal: 12,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                      borderColor: videoDuration === duration.value ? '#F59E0B' : theme.border,
-                      backgroundColor: videoDuration === duration.value ? 'rgba(245, 158, 11, 0.1)' : theme.backgroundTertiary,
-                      alignItems: 'center',
-                    }}
-                    onPress={() => setVideoDuration(duration.value)}
-                  >
-                    <ThemedText variant="label" color={videoDuration === duration.value ? '#F59E0B' : theme.textPrimary}>
-                      {duration.label}
-                    </ThemedText>
-                    <ThemedText variant="tiny" color={theme.textMuted} style={{ marginTop: 4 }}>
-                      {duration.gPoints} G点
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {gPointsBalance < (VIDEO_DURATIONS.find(d => d.value === videoDuration)?.gPoints || 30) && (
+              
+              {/* 时长选择 */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  {(isPrivilegedUser ? PRIVILEGED_VIDEO_DURATIONS : VIDEO_DURATIONS).map((duration) => (
+                    <TouchableOpacity
+                      key={duration.value}
+                      style={{
+                        paddingVertical: 16,
+                        paddingHorizontal: 16,
+                        borderRadius: 12,
+                        borderWidth: 2,
+                        borderColor: videoDuration === duration.value ? '#F59E0B' : theme.border,
+                        backgroundColor: videoDuration === duration.value ? 'rgba(245, 158, 11, 0.1)' : theme.backgroundTertiary,
+                        alignItems: 'center',
+                        minWidth: 80,
+                      }}
+                      onPress={() => setVideoDuration(duration.value)}
+                    >
+                      <ThemedText variant="label" color={videoDuration === duration.value ? '#F59E0B' : theme.textPrimary}>
+                        {duration.label}
+                      </ThemedText>
+                      <ThemedText variant="tiny" color={theme.textMuted} style={{ marginTop: 4 }}>
+                        {isPrivilegedUser ? '免费' : `${duration.gPoints} G点`}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* 特权用户特效和分辨率选择 */}
+              {isPrivilegedUser && (
+                <>
+                  {/* 分辨率选择 */}
+                  <View style={{ marginTop: 16 }}>
+                    <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: 8 }}>分辨率</ThemedText>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      {PRIVILEGED_RESOLUTIONS.map((res) => (
+                        <TouchableOpacity
+                          key={res.value}
+                          style={{
+                            paddingVertical: 8,
+                            paddingHorizontal: 12,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: videoResolution === res.value ? '#F59E0B' : theme.border,
+                            backgroundColor: videoResolution === res.value ? 'rgba(245, 158, 11, 0.1)' : theme.backgroundTertiary,
+                          }}
+                          onPress={() => setVideoResolution(res.value)}
+                        >
+                          <ThemedText variant="captionMedium" color={videoResolution === res.value ? '#F59E0B' : theme.textPrimary}>
+                            {res.label}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* 特效选择 */}
+                  <View style={{ marginTop: 16 }}>
+                    <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: 8 }}>特效</ThemedText>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      {VIDEO_EFFECTS.map((effect) => (
+                        <TouchableOpacity
+                          key={effect.value}
+                          style={{
+                            paddingVertical: 8,
+                            paddingHorizontal: 12,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: videoEffect === effect.value ? '#F59E0B' : theme.border,
+                            backgroundColor: videoEffect === effect.value ? 'rgba(245, 158, 11, 0.1)' : theme.backgroundTertiary,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                          }}
+                          onPress={() => setVideoEffect(effect.value)}
+                        >
+                          <FontAwesome6 name={effect.icon} size={12} color={videoEffect === effect.value ? '#F59E0B' : theme.textMuted} style={{ marginRight: 6 }} />
+                          <ThemedText variant="captionMedium" color={videoEffect === effect.value ? '#F59E0B' : theme.textPrimary}>
+                            {effect.label}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* 非特权用户G点不足提示 */}
+              {!isPrivilegedUser && gPointsBalance < (VIDEO_DURATIONS.find(d => d.value === videoDuration)?.gPoints || 30) && (
                 <TouchableOpacity
                   style={{
                     marginTop: 12,

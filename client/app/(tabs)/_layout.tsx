@@ -87,6 +87,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="free-models"
+        options={{
+          title: '免费模型',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="gift" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="qrcode-promo"
         options={{
           title: '收款码',

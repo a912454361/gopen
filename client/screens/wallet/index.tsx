@@ -1,6 +1,7 @@
 /**
  * 钱包页面
  * 功能：余额管理、G点管理、充值、消费记录
+ * 优化：简化充值流程，统一充值入口
  */
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
@@ -13,34 +14,20 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
-
-interface Model {
-  id: string;
-  code: string;
-  name: string;
-  provider: string;
-  category: string;
-  inputPrice: string;
-  outputPrice: string;
-  is_free: boolean;
-  member_only: boolean;
-  super_member_only: boolean;
-  max_tokens: number;
-  description?: string;
-}
 
 interface Balance {
   balance: number;
@@ -52,23 +39,22 @@ interface Balance {
   gPoints?: number;
 }
 
-// 预设充值金额（现金）
+// 统一充值金额选项
 const RECHARGE_OPTIONS = [
-  { amount: 1000, bonus: 0, label: '10元' },
-  { amount: 5000, bonus: 500, label: '50元' },
-  { amount: 10000, bonus: 1500, label: '100元' },
-  { amount: 50000, bonus: 10000, label: '500元' },
-  { amount: 100000, bonus: 25000, label: '1000元' },
-  { amount: 0, bonus: 0, label: '自定义' },
+  { amount: 1000, label: '10元', bonus: 0, bonusType: 'none' },
+  { amount: 5000, label: '50元', bonus: 500, bonusType: 'cash' },
+  { amount: 10000, label: '100元', bonus: 1500, bonusType: 'cash' },
+  { amount: 30000, label: '300元', bonus: 5000, bonusType: 'cash' },
+  { amount: 50000, label: '500元', bonus: 10000, bonusType: 'cash' },
+  { amount: 100000, label: '1000元', bonus: 25000, bonusType: 'cash' },
+  { amount: 0, label: '自定义', bonus: 0, bonusType: 'none' },
 ];
 
-// G点充值选项
-const GPOINT_RECHARGE_OPTIONS = [
-  { amount: 10, gPoints: 1000, label: '10元' },
-  { amount: 30, gPoints: 3000, label: '30元', bonus: 300 },
-  { amount: 50, gPoints: 5000, label: '50元', bonus: 800 },
-  { amount: 100, gPoints: 10000, label: '100元', bonus: 2000 },
-  { amount: 200, gPoints: 20000, label: '200元', bonus: 5000 },
+// 支付方式
+const PAY_METHODS = [
+  { id: 'alipay', name: '支付宝', icon: 'alipay', color: '#1677FF' },
+  { id: 'wechat', name: '微信', icon: 'weixin', color: '#07C160', brand: true },
+  { id: 'bank', name: '银行卡', icon: 'building-columns', color: '#C41230' },
 ];
 
 export default function WalletScreen() {
@@ -78,13 +64,10 @@ export default function WalletScreen() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [balance, setBalance] = useState<Balance | null>(null);
-  const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [rechargeModal, setRechargeModal] = useState(false);
-  const [gPointModal, setGPointModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(10000);
   const [customAmount, setCustomAmount] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [selectedPayMethod, setSelectedPayMethod] = useState<'alipay' | 'wechat' | 'bank'>('alipay');
   const [userId, setUserId] = useState<string | null>(null);
 
   // 获取用户ID
@@ -126,18 +109,6 @@ export default function WalletScreen() {
           gPoints: gPointsData.data.gPoints 
         });
       }
-
-      // 获取模型列表
-      const modelsRes = await fetch(
-        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/models`
-      );
-      const modelsData = await modelsRes.json();
-      if (modelsData.success) {
-        setModels(modelsData.data || []);
-        if (modelsData.data?.length > 0) {
-          setSelectedModel(modelsData.data[0].id);
-        }
-      }
     } catch (error) {
       console.error('Fetch data error:', error);
     } finally {
@@ -145,14 +116,15 @@ export default function WalletScreen() {
     }
   }, []);
 
-  // 加载数据 - 使用 useFocusEffect 确保页面返回时刷新
+  // 加载数据
   useFocusEffect(
     useCallback(() => {
       fetchData();
     }, [fetchData])
   );
 
-  const handleRecharge = async () => {
+  // 充值处理
+  const handleRecharge = () => {
     if (!userId) {
       Alert.alert('请先登录', '您需要登录后才能充值', [
         { text: '取消', style: 'cancel' },
@@ -163,7 +135,7 @@ export default function WalletScreen() {
 
     let amount = selectedAmount;
     if (selectedAmount === 0) {
-      amount = parseInt(customAmount) * 100;
+      amount = parseInt(customAmount, 10) * 100;
       if (isNaN(amount) || amount < 100) {
         Alert.alert('提示', '充值金额最低1元');
         return;
@@ -171,40 +143,12 @@ export default function WalletScreen() {
     }
 
     setRechargeModal(false);
-    // 延迟跳转，确保弹窗关闭动画完成
-    setTimeout(() => {
-      router.push('/payment', { amount: String(amount), productType: 'recharge' });
-    }, 300);
-  };
-
-  // G点充值 - 跳转到支付页面
-  const handleGPointRecharge = async (option: typeof GPOINT_RECHARGE_OPTIONS[0]) => {
-    if (!userId) {
-      Alert.alert('请先登录', '您需要登录后才能充值', [
-        { text: '取消', style: 'cancel' },
-        { text: '去登录', onPress: () => router.push('/login') }
-      ]);
-      return;
-    }
-
-    // 跳转到支付页面，金额单位为分
-    setGPointModal(false);
     setTimeout(() => {
       router.push('/payment', { 
-        amount: String(option.amount * 100), 
-        productType: 'gpoints',
-        gPoints: String(option.gPoints + (option.bonus || 0))
+        amount: String(amount), 
+        productType: 'recharge'
       });
     }, 300);
-  };
-
-  const getModelIcon = (provider: string, category: string): keyof typeof FontAwesome6.glyphMap => {
-    if (provider === 'openai') return 'robot';
-    if (provider === 'ollama') return 'server';
-    if (category === 'image') return 'image';
-    if (category === 'video') return 'video';
-    if (category === 'audio') return 'music';
-    return 'brain';
   };
 
   if (isLoading) {
@@ -220,8 +164,8 @@ export default function WalletScreen() {
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header with back button */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xl }}>
           <TouchableOpacity 
             onPress={() => router.back()} 
             style={{ padding: Spacing.sm, marginLeft: -Spacing.sm }}
@@ -229,170 +173,135 @@ export default function WalletScreen() {
             <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
           </TouchableOpacity>
           <ThemedText variant="h4" color={theme.textPrimary} style={{ marginLeft: Spacing.sm }}>
-            钱包
+            我的钱包
           </ThemedText>
         </View>
 
-        {/* 现金余额卡片 */}
-        <View style={styles.balanceCard}>
-          <View style={styles.balanceHeader}>
-            <ThemedText variant="small" color={theme.textMuted} style={styles.balanceLabel}>
-              账户余额
-            </ThemedText>
-            <TouchableOpacity onPress={() => router.push('/bill')}>
-              <FontAwesome6 name="receipt" size={16} color={theme.textMuted} />
-            </TouchableOpacity>
-          </View>
-          <ThemedText variant="h1" color={theme.textPrimary} style={styles.balanceAmount}>
-            ¥{balance?.balanceYuan || '0.00'}
-          </ThemedText>
-          <View style={styles.balanceActions}>
-            <TouchableOpacity
-              style={[styles.balanceButton, styles.rechargeButton]}
-              onPress={() => setRechargeModal(true)}
-            >
-              <ThemedText variant="smallMedium" color={theme.buttonPrimaryText} style={styles.balanceButtonText}>
-                充值
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.balanceButton, styles.withdrawButton]}
-              onPress={() => router.push('/consumption')}
-            >
-              <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.balanceButtonText}>
-                消费记录
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* G点余额卡片 */}
-        <View style={[styles.gPointCard, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B30' }]}>
-          <View style={styles.balanceHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <FontAwesome6 name="bolt" size={18} color="#F59E0B" solid style={{ marginRight: 8 }} />
-              <ThemedText variant="small" color={theme.textMuted}>
-                G点余额
-              </ThemedText>
+        {/* 主余额卡片 */}
+        <LinearGradient
+          colors={[theme.primary, theme.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            borderRadius: BorderRadius.xl,
+            padding: Spacing.xl,
+            marginBottom: Spacing.xl,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.lg }}>
+            <View>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 4 }}>
+                账户余额
+              </Text>
+              <Text style={{ color: '#fff', fontSize: 36, fontWeight: '700' }}>
+                ¥{balance?.balanceYuan || '0.00'}
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => setGPointModal(true)}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
-                <FontAwesome6 name="plus" size={12} color="#fff" style={{ marginRight: 4 }} />
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>充值</Text>
-              </View>
+            <TouchableOpacity 
+              onPress={() => router.push('/bill')}
+              style={{ backgroundColor: 'rgba(255,255,255,0.2', padding: 8, borderRadius: BorderRadius.sm }}
+            >
+              <FontAwesome6 name="receipt" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 8 }}>
-            <ThemedText variant="h1" color="#F59E0B" style={{ fontSize: 32, fontWeight: '700' }}>
-              {balance?.gPoints?.toLocaleString() || '0'}
-            </ThemedText>
-            <ThemedText variant="label" color="#F59E0B" style={{ marginLeft: 8 }}>G点</ThemedText>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Spacing.lg }}>
+            <FontAwesome6 name="bolt" size={14} color="#FCD34D" solid />
+            <Text style={{ color: '#FCD34D', fontSize: 14 }}>
+              {balance?.gPoints?.toLocaleString() || '0'} G点
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+              (视频生成: 1秒 = 1G点)
+            </Text>
           </View>
-          <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: 8 }}>
-            视频生成：1秒 = 1G点 | 充值：1元 = 100G点
-          </ThemedText>
-        </View>
 
-        {/* 统计 */}
+          <TouchableOpacity 
+            onPress={() => setRechargeModal(true)}
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: BorderRadius.lg,
+              paddingVertical: Spacing.lg,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <FontAwesome6 name="plus" size={16} color={theme.primary} />
+            <Text style={{ color: theme.primary, fontSize: 16, fontWeight: '600' }}>
+              立即充值
+            </Text>
+          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* 统计卡片 */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <ThemedText variant="h4" color={theme.textPrimary} style={styles.statValue}>
-              ¥{((balance?.totalConsumed || 0) / 100).toFixed(2)}
-            </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted} style={styles.statLabel}>
-              累计消费
-            </ThemedText>
-          </View>
-          <View style={styles.statCard}>
-            <ThemedText variant="h4" color={theme.textPrimary} style={styles.statValue}>
-              ¥{((balance?.monthlyConsumed || 0) / 100).toFixed(2)}
-            </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted} style={styles.statLabel}>
-              本月消费
-            </ThemedText>
-          </View>
-          <View style={styles.statCard}>
-            <ThemedText variant="h4" color={theme.textPrimary} style={styles.statValue}>
+          <View style={[styles.statCard, { flex: 1 }]}>
+            <FontAwesome6 name="arrow-trend-up" size={20} color={theme.success} style={{ marginBottom: Spacing.sm }} />
+            <ThemedText variant="h4" color={theme.textPrimary}>
               ¥{((balance?.totalRecharged || 0) / 100).toFixed(2)}
             </ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted} style={styles.statLabel}>
-              累计充值
+            <ThemedText variant="caption" color={theme.textMuted}>累计充值</ThemedText>
+          </View>
+          <View style={[styles.statCard, { flex: 1 }]}>
+            <FontAwesome6 name="arrow-trend-down" size={20} color={theme.error} style={{ marginBottom: Spacing.sm }} />
+            <ThemedText variant="h4" color={theme.textPrimary}>
+              ¥{((balance?.totalConsumed || 0) / 100).toFixed(2)}
             </ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>累计消费</ThemedText>
           </View>
         </View>
 
-        {/* 模型选择 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText variant="caption" color={theme.textSecondary} style={styles.sectionTitle}>
-              选择模型
-            </ThemedText>
-            <TouchableOpacity onPress={() => router.push('/models')}>
-              <ThemedText variant="small" color={theme.primary}>
-                查看全部
-              </ThemedText>
+        {/* 快捷功能 */}
+        <View style={{ marginBottom: Spacing.xl }}>
+          <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: Spacing.md }}>
+            快捷功能
+          </ThemedText>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity 
+              style={[styles.statCard, { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }]}
+              onPress={() => router.push('/consumption')}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: BorderRadius.md, backgroundColor: `${theme.primary}15`, justifyContent: 'center', alignItems: 'center' }}>
+                <FontAwesome6 name="list" size={18} color={theme.primary} />
+              </View>
+              <View>
+                <ThemedText variant="label" color={theme.textPrimary}>消费记录</ThemedText>
+                <ThemedText variant="tiny" color={theme.textMuted}>查看消费明细</ThemedText>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.statCard, { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }]}
+              onPress={() => router.push('/bill')}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: BorderRadius.md, backgroundColor: `${theme.accent}15`, justifyContent: 'center', alignItems: 'center' }}>
+                <FontAwesome6 name="file-invoice" size={18} color={theme.accent} />
+              </View>
+              <View>
+                <ThemedText variant="label" color={theme.textPrimary}>账单明细</ThemedText>
+                <ThemedText variant="tiny" color={theme.textMuted}>充值与消费</ThemedText>
+              </View>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {models.slice(0, 5).map((model) => (
-            <TouchableOpacity
-              key={model.id}
-              style={[styles.modelCard, selectedModel === model.id && styles.selectedModel]}
-              onPress={() => setSelectedModel(model.id)}
-            >
-              <View style={styles.modelHeader}>
-                <View style={styles.modelIcon}>
-                  <FontAwesome6
-                    name={getModelIcon(model.provider, model.category)}
-                    size={20}
-                    color={theme.primary}
-                  />
-                </View>
-                <View style={styles.modelInfo}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.modelName}>
-                      {model.name}
-                    </ThemedText>
-                    {model.is_free && (
-                      <View style={[styles.modelBadge, styles.freeBadge]}>
-                        <Text style={[styles.badgeText, { color: theme.success }]}>免费</Text>
-                      </View>
-                    )}
-                    {model.member_only && !model.is_free && (
-                      <View style={[styles.modelBadge, styles.memberBadge]}>
-                        <Text style={[styles.badgeText, { color: '#D97706' }]}>会员</Text>
-                      </View>
-                    )}
-                  </View>
-                  <ThemedText variant="caption" color={theme.textMuted} style={styles.modelProvider}>
-                    {model.provider.toUpperCase()} · {model.max_tokens}K tokens
-                  </ThemedText>
-                </View>
-              </View>
-              <View style={styles.modelPrice}>
-                <View>
-                  <ThemedText variant="caption" color={theme.textMuted} style={styles.priceLabel}>
-                    输入价格
-                  </ThemedText>
-                  <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.priceValue}>
-                    ¥{model.inputPrice}/百万tokens
-                  </ThemedText>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText variant="caption" color={theme.textMuted} style={styles.priceLabel}>
-                    输出价格
-                  </ThemedText>
-                  <ThemedText variant="smallMedium" color={theme.textPrimary} style={styles.priceValue}>
-                    ¥{model.outputPrice}/百万tokens
-                  </ThemedText>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+        {/* 充值说明 */}
+        <View style={{ backgroundColor: theme.backgroundDefault, borderRadius: BorderRadius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: theme.border }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            <FontAwesome6 name="circle-info" size={16} color={theme.primary} />
+            <ThemedText variant="label" color={theme.textPrimary}>充值说明</ThemedText>
+          </View>
+          <ThemedText variant="small" color={theme.textSecondary} style={{ lineHeight: 22 }}>
+            {'\n'}• 支持支付宝、微信、银行卡转账{'\n'}
+            • 充值金额将实时到账{'\n'}
+            • 充值后可用于所有AI服务{'\n'}
+            • 余额不可提现，请按需充值{'\n'}
+            • 如有问题请联系客服
+          </ThemedText>
         </View>
       </ScrollView>
 
-      {/* 现金充值弹窗 */}
+      {/* 充值弹窗 */}
       <Modal
         visible={rechargeModal}
         transparent
@@ -400,51 +309,70 @@ export default function WalletScreen() {
         onRequestClose={() => setRechargeModal(false)}
       >
         <View style={styles.modal}>
+          <TouchableOpacity 
+            style={{ flex: 1 }} 
+            activeOpacity={1} 
+            onPress={() => setRechargeModal(false)}
+          />
           <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+            {/* 标题 */}
             <View style={styles.modalHeader}>
-              <ThemedText variant="h4" color={theme.textPrimary} style={styles.modalTitle}>
-                账户充值
-              </ThemedText>
+              <ThemedText variant="h4" color={theme.textPrimary}>选择充值金额</ThemedText>
               <TouchableOpacity style={styles.closeButton} onPress={() => setRechargeModal(false)}>
                 <FontAwesome6 name="xmark" size={16} color={theme.textPrimary} />
               </TouchableOpacity>
             </View>
 
+            {/* 当前余额 */}
+            <View style={{ 
+              flexDirection: 'row', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              backgroundColor: theme.backgroundTertiary,
+              padding: Spacing.lg,
+              borderRadius: BorderRadius.md,
+              marginBottom: Spacing.lg,
+            }}>
+              <ThemedText variant="label" color={theme.textMuted}>当前余额</ThemedText>
+              <ThemedText variant="h3" color={theme.primary}>¥{balance?.balanceYuan || '0.00'}</ThemedText>
+            </View>
+
+            {/* 金额选项 */}
             <View style={styles.amountOptions}>
               {RECHARGE_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.label}
                   style={[
                     styles.amountOption,
-                    selectedAmount === option.amount && styles.amountSelected,
+                    selectedAmount === option.amount && { 
+                      borderColor: theme.primary, 
+                      backgroundColor: `${theme.primary}10` 
+                    },
                   ]}
                   onPress={() => setSelectedAmount(option.amount)}
                 >
-                  <Text
-                    style={[
-                      styles.amountValue,
-                      { color: selectedAmount === option.amount ? theme.buttonPrimaryText : theme.textPrimary },
-                    ]}
-                  >
+                  <Text style={[
+                    styles.amountValue, 
+                    { color: selectedAmount === option.amount ? theme.primary : theme.textPrimary }
+                  ]}>
                     {option.label}
                   </Text>
                   {option.bonus > 0 && (
-                    <Text
-                      style={[
-                        styles.amountBonus,
-                        { color: selectedAmount === option.amount ? theme.buttonPrimaryText : theme.success },
-                      ]}
-                    >
-                      送{option.bonus / 100}元
+                    <Text style={[
+                      styles.amountBonus, 
+                      { color: selectedAmount === option.amount ? theme.primary : theme.success }
+                    ]}>
+                      送{(option.bonus / 100).toFixed(0)}元
                     </Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
+            {/* 自定义金额输入 */}
             {selectedAmount === 0 && (
               <View style={styles.customAmount}>
-                <Text style={{ color: theme.textMuted, marginRight: 8 }}>¥</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 18 }}>¥</Text>
                 <TextInput
                   style={styles.customInput}
                   placeholder="输入充值金额"
@@ -453,117 +381,80 @@ export default function WalletScreen() {
                   value={customAmount}
                   onChangeText={setCustomAmount}
                 />
+                <Text style={{ color: theme.textMuted }}>元</Text>
               </View>
             )}
 
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleRecharge}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
-              ) : (
-                <ThemedText variant="smallMedium" color={theme.buttonPrimaryText} style={styles.submitButtonText}>
-                  立即充值
-                </ThemedText>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* G点充值弹窗 */}
-      <Modal
-        visible={gPointModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setGPointModal(false)}
-      >
-        <View style={styles.modal}>
-          <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <FontAwesome6 name="bolt" size={20} color="#F59E0B" solid style={{ marginRight: 8 }} />
-                <ThemedText variant="h4" color={theme.textPrimary} style={styles.modalTitle}>
-                  G点充值
-                </ThemedText>
-              </View>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setGPointModal(false)}>
-                <FontAwesome6 name="xmark" size={16} color={theme.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ThemedText variant="caption" color={theme.textMuted} style={{ marginBottom: 16 }}>
-              1元 = 100G点，视频生成1秒 = 1G点
+            {/* 支付方式选择 */}
+            <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: Spacing.md }}>
+              选择支付方式
             </ThemedText>
-
-            {/* 当前余额 */}
-            <View style={{ 
-              backgroundColor: '#F59E0B10', 
-              borderRadius: BorderRadius.md, 
-              padding: 16, 
-              marginBottom: 20,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <ThemedText variant="label" color={theme.textMuted}>当前G点</ThemedText>
-              <ThemedText variant="h3" color="#F59E0B">{balance?.gPoints?.toLocaleString() || '0'} G点</ThemedText>
-            </View>
-
-            {/* 充值选项 */}
-            <View style={{ gap: 12 }}>
-              {GPOINT_RECHARGE_OPTIONS.map((option) => (
+            <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl }}>
+              {PAY_METHODS.map((method) => (
                 <TouchableOpacity
-                  key={option.amount}
+                  key={method.id}
                   style={{
-                    backgroundColor: theme.backgroundTertiary,
-                    borderRadius: BorderRadius.md,
-                    padding: 16,
-                    borderWidth: 1,
-                    borderColor: theme.border,
+                    flex: 1,
                     flexDirection: 'row',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: Spacing.sm,
+                    padding: Spacing.md,
+                    borderRadius: BorderRadius.md,
+                    borderWidth: 1,
+                    borderColor: selectedPayMethod === method.id ? method.color : theme.border,
+                    backgroundColor: selectedPayMethod === method.id ? `${method.color}10` : theme.backgroundTertiary,
                   }}
-                  onPress={() => handleGPointRecharge(option)}
-                  disabled={submitting}
+                  onPress={() => setSelectedPayMethod(method.id as 'alipay' | 'wechat' | 'bank')}
                 >
-                  <View>
-                    <ThemedText variant="label" color={theme.textPrimary} style={{ fontWeight: '600' }}>
-                      充值 {option.amount} 元
-                    </ThemedText>
-                    <ThemedText variant="caption" color={theme.textMuted} style={{ marginTop: 4 }}>
-                      获得 {(option.gPoints + (option.bonus || 0)).toLocaleString()} G点
-                    </ThemedText>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {option.bonus && (
-                      <View style={{
-                        backgroundColor: '#F59E0B20',
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                        marginRight: 12,
-                      }}>
-                        <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '600' }}>
-                          +{option.bonus}赠送
-                        </Text>
-                      </View>
-                    )}
-                    <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
-                  </View>
+                  <FontAwesome6 
+                    name={method.icon as any} 
+                    size={16} 
+                    color={selectedPayMethod === method.id ? method.color : theme.textMuted}
+                    brand={(method as any).brand}
+                  />
+                  <Text style={{ 
+                    color: selectedPayMethod === method.id ? method.color : theme.textPrimary,
+                    fontWeight: '500',
+                  }}>
+                    {method.name}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {/* 说明 */}
-            <View style={{ marginTop: 20, padding: 12, backgroundColor: theme.backgroundTertiary, borderRadius: BorderRadius.sm }}>
+            {/* 确认充值按钮 */}
+            <TouchableOpacity
+              style={[styles.submitButton, { backgroundColor: theme.primary }]}
+              onPress={handleRecharge}
+            >
+              <LinearGradient
+                colors={[theme.primary, theme.accent]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ 
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: Spacing.sm,
+                  paddingVertical: Spacing.lg,
+                  borderRadius: BorderRadius.md,
+                }}
+              >
+                <FontAwesome6 name="wallet" size={16} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+                  {selectedAmount === 0 
+                    ? `充值 ¥${customAmount || '0'}` 
+                    : `充值 ${(selectedAmount / 100).toFixed(0)}元`
+                  }
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* 充值提示 */}
+            <View style={{ marginTop: Spacing.md, alignItems: 'center' }}>
               <ThemedText variant="tiny" color={theme.textMuted}>
-                • G点仅用于视频生成服务{'\n'}
-                • G点不可提现，不可转让{'\n'}
-                • 充值即时到账
+                点击充值后将跳转到支付页面，扫码付款即可
               </ThemedText>
             </View>
           </View>

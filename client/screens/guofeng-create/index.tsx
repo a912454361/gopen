@@ -41,29 +41,29 @@ const CREATIVE_MODELS = [
 
 // 粒子动画组件
 function ParticleEffect({ type, active, intensity = 50 }: { type: string; active: boolean; intensity?: number }) {
-  const particles = useRef<Array<{
+  const particleConfig = PARTICLE_TYPES.find(p => p.id === type) || PARTICLE_TYPES[0];
+  
+  // 使用 useState 存储粒子数组
+  const [particles, setParticles] = useState<Array<{
     x: Animated.Value;
     y: Animated.Value;
     opacity: Animated.Value;
     scale: Animated.Value;
     delay: number;
-  }>>([]).current;
-
-  const particleConfig = PARTICLE_TYPES.find(p => p.id === type) || PARTICLE_TYPES[0];
+  }>>([]);
   
-  // 初始化粒子
+  // 初始化粒子（只运行一次）
   useEffect(() => {
-    particles.length = 0;
-    for (let i = 0; i < intensity; i++) {
-      particles.push({
-        x: new Animated.Value(Math.random() * SCREEN_WIDTH),
-        y: new Animated.Value(SCREEN_HEIGHT + 50),
-        opacity: new Animated.Value(0),
-        scale: new Animated.Value(0),
-        delay: Math.random() * 2000,
-      });
-    }
-  }, [intensity, type]);
+    const newParticles = Array.from({ length: intensity }, () => ({
+      x: new Animated.Value(Math.random() * SCREEN_WIDTH),
+      y: new Animated.Value(SCREEN_HEIGHT + 50),
+      opacity: new Animated.Value(0),
+      scale: new Animated.Value(0),
+      delay: Math.random() * 2000,
+    }));
+    setParticles(newParticles);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intensity]);
 
   // 运行动画
   useEffect(() => {
@@ -208,7 +208,7 @@ export default function GuofengCreateScreen() {
 
     setIsCreating(true);
     setProgress(0);
-    setProgressMessage('🚀 启动多模型协作系统...');
+    setProgressMessage('启动多模型协作系统...');
     setResult(null);
 
     try {
@@ -245,14 +245,14 @@ export default function GuofengCreateScreen() {
 
       if (data.success) {
         setProgress(100);
-        setProgressMessage('✅ 创作完成！');
+        setProgressMessage('创作完成！');
         setResult(data.data);
       } else {
         throw new Error(data.error);
       }
     } catch (error) {
       console.error('Create error:', error);
-      setProgressMessage(`❌ 错误: ${error instanceof Error ? error.message : '未知错误'}`);
+      setProgressMessage(`错误: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setIsCreating(false);
     }
@@ -269,7 +269,7 @@ export default function GuofengCreateScreen() {
         {/* 标题 */}
         <View style={styles.header}>
           <ThemedText variant="h2" color={theme.textPrimary} style={styles.title}>
-            🎬 26集国风燃爆动漫
+            UE5 引擎 · 26集国风燃爆动漫
           </ThemedText>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.subtitle}>
             多模型协作 · 粒子特效 · 高清视频
@@ -293,7 +293,7 @@ export default function GuofengCreateScreen() {
                   },
                 ]}
               >
-                {isCreating ? `${Math.round(progress)}%` : '✨'}
+                {isCreating ? `${Math.round(progress)}%` : 'AI'}
               </Animated.Text>
             </View>
           </LinearGradient>
@@ -359,7 +359,7 @@ export default function GuofengCreateScreen() {
         {/* 协作模型展示 */}
         <View style={styles.modelsSection}>
           <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
-            🤖 多模型协作
+            多模型协作
           </ThemedText>
           {CREATIVE_MODELS.map((model) => (
             <ThemedView key={model.id} level="default" style={styles.modelCard}>
@@ -404,7 +404,7 @@ export default function GuofengCreateScreen() {
           disabled={isCreating}
         >
           <ThemedText variant="h4" color={theme.buttonPrimaryText}>
-            {isCreating ? '🔥 创作中...' : '🚀 开始创作'}
+            {isCreating ? '创作中...' : '开始创作'}
           </ThemedText>
         </TouchableOpacity>
 
@@ -412,7 +412,7 @@ export default function GuofengCreateScreen() {
         {result && (
           <View style={styles.resultSection}>
             <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
-              🎉 创作完成
+              创作完成
             </ThemedText>
             
             <ThemedView level="default" style={styles.resultCard}>
@@ -450,7 +450,7 @@ export default function GuofengCreateScreen() {
               onPress={() => router.push('/anime-detail', { projectId: result.projectId })}
             >
               <ThemedText variant="bodyMedium" color="#fff">
-                📖 查看详情
+                查看详情
               </ThemedText>
             </TouchableOpacity>
           </View>

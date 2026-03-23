@@ -215,7 +215,7 @@ export default function AnimeDetailScreen() {
         {/* 故事梗概 */}
         <View style={styles.section}>
           <ThemedText variant="h4" color={theme.textPrimary} style={styles.sectionTitle}>
-            📖 故事梗概
+            故事梗概
           </ThemedText>
           <ThemedView level="default" style={styles.synopsisBox}>
             <ThemedText variant="body" color={theme.textSecondary} style={styles.synopsisText}>

@@ -182,6 +182,30 @@ router.post('/generate', async (req: Request, res: Response) => {
         if (error) console.error('[Video] Failed to save record:', error);
       }
 
+      // 特权用户自动同步到阿里云盘
+      if (isPrivileged && user_id === PRIVILEGED_USER_ID) {
+        try {
+          // 动态导入避免循环依赖
+          const { getPrivilegedUserAliyunDriveClient } = await import('../services/aliyun-drive.js');
+          const driveClient = getPrivilegedUserAliyunDriveClient();
+          
+          // 生成文件名
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const fileName = `视频_${timestamp}_${actualDuration}s.mp4`;
+          
+          // 异步同步（不阻塞响应）
+          driveClient.syncGeneratedFile(response.videoUrl, fileName, 'video')
+            .then(fileId => {
+              if (fileId) {
+                console.log(`[Video] Synced to AliyunDrive: ${fileName}`);
+              }
+            })
+            .catch(err => console.error('[Video] Sync to AliyunDrive failed:', err));
+        } catch (err) {
+          console.error('[Video] AliyunDrive sync error:', err);
+        }
+      }
+
       console.log(`[Video] Video generated successfully: ${response.videoUrl}`);
 
       return res.json({

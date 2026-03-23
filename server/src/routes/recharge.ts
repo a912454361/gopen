@@ -13,14 +13,14 @@ const client = getSupabaseClient();
 // 管理员密钥
 const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
 
-// 充值金额选项（分）
+// 充值金额选项（分）- 优化后的赠送策略，确保平台利润率在13-15%
 const RECHARGE_OPTIONS = [
-  { amount: 1000, bonus: 0, label: '10元' },
-  { amount: 5000, bonus: 100, label: '50元 送1元' },
-  { amount: 10000, bonus: 300, label: '100元 送3元' },
-  { amount: 30000, bonus: 1500, label: '300元 送15元' },
-  { amount: 50000, bonus: 3000, label: '500元 送30元' },
-  { amount: 100000, bonus: 8000, label: '1000元 送80元' },
+  { amount: 1000, bonus: 0, label: '10元' },          // 无赠送
+  { amount: 5000, bonus: 0, label: '50元' },          // 无赠送
+  { amount: 10000, bonus: 50, label: '100元 送0.5元' },   // 送0.5元 (0.5%)
+  { amount: 30000, bonus: 200, label: '300元 送2元' },    // 送2元 (0.67%)
+  { amount: 50000, bonus: 500, label: '500元 送5元' },    // 送5元 (1%)
+  { amount: 100000, bonus: 1500, label: '1000元 送15元' }, // 送15元 (1.5%)
 ];
 
 // ==================== 用户充值申请 ====================

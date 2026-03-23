@@ -39,14 +39,14 @@ interface Balance {
   gPoints?: number;
 }
 
-// 统一充值金额选项
+// 统一充值金额选项（优化后的赠送策略，确保平台利润率在13-15%）
 const RECHARGE_OPTIONS = [
-  { amount: 1000, label: '10元', bonus: 0, bonusType: 'none' },
-  { amount: 5000, label: '50元', bonus: 500, bonusType: 'cash' },
-  { amount: 10000, label: '100元', bonus: 1500, bonusType: 'cash' },
-  { amount: 30000, label: '300元', bonus: 5000, bonusType: 'cash' },
-  { amount: 50000, label: '500元', bonus: 10000, bonusType: 'cash' },
-  { amount: 100000, label: '1000元', bonus: 25000, bonusType: 'cash' },
+  { amount: 1000, label: '10元', bonus: 0, bonusType: 'none' },        // 无赠送
+  { amount: 5000, label: '50元', bonus: 0, bonusType: 'none' },        // 无赠送
+  { amount: 10000, label: '100元', bonus: 50, bonusType: 'cash' },     // 送0.5元 (0.5%)
+  { amount: 30000, label: '300元', bonus: 200, bonusType: 'cash' },    // 送2元 (0.67%)
+  { amount: 50000, label: '500元', bonus: 500, bonusType: 'cash' },    // 送5元 (1%)
+  { amount: 100000, label: '1000元', bonus: 1500, bonusType: 'cash' }, // 送15元 (1.5%)
   { amount: 0, label: '自定义', bonus: 0, bonusType: 'none' },
 ];
 

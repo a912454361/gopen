@@ -150,5 +150,26 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
       marginBottom: Spacing.sm,
     },
+    inputContainer: {
+      borderRadius: BorderRadius.lg,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    textInput: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    noPermissionCard: {
+      borderRadius: BorderRadius.xl,
+      padding: Spacing['2xl'],
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    noPermissionText: {
+      marginTop: Spacing.lg,
+      marginBottom: Spacing.sm,
+    },
   });
 };

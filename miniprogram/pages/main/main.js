@@ -254,20 +254,6 @@ Page({
     wx.showToast({ title: '已重置', icon: 'success' });
   },
 
-  // 跳转到剧情游戏
-  goToStory() {
-    wx.navigateTo({
-      url: '/pages/game/game?node=start'
-    });
-  },
-
-  // 跳转到成就
-  goToAchievements() {
-    wx.switchTab({
-      url: '/pages/achievements/achievements'
-    });
-  },
-
   // 跳转到关卡
   goToStage() {
     wx.navigateTo({

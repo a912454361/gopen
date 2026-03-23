@@ -80,19 +80,11 @@
 
     <!-- 主功能按钮 -->
     <view class="main-actions">
-      <button class="action-btn large primary" bindtap="goToStory">
+      <button class="action-btn large primary" bindtap="goToStage">
         <text class="btn-icon">⚔️</text>
         <view class="btn-content">
-          <text class="btn-title">开始冒险</text>
-          <text class="btn-desc">体验主线剧情</text>
-        </view>
-      </button>
-      
-      <button class="action-btn large" bindtap="goToStage">
-        <text class="btn-icon">🏰</text>
-        <view class="btn-content">
-          <text class="btn-title">闯关挑战</text>
-          <text class="btn-desc">战力碾压过关</text>
+          <text class="btn-title">开始战斗</text>
+          <text class="btn-desc">挑战关卡获取奖励</text>
         </view>
       </button>
     </view>

@@ -183,6 +183,7 @@ export default function AdminMobileScreen() {
     <Screen 
       backgroundColor={theme.backgroundRoot} 
       statusBarStyle={isDark ? 'light' : 'dark'}
+      safeAreaEdges={[]}
     >
       {/* 顶部栏 */}
       <View style={{

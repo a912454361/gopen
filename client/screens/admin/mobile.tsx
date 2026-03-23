@@ -18,7 +18,6 @@ import {
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -68,7 +67,6 @@ export default function AdminMobileScreen() {
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ key?: string }>();
   const adminKey = params.key || '';
-  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -185,12 +183,11 @@ export default function AdminMobileScreen() {
     <Screen 
       backgroundColor={theme.backgroundRoot} 
       statusBarStyle={isDark ? 'light' : 'dark'}
-      safeAreaEdges={['left', 'right', 'bottom']}
     >
-      {/* 顶部栏 - 沉浸式设计，延伸到状态栏 */}
+      {/* 顶部栏 */}
       <View style={{
-        paddingTop: insets.top + Spacing.xs,
-        paddingBottom: Spacing.xs,
+        paddingTop: Spacing.sm,
+        paddingBottom: Spacing.sm,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -236,7 +233,7 @@ export default function AdminMobileScreen() {
         contentContainerStyle={{ 
           paddingHorizontal: Spacing.md, 
           paddingTop: Spacing.sm,
-          paddingBottom: 100 + insets.bottom 
+          paddingBottom: 100
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
@@ -265,7 +262,6 @@ export default function AdminMobileScreen() {
         borderTopColor: theme.border,
         paddingHorizontal: Spacing.xs,
         paddingVertical: Spacing.sm,
-        paddingBottom: insets.bottom + Spacing.sm,
       }}>
         {mainTabs.map((tab) => (
           <TouchableOpacity

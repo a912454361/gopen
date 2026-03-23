@@ -1,7 +1,7 @@
 /**
  * 钱包页面
  * 功能：余额管理、G点管理、充值、消费记录
- * 优化：简化充值流程，统一充值入口
+ * 优化：支持多种支付方式（扫码支付、App跳转支付）
  */
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
@@ -15,6 +15,8 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Platform,
+  Linking,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,23 +41,27 @@ interface Balance {
   gPoints?: number;
 }
 
-// 统一充值金额选项（优化后的赠送策略，确保平台利润率在13-15%）
+// 充值金额选项
 const RECHARGE_OPTIONS = [
-  { amount: 1000, label: '10元', bonus: 0, bonusType: 'none' },        // 无赠送
-  { amount: 5000, label: '50元', bonus: 0, bonusType: 'none' },        // 无赠送
-  { amount: 10000, label: '100元', bonus: 50, bonusType: 'cash' },     // 送0.5元 (0.5%)
-  { amount: 30000, label: '300元', bonus: 200, bonusType: 'cash' },    // 送2元 (0.67%)
-  { amount: 50000, label: '500元', bonus: 500, bonusType: 'cash' },    // 送5元 (1%)
-  { amount: 100000, label: '1000元', bonus: 1500, bonusType: 'cash' }, // 送15元 (1.5%)
-  { amount: 0, label: '自定义', bonus: 0, bonusType: 'none' },
+  { amount: 1000, label: '10元', bonus: 0 },
+  { amount: 5000, label: '50元', bonus: 0 },
+  { amount: 10000, label: '100元', bonus: 50 },
+  { amount: 30000, label: '300元', bonus: 200 },
+  { amount: 50000, label: '500元', bonus: 500 },
+  { amount: 100000, label: '1000元', bonus: 1500 },
+  { amount: 0, label: '自定义', bonus: 0 },
 ];
 
 // 支付方式
 const PAY_METHODS = [
-  { id: 'alipay', name: '支付宝', icon: 'alipay', color: '#1677FF' },
-  { id: 'wechat', name: '微信', icon: 'weixin', color: '#07C160', brand: true },
-  { id: 'bank', name: '银行卡', icon: 'building-columns', color: '#C41230' },
+  { id: 'alipay', name: '支付宝', icon: 'alipay', color: '#1677FF', brand: true, supportAppJump: true },
+  { id: 'wechat', name: '微信', icon: 'weixin', color: '#07C160', brand: true, supportAppJump: true },
+  { id: 'unionpay', name: '银联', icon: 'credit-card', color: '#E60012', supportAppJump: true },
+  { id: 'bank', name: '银行转账', icon: 'building-columns', color: '#C41230', supportAppJump: false },
 ];
+
+// 支付模式
+type PaymentMode = 'app' | 'qrcode';
 
 export default function WalletScreen() {
   const { theme, isDark } = useTheme();
@@ -67,8 +73,10 @@ export default function WalletScreen() {
   const [rechargeModal, setRechargeModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(10000);
   const [customAmount, setCustomAmount] = useState('');
-  const [selectedPayMethod, setSelectedPayMethod] = useState<'alipay' | 'wechat' | 'bank'>('alipay');
+  const [selectedPayMethod, setSelectedPayMethod] = useState<'alipay' | 'wechat' | 'unionpay' | 'bank'>('alipay');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('app');
   const [userId, setUserId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // 获取用户ID
   useEffect(() => {
@@ -124,7 +132,7 @@ export default function WalletScreen() {
   );
 
   // 充值处理
-  const handleRecharge = () => {
+  const handleRecharge = async () => {
     if (!userId) {
       Alert.alert('请先登录', '您需要登录后才能充值', [
         { text: '取消', style: 'cancel' },
@@ -142,13 +150,105 @@ export default function WalletScreen() {
       }
     }
 
-    setRechargeModal(false);
-    setTimeout(() => {
-      router.push('/payment', { 
-        amount: String(amount), 
-        productType: 'recharge'
+    // 银行转账只支持扫码模式
+    if (selectedPayMethod === 'bank') {
+      setRechargeModal(false);
+      setTimeout(() => {
+        router.push('/payment', { 
+          amount: String(amount), 
+          productType: 'recharge',
+          payMethod: 'bank',
+        });
+      }, 300);
+      return;
+    }
+
+    // App跳转支付模式
+    if (paymentMode === 'app') {
+      await handleAppJumpPayment(amount);
+    } else {
+      // 扫码支付模式
+      setRechargeModal(false);
+      setTimeout(() => {
+        router.push('/payment', { 
+          amount: String(amount), 
+          productType: 'recharge',
+          payMethod: selectedPayMethod,
+        });
+      }, 300);
+    }
+  };
+
+  // App跳转支付处理
+  const handleAppJumpPayment = async (amount: number) => {
+    setIsProcessing(true);
+    try {
+      // 调用后端创建支付订单
+      /**
+       * 服务端文件：server/src/routes/payment.ts
+       * 接口：POST /api/v1/payment/create
+       * Body 参数：amount: number, payMethod: string, userId: string, productType: string
+       */
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          payMethod: selectedPayMethod,
+          userId,
+          productType: 'recharge',
+        }),
       });
-    }, 300);
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const { orderId, payUrl, deepLink } = result.data;
+
+        // 尝试打开支付App
+        if (deepLink) {
+          const canOpen = await Linking.canOpenURL(deepLink);
+          if (canOpen) {
+            // 保存订单ID，支付成功后查询
+            await AsyncStorage.setItem('pendingPaymentOrder', orderId);
+            
+            // 打开支付App
+            await Linking.openURL(deepLink);
+            
+            // 延迟提示用户返回查看支付状态
+            setTimeout(() => {
+              Alert.alert(
+                '支付完成？',
+                '请在支付完成后返回查看订单状态',
+                [
+                  { text: '稍后查看', style: 'cancel' },
+                  { text: '查看订单', onPress: () => router.push('/bill') },
+                ]
+              );
+            }, 1000);
+          } else {
+            // 无法打开App，使用网页支付
+            if (payUrl) {
+              await Linking.openURL(payUrl);
+            } else {
+              Alert.alert('提示', '请先安装' + PAY_METHODS.find(p => p.id === selectedPayMethod)?.name);
+            }
+          }
+        } else if (payUrl) {
+          // 使用网页支付
+          await Linking.openURL(payUrl);
+        }
+        
+        setRechargeModal(false);
+      } else {
+        Alert.alert('支付失败', result.error || '创建订单失败');
+      }
+    } catch (error) {
+      console.error('App jump payment error:', error);
+      Alert.alert('支付失败', '网络错误，请稍后重试');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isLoading) {
@@ -421,33 +521,34 @@ export default function WalletScreen() {
             <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: Spacing.md }}>
               选择支付方式
             </ThemedText>
-            <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg }}>
               {PAY_METHODS.map((method) => (
                 <TouchableOpacity
                   key={method.id}
                   style={{
-                    flex: 1,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: Spacing.sm,
-                    padding: Spacing.md,
+                    gap: Spacing.xs,
+                    paddingVertical: Spacing.sm,
+                    paddingHorizontal: Spacing.md,
                     borderRadius: BorderRadius.md,
                     borderWidth: 1,
                     borderColor: selectedPayMethod === method.id ? method.color : theme.border,
                     backgroundColor: selectedPayMethod === method.id ? `${method.color}10` : theme.backgroundTertiary,
                   }}
-                  onPress={() => setSelectedPayMethod(method.id as 'alipay' | 'wechat' | 'bank')}
+                  onPress={() => setSelectedPayMethod(method.id as typeof selectedPayMethod)}
                 >
                   <FontAwesome6 
                     name={method.icon as any} 
-                    size={16} 
+                    size={14} 
                     color={selectedPayMethod === method.id ? method.color : theme.textMuted}
                     brand={(method as any).brand}
                   />
                   <Text style={{ 
                     color: selectedPayMethod === method.id ? method.color : theme.textPrimary,
                     fontWeight: '500',
+                    fontSize: 14,
                   }}>
                     {method.name}
                   </Text>
@@ -455,38 +556,104 @@ export default function WalletScreen() {
               ))}
             </View>
 
+            {/* 支付模式选择 - 非银行转账时显示 */}
+            {selectedPayMethod !== 'bank' && (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: Spacing.md }}>
+                  支付模式
+                </ThemedText>
+                <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      padding: Spacing.lg,
+                      borderRadius: BorderRadius.md,
+                      borderWidth: 2,
+                      borderColor: paymentMode === 'app' ? theme.primary : theme.border,
+                      backgroundColor: paymentMode === 'app' ? `${theme.primary}10` : theme.backgroundTertiary,
+                    }}
+                    onPress={() => setPaymentMode('app')}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
+                      <FontAwesome6 name="mobile-screen-button" size={16} color={paymentMode === 'app' ? theme.primary : theme.textPrimary} />
+                      <ThemedText variant="label" color={paymentMode === 'app' ? theme.primary : theme.textPrimary}>
+                        App支付
+                      </ThemedText>
+                    </View>
+                    <ThemedText variant="tiny" color={theme.textMuted}>
+                      跳转{PAY_METHODS.find(p => p.id === selectedPayMethod)?.name}App支付
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      padding: Spacing.lg,
+                      borderRadius: BorderRadius.md,
+                      borderWidth: 2,
+                      borderColor: paymentMode === 'qrcode' ? theme.primary : theme.border,
+                      backgroundColor: paymentMode === 'qrcode' ? `${theme.primary}10` : theme.backgroundTertiary,
+                    }}
+                    onPress={() => setPaymentMode('qrcode')}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
+                      <FontAwesome6 name="qrcode" size={16} color={paymentMode === 'qrcode' ? theme.primary : theme.textPrimary} />
+                      <ThemedText variant="label" color={paymentMode === 'qrcode' ? theme.primary : theme.textPrimary}>
+                        扫码支付
+                      </ThemedText>
+                    </View>
+                    <ThemedText variant="tiny" color={theme.textMuted}>
+                      使用扫码功能付款
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {/* 确认充值按钮 */}
             <TouchableOpacity
               style={[styles.submitButton, { backgroundColor: theme.primary }]}
               onPress={handleRecharge}
+              disabled={isProcessing}
             >
-              <LinearGradient
-                colors={[theme.primary, theme.accent]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{ 
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: Spacing.sm,
-                  paddingVertical: Spacing.lg,
-                  borderRadius: BorderRadius.md,
-                }}
-              >
-                <FontAwesome6 name="wallet" size={16} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
-                  {selectedAmount === 0 
-                    ? `充值 ¥${customAmount || '0'}` 
-                    : `充值 ${(selectedAmount / 100).toFixed(0)}元`
-                  }
-                </Text>
-              </LinearGradient>
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <LinearGradient
+                  colors={[theme.primary, theme.accent]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ 
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: Spacing.sm,
+                    paddingVertical: Spacing.lg,
+                    borderRadius: BorderRadius.md,
+                  }}
+                >
+                  <FontAwesome6 
+                    name={selectedPayMethod === 'bank' || paymentMode === 'qrcode' ? 'qrcode' : 'arrow-right'} 
+                    size={16} 
+                    color="#fff" 
+                  />
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+                    {selectedAmount === 0 
+                      ? `充值 ¥${customAmount || '0'}` 
+                      : `充值 ${(selectedAmount / 100).toFixed(0)}元`
+                    }
+                  </Text>
+                </LinearGradient>
+              )}
             </TouchableOpacity>
 
             {/* 充值提示 */}
             <View style={{ marginTop: Spacing.md, alignItems: 'center' }}>
               <ThemedText variant="tiny" color={theme.textMuted}>
-                点击充值后将跳转到支付页面，扫码付款即可
+                {selectedPayMethod === 'bank' 
+                  ? '银行转账需扫码后手动填写信息' 
+                  : paymentMode === 'app' 
+                    ? '点击后将跳转支付App完成支付' 
+                    : '点击充值后将跳转到扫码支付页面'}
               </ThemedText>
             </View>
           </View>

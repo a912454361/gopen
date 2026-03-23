@@ -234,17 +234,28 @@ router.get('/accounts', async (req: Request, res: Response) => {
 const createOrderSchema = z.object({
   userId: z.string().min(1),
   amount: z.number().int().positive(), // 金额（分）
-  payType: z.enum(['alipay', 'wechat']),
-  productType: z.enum(['membership', 'super_member']),
+  payMethod: z.enum(['alipay', 'wechat', 'unionpay', 'bank']).optional(),
+  payType: z.enum(['alipay', 'wechat']).optional(), // 兼容旧参数
+  productType: z.enum(['membership', 'super_member', 'recharge', 'gpoints']).optional(),
+  paymentMode: z.enum(['app', 'qrcode']).optional(), // 支付模式
 });
 
 /**
  * 创建支付订单
  * POST /api/v1/payment/create
+ * 
+ * 支持两种支付模式：
+ * 1. App跳转支付：返回deepLink，前端直接唤起支付App
+ * 2. 扫码支付：返回收款码URL，前端显示二维码
  */
 router.post('/create', async (req: Request, res: Response) => {
   try {
     const body = createOrderSchema.parse(req.body);
+    
+    // 兼容新旧参数
+    const payMethod = body.payMethod || body.payType || 'alipay';
+    const productType = body.productType || 'recharge';
+    const paymentMode = body.paymentMode || 'qrcode';
     
     // 生成订单号
     const orderNo = `GO${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -259,10 +270,10 @@ router.post('/create', async (req: Request, res: Response) => {
         order_no: orderNo,
         user_id: body.userId,
         amount: body.amount,
-        pay_type: body.payType,
+        pay_type: payMethod,
         status: 'pending',
-        qr_code_url: PAYMENT_ACCOUNTS[body.payType].qrcodeUrl,
-        product_type: body.productType,
+        qr_code_url: PAYMENT_ACCOUNTS[payMethod]?.qrcodeUrl || '',
+        product_type: productType,
         expired_at: expiredAt.toISOString(),
       }])
       .select()
@@ -274,7 +285,45 @@ router.post('/create', async (req: Request, res: Response) => {
     }
     
     // 获取收款账户信息
-    const paymentAccount = PAYMENT_ACCOUNTS[body.payType];
+    const paymentAccount = PAYMENT_ACCOUNTS[payMethod];
+    
+    // 构建支付链接
+    let payUrl: string | undefined;
+    let deepLink: string | undefined;
+    
+    if (paymentMode === 'app' && payMethod !== 'bank') {
+      // App跳转支付模式
+      // 生成支付链接和Deep Link
+      
+      if (payMethod === 'alipay') {
+        // 支付宝App跳转
+        // 实际项目中需要调用支付宝SDK生成支付订单
+        // 这里使用收款码的Deep Link方式
+        const qrCodeUrl = paymentAccount?.qrcodeUrl || '';
+        
+        // 支付宝扫一扫的Deep Link
+        // alipay://platformapi/startapp?appId=20000067&url=xxx
+        // 由于我们使用的是固定收款码，这里直接跳转到支付宝扫一扫
+        deepLink = 'alipay://platformapi/startapp?appId=20000067';
+        payUrl = qrCodeUrl;
+        
+      } else if (payMethod === 'wechat') {
+        // 微信App跳转
+        // 微信扫一扫的Deep Link
+        // weixin://scanqrcode
+        deepLink = 'weixin://scanqrcode';
+        payUrl = paymentAccount?.qrcodeUrl;
+        
+      } else if (payMethod === 'unionpay') {
+        // 云闪付App跳转
+        // 云闪付扫一扫的Deep Link
+        deepLink = 'uppay://uppay/com.unionpay.activity.SplashActivity';
+        payUrl = paymentAccount?.qrcodeUrl;
+      }
+    } else {
+      // 扫码支付模式
+      payUrl = paymentAccount?.qrcodeUrl;
+    }
     
     res.json({
       success: true,
@@ -282,16 +331,21 @@ router.post('/create', async (req: Request, res: Response) => {
         orderId: order.id,
         orderNo,
         amount: body.amount,
-        payType: body.payType,
-        productType: body.productType,
+        payMethod,
+        productType,
+        paymentMode,
         expiredAt: expiredAt.toISOString(),
+        // 支付链接（用于网页支付或展示二维码）
+        payUrl: payUrl ? getQRCodeImageUrl(payUrl, payMethod) : undefined,
+        // Deep Link（用于App跳转）
+        deepLink,
         // 收款账户信息
-        paymentAccount: {
+        paymentAccount: paymentAccount ? {
           name: paymentAccount.name,
           account: paymentAccount.account,
-          qrcodeUrl: getQRCodeImageUrl(paymentAccount.qrcodeUrl, body.payType),
+          qrcodeUrl: getQRCodeImageUrl(paymentAccount.qrcodeUrl, payMethod),
           realName: paymentAccount.realName,
-        },
+        } : undefined,
       },
     });
   } catch (error) {

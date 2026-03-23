@@ -445,4 +445,182 @@ router.get('/:userId/favorites/:modelId/check', async (req: Request, res: Respon
   }
 });
 
+// ==================== 余额开通会员API ====================
+
+// 会员价格配置（单位：分）
+const MEMBER_PRICES = {
+  member: {
+    monthly: 2900,    // ¥29/月
+    quarterly: 7900,  // ¥79/季度（约¥26.3/月）
+    yearly: 29000,    // ¥290/年（约¥24.2/月）
+  },
+  super: {
+    monthly: 9900,    // ¥99/月
+    quarterly: 26900, // ¥269/季度（约¥89.7/月）
+    yearly: 99000,    // ¥990/年（约¥82.5/月）
+  },
+};
+
+// 会员时长配置
+const MEMBER_DURATION = {
+  monthly: 30,    // 30天
+  quarterly: 90,  // 90天
+  yearly: 365,    // 365天
+};
+
+/**
+ * 余额开通会员
+ * POST /api/v1/user/:userId/membership/upgrade
+ * Body: { memberLevel: 'member' | 'super', duration: 'monthly' | 'quarterly' | 'yearly' }
+ */
+router.post('/:userId/membership/upgrade', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { memberLevel, duration = 'monthly' } = req.body;
+
+    // 参数验证
+    if (!['member', 'super'].includes(memberLevel)) {
+      return res.status(400).json({ error: '无效的会员等级，可选：member 或 super' });
+    }
+
+    if (!['monthly', 'quarterly', 'yearly'].includes(duration)) {
+      return res.status(400).json({ error: '无效的时长，可选：monthly、quarterly、yearly' });
+    }
+
+    // 计算价格
+    const price = MEMBER_PRICES[memberLevel as keyof typeof MEMBER_PRICES][duration as keyof typeof MEMBER_PRICES.member];
+    const days = MEMBER_DURATION[duration as keyof typeof MEMBER_DURATION];
+
+    if (!price || !days) {
+      return res.status(400).json({ error: '价格计算错误' });
+    }
+
+    // 获取用户余额
+    const { data: user, error: userError } = await client
+      .from('users')
+      .select('id, balance, member_level, member_expire_at')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    // 检查余额是否充足
+    if (user.balance < price) {
+      return res.status(400).json({ 
+        error: '余额不足',
+        data: {
+          balance: user.balance,
+          required: price,
+          shortage: price - user.balance,
+        }
+      });
+    }
+
+    // 计算新的会员到期时间
+    let newExpireDate: Date;
+    const now = new Date();
+
+    if (user.member_expire_at && new Date(user.member_expire_at) > now) {
+      // 如果当前会员未过期，在原有基础上延长
+      newExpireDate = new Date(user.member_expire_at);
+    } else {
+      // 否则从现在开始计算
+      newExpireDate = now;
+    }
+    newExpireDate.setDate(newExpireDate.getDate() + days);
+
+    // 使用事务处理
+    // 1. 扣除余额
+    const { error: deductError } = await client
+      .rpc('update_user_balance', {
+        p_user_id: userId,
+        p_amount: -price,
+        p_type: 'consumption',
+        p_description: `开通${memberLevel === 'super' ? '超级' : '普通'}会员-${duration === 'monthly' ? '月度' : duration === 'quarterly' ? '季度' : '年度'}`,
+      });
+
+    if (deductError) {
+      console.error('Deduct balance error:', deductError);
+      return res.status(500).json({ error: '余额扣除失败' });
+    }
+
+    // 2. 更新会员等级和到期时间
+    const { error: updateError } = await client
+      .from('users')
+      .update({
+        member_level: memberLevel,
+        member_expire_at: newExpireDate.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Update membership error:', updateError);
+      // 尝试回滚余额
+      await client.rpc('update_user_balance', {
+        p_user_id: userId,
+        p_amount: price,
+        p_type: 'refund',
+        p_description: '开通会员失败，退还余额',
+      });
+      return res.status(500).json({ error: '会员开通失败' });
+    }
+
+    // 3. 记录会员开通日志
+    await client
+      .from('member_upgrade_records')
+      .insert([{
+        user_id: userId,
+        member_level: memberLevel,
+        duration: duration,
+        price: price,
+        payment_method: 'balance',
+        expire_at: newExpireDate.toISOString(),
+        created_at: new Date().toISOString(),
+      }])
+      .then(({ error }) => {
+        if (error) console.error('Insert upgrade record error:', error);
+      });
+
+    // 4. 获取更新后的余额
+    const { data: balanceData } = await client
+      .from('users')
+      .select('balance')
+      .eq('id', userId)
+      .single();
+
+    console.log(`[Membership] User ${userId} upgraded to ${memberLevel} for ${duration}, price: ¥${price / 100}`);
+
+    res.json({
+      success: true,
+      message: `${memberLevel === 'super' ? '超级会员' : '普通会员'}开通成功`,
+      data: {
+        memberLevel,
+        expireAt: newExpireDate.toISOString(),
+        price,
+        balance: balanceData?.balance || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Upgrade membership error:', error);
+    res.status(500).json({ error: '开通会员失败，请稍后重试' });
+  }
+});
+
+/**
+ * 获取会员价格配置
+ * GET /api/v1/user/membership/prices
+ */
+router.get('/membership/prices', (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {
+      prices: MEMBER_PRICES,
+      durations: MEMBER_DURATION,
+    },
+  });
+});
+
 export default router;

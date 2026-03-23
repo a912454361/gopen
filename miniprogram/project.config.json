@@ -1,9 +1,7 @@
 {
-  "description": "剑破苍穹 - 国风燃爆互动剧情游戏",
-  "packOptions": {
-    "ignore": [],
-    "include": []
-  },
+  "appid": "wx0000000000000000",
+  "projectname": "剑破苍穹",
+  "miniprogramRoot": "miniprogram/",
   "setting": {
     "urlCheck": false,
     "es6": true,
@@ -11,7 +9,7 @@
     "postcss": true,
     "preloadBackgroundData": false,
     "minified": true,
-    "newFeature": false,
+    "newFeature": true,
     "coverView": true,
     "nodeModules": false,
     "autoAudits": false,
@@ -31,22 +29,18 @@
       "disablePlugins": [],
       "outputPath": ""
     },
-    "bundle": false,
+    "enableEngineNative": false,
     "useIsolateContext": true,
-    "useCompilerModule": true,
-    "userConfirmedUseCompilerModuleSwitch": false,
     "userConfirmedBundleSwitch": false,
     "packNpmManually": false,
     "packNpmRelationList": [],
-    "minifyWXSS": true
+    "minifyWXSS": true,
+    "disableUseStrict": false,
+    "minifyWXML": true,
+    "showES6CompileOption": false,
+    "useCompilerPlugins": false
   },
   "compileType": "miniprogram",
-  "libVersion": "2.25.0",
-  "appid": "wx0000000000000000",
-  "projectname": "jianpo-game",
-  "condition": {},
-  "editorSetting": {
-    "tabIndent": "insertSpaces",
-    "tabSize": 2
-  }
+  "libVersion": "3.3.4",
+  "condition": {}
 }

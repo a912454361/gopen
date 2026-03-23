@@ -147,7 +147,7 @@ router.post('/script', async (req: Request, res: Response) => {
     }
 
     // 保存到动漫项目表
-    await client.from('anime_projects').insert([{
+    const { data: projectData, error: projectError } = await client.from('anime_projects').insert([{
       user_id,
       title: script.title,
       synopsis: script.synopsis,
@@ -158,14 +158,19 @@ router.post('/script', async (req: Request, res: Response) => {
       theme: theme || 'fantasy',
       task_id: taskId,
       created_at: new Date().toISOString(),
-    }]).then(({ error }) => {
-      if (error) console.error('[Anime] Failed to save project:', error);
-    });
+    }]).select('id').single();
+
+    if (projectError) {
+      console.error('[Anime] Failed to save project:', projectError);
+    }
+
+    const projectId = projectData?.id;
 
     res.json({
       success: true,
       data: {
         task_id: taskId,
+        project_id: projectId,
         script,
       },
     });

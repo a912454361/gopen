@@ -230,7 +230,7 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
   }
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Server listening at http://localhost:${port}/`);
   
   // 启动推广任务调度器
@@ -242,4 +242,68 @@ app.listen(port, () => {
     startModelSyncScheduler();
     console.log('Model sync scheduler started');
   });
+
+  // 初始化 UE5 远程连接
+  const { getUE5Remote } = await import('./services/ue5-remote-service.js');
+  const ue5 = getUE5Remote();
+  const connected = await ue5.connect();
+  if (connected) {
+    console.log('[UE5Remote] ✅ Connected to UE5 Mock Server');
+  } else {
+    console.log('[UE5Remote] ⚠️ Running in simulation mode');
+  }
+});
+
+// UE5 状态 API
+app.get('/api/v1/ue5/status', async (req: Request, res: Response) => {
+  try {
+    const { getUE5Remote } = await import('./services/ue5-remote-service.js');
+    const ue5 = getUE5Remote();
+    const status = ue5.getStatus();
+    const scripts = ue5.getAvailableScripts();
+    
+    res.json({
+      success: true,
+      data: {
+        ...status,
+        mode: status.connected ? 'real' : 'simulation',
+        availableScripts: scripts.length,
+        scripts: scripts.map(s => s.name),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// UE5 执行脚本 API
+app.post('/api/v1/ue5/execute', async (req: Request, res: Response) => {
+  try {
+    const { script, params } = req.body;
+    
+    if (!script) {
+      return res.status(400).json({ error: 'Script name is required' });
+    }
+    
+    const { getUE5Remote } = await import('./services/ue5-remote-service.js');
+    const ue5 = getUE5Remote();
+    const result = await ue5.executeScript(script, params || {});
+    
+    res.json({
+      success: result.success,
+      data: {
+        output: result.output,
+        duration: result.duration,
+        error: result.error,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });

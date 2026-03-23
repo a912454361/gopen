@@ -358,6 +358,14 @@ let ue5Instance: UE5RemoteService | null = null;
 export function getUE5Remote(): UE5RemoteService {
   if (!ue5Instance) {
     ue5Instance = new UE5RemoteService();
+    // 自动尝试连接
+    ue5Instance.connect().then(connected => {
+      if (connected) {
+        console.log('[UE5Remote] ✅ Connected to UE5 Mock Server');
+      } else {
+        console.log('[UE5Remote] ⚠️ Running in simulation mode');
+      }
+    });
   }
   return ue5Instance;
 }

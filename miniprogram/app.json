@@ -1,0 +1,44 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/game/game",
+    "pages/ending/ending",
+    "pages/achievements/achievements",
+    "pages/stats/stats"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#1a1a2e",
+    "navigationBarTitleText": "剑破苍穹",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0f0f1a"
+  },
+  "tabBar": {
+    "color": "#666666",
+    "selectedColor": "#ffd700",
+    "backgroundColor": "#1a1a2e",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "开始",
+        "iconPath": "assets/icons/play.png",
+        "selectedIconPath": "assets/icons/play-active.png"
+      },
+      {
+        "pagePath": "pages/achievements/achievements",
+        "text": "成就",
+        "iconPath": "assets/icons/trophy.png",
+        "selectedIconPath": "assets/icons/trophy-active.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计",
+        "iconPath": "assets/icons/chart.png",
+        "selectedIconPath": "assets/icons/chart-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

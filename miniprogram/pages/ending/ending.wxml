@@ -1,0 +1,44 @@
+<!--结局页面-->
+<view class="container ending-container">
+  
+  <!-- 结局徽章 -->
+  <view class="ending-badge {{endingClass}}">
+    <text class="badge-text">{{endingText}}</text>
+  </view>
+
+  <!-- 结局标题 -->
+  <text class="ending-title">{{title}}</text>
+
+  <!-- 结局描述 -->
+  <view class="ending-description">
+    <text>{{description}}</text>
+  </view>
+
+  <!-- 最终属性 -->
+  <view class="final-stats card">
+    <text class="stats-title">最终属性</text>
+    <view class="stats-list">
+      <view class="stat-row" wx:for="{{stats}}" wx:key="index">
+        <text class="stat-name">{{item.key}}</text>
+        <view class="stat-bar-final">
+          <view class="stat-fill" style="width: {{item.value > 100 ? 100 : item.value}}%"></view>
+        </view>
+        <text class="stat-val">{{item.value}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 按钮区域 -->
+  <view class="button-area">
+    <button class="btn btn-primary" bindtap="restart">
+      重新开始
+    </button>
+    <button class="btn btn-secondary" bindtap="backToHome">
+      返回首页
+    </button>
+    <button class="btn btn-text" open-type="share">
+      分享结局
+    </button>
+  </view>
+
+</view>

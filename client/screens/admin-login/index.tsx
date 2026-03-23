@@ -31,7 +31,7 @@ const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const ADMIN_CREDENTIALS = {
   phone: '18321337942',
   password: 'guo13816528465',
-  adminKey: 'gopen_admin_2024',
+  adminKey: 'GtAdmin2024SecretKey8888',
 };
 
 const LOGIN_STORAGE_KEY = 'admin_login_status';

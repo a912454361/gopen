@@ -1,3 +1,8 @@
+// ============================================================
+// 环境变量加载 - 必须在最开始执行
+// ============================================================
+import 'dotenv/config';
+
 import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";

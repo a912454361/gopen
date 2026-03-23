@@ -156,7 +156,7 @@ export default function QRCodePromoScreen() {
           platforms: selectedPlatforms,
           pay_type: activePayType,
           promo_text: promoText,
-          adminKey: 'gopen_admin_2024',
+          adminKey: 'GtAdmin2024SecretKey8888',
         }),
       });
       
@@ -185,7 +185,7 @@ export default function QRCodePromoScreen() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-admin-key': 'gopen_admin_2024',
+          'x-admin-key': 'GtAdmin2024SecretKey8888',
         },
       });
       

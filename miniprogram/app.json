@@ -1,13 +1,6 @@
 {
   "pages": [
     "pages/main/main",
-    "pages/battle/battle",
-    "pages/stage/stage",
-    "pages/ranking/ranking",
-    "pages/arena/arena",
-    "pages/guild/guild",
-    "pages/pet/pet",
-    "pages/friend/friend",
     "pages/shop/shop"
   ],
   "window": {

@@ -1,5 +1,5 @@
 /**
- * 游戏主页面 - 3D粒子效果
+ * 主页面 - 3D粒子效果
  */
 
 const userManager = require('../../utils/user.js');
@@ -10,7 +10,6 @@ Page({
     user: null,
     particleCount: 0,
     showRecharge: false,
-    showGM: false,
     quality: 'high',
     packages: []
   },
@@ -226,73 +225,6 @@ Page({
       setTimeout(() => {
         resolve({ success: true });
       }, 1000);
-    });
-  },
-
-  // 显示GM面板（调试）
-  showGMPanel() {
-    this.setData({ showGM: true });
-  },
-
-  hideGM() {
-    this.setData({ showGM: false });
-  },
-
-  // GM添加货币
-  gmAddCurrency(e) {
-    const { type } = e.currentTarget.dataset;
-    userManager.addCurrency(type, 10000);
-    this.engine.createExplosion(0, 0, 0, 150);
-    this.setData({ user: userManager.getSummary() });
-    wx.showToast({ title: '+10000', icon: 'none' });
-  },
-
-  // GM重置数据
-  gmReset() {
-    userManager.reset();
-    this.setData({ user: userManager.getSummary() });
-    wx.showToast({ title: '已重置', icon: 'success' });
-  },
-
-  // 跳转到关卡
-  goToStage() {
-    wx.navigateTo({
-      url: '/pages/stage/stage'
-    });
-  },
-
-  // 跳转到排行榜
-  goToRanking() {
-    wx.navigateTo({
-      url: '/pages/ranking/ranking'
-    });
-  },
-
-  // 跳转到竞技场
-  goToArena() {
-    wx.navigateTo({
-      url: '/pages/arena/arena'
-    });
-  },
-
-  // 跳转到战盟
-  goToGuild() {
-    wx.navigateTo({
-      url: '/pages/guild/guild'
-    });
-  },
-
-  // 跳转到宠物
-  goToPet() {
-    wx.navigateTo({
-      url: '/pages/pet/pet'
-    });
-  },
-
-  // 跳转到好友
-  goToFriend() {
-    wx.navigateTo({
-      url: '/pages/friend/friend'
     });
   }
 });

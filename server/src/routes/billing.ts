@@ -422,4 +422,257 @@ router.get('/admin/profit', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== G点系统 ====================
+
+/**
+ * 获取用户G点余额
+ * GET /api/v1/billing/g-points/:userId
+ */
+router.get('/g-points/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    // 获取或创建余额记录
+    let { data: balance, error } = await client
+      .from('user_balances')
+      .select('g_points')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code === 'PGRST116') {
+      // 不存在则创建
+      const { data: newBalance, error: createError } = await client
+        .from('user_balances')
+        .insert([{ user_id: userId, g_points: 0 }])
+        .select('g_points')
+        .single();
+      
+      if (createError) {
+        return res.status(500).json({ error: 'Failed to create balance' });
+      }
+      balance = newBalance;
+    } else if (error) {
+      return res.status(500).json({ error: 'Failed to fetch g_points' });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        gPoints: balance?.g_points || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Get g_points error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * G点充值
+ * POST /api/v1/billing/g-points/recharge
+ * Body: { userId, amount } // amount单位：元
+ * 规则：1元 = 100G点
+ */
+const gPointRechargeSchema = z.object({
+  userId: z.string(),
+  amount: z.number().min(1), // 最低1元
+});
+
+router.post('/g-points/recharge', async (req: Request, res: Response) => {
+  try {
+    const body = gPointRechargeSchema.parse(req.body);
+    
+    // 计算G点：1元 = 100G点
+    const gPoints = body.amount * 100;
+    
+    // 获取当前余额
+    const { data: userBalance, error: balanceError } = await client
+      .from('user_balances')
+      .select('g_points')
+      .eq('user_id', body.userId)
+      .single();
+    
+    const balanceBefore = userBalance?.g_points || 0;
+    const balanceAfter = balanceBefore + gPoints;
+    
+    // 更新G点余额
+    const { error: updateError } = await client
+      .from('user_balances')
+      .upsert({
+        user_id: body.userId,
+        g_points: balanceAfter,
+        updated_at: new Date().toISOString(),
+      });
+    
+    if (updateError) {
+      return res.status(500).json({ error: 'Failed to update g_points' });
+    }
+    
+    // 记录G点充值
+    await client.from('g_point_records').insert([{
+      user_id: body.userId,
+      type: 'recharge',
+      amount: gPoints,
+      balance_before: balanceBefore,
+      balance_after: balanceAfter,
+      description: `充值${body.amount}元，获得${gPoints}G点`,
+    }]);
+    
+    res.json({
+      success: true,
+      data: {
+        rechargeAmount: body.amount,
+        gPointsReceived: gPoints,
+        balanceBefore,
+        balanceAfter,
+        message: `充值成功，获得${gPoints}G点`,
+      },
+    });
+  } catch (error) {
+    console.error('G-point recharge error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+/**
+ * G点扣费
+ * POST /api/v1/billing/g-points/deduct
+ * Body: { userId, gPoints, description, relatedType?, relatedId? }
+ */
+const gPointDeductSchema = z.object({
+  userId: z.string(),
+  gPoints: z.number().min(1),
+  description: z.string(),
+  relatedType: z.string().optional(),
+  relatedId: z.string().optional(),
+});
+
+router.post('/g-points/deduct', async (req: Request, res: Response) => {
+  try {
+    const body = gPointDeductSchema.parse(req.body);
+    
+    // 获取当前余额
+    const { data: userBalance, error: balanceError } = await client
+      .from('user_balances')
+      .select('g_points')
+      .eq('user_id', body.userId)
+      .single();
+    
+    if (!userBalance) {
+      return res.status(400).json({ error: 'User balance not found' });
+    }
+    
+    const balanceBefore = userBalance.g_points || 0;
+    
+    // 检查余额是否充足
+    if (balanceBefore < body.gPoints) {
+      return res.status(400).json({
+        error: 'Insufficient G-points',
+        data: {
+          balance: balanceBefore,
+          required: body.gPoints,
+          shortage: body.gPoints - balanceBefore,
+        },
+      });
+    }
+    
+    const balanceAfter = balanceBefore - body.gPoints;
+    
+    // 扣除G点
+    const { error: deductError } = await client
+      .from('user_balances')
+      .update({
+        g_points: balanceAfter,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', body.userId);
+    
+    if (deductError) {
+      return res.status(500).json({ error: 'Failed to deduct g_points' });
+    }
+    
+    // 记录G点消费
+    const { data: record, error: recordError } = await client
+      .from('g_point_records')
+      .insert([{
+        user_id: body.userId,
+        type: 'consume',
+        amount: body.gPoints,
+        balance_before: balanceBefore,
+        balance_after: balanceAfter,
+        description: body.description,
+        related_type: body.relatedType,
+        related_id: body.relatedId,
+      }])
+      .select()
+      .single();
+    
+    if (recordError) {
+      console.error('Failed to record g_point consumption:', recordError);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        deducted: true,
+        gPointsDeducted: body.gPoints,
+        balanceBefore,
+        balanceAfter,
+        recordId: record?.id,
+        message: `成功扣除${body.gPoints}G点`,
+      },
+    });
+  } catch (error) {
+    console.error('G-point deduct error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+/**
+ * 获取G点消费记录
+ * GET /api/v1/billing/g-points/records/:userId
+ * Query: page?, limit?, type?
+ */
+router.get('/g-points/records/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 20, type } = req.query;
+    
+    const offset = (Number(page) - 1) * Number(limit);
+    
+    let query = client
+      .from('g_point_records')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + Number(limit) - 1);
+    
+    if (type) {
+      query = query.eq('type', type);
+    }
+    
+    const { data: records, count, error } = await query;
+    
+    if (error) {
+      return res.status(500).json({ error: 'Failed to fetch g_point records' });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        records,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / Number(limit)),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get g_point records error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

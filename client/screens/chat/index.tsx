@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 // @ts-ignore - react-native-sse lacks proper type definitions
 import RNSSE from 'react-native-sse';
@@ -141,6 +142,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 export default function ChatScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const { isMember, isSuperMember, dailyChatCount, maxFreeChatsPerDay, incrementChatCount } = useMembership();
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ 
@@ -578,7 +580,11 @@ export default function ChatScreen() {
   const providerColor = selectedModel ? (PROVIDER_COLORS[selectedModel.provider] || theme.primary) : theme.primary;
 
   return (
-    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+    <Screen 
+      backgroundColor={theme.backgroundRoot} 
+      statusBarStyle="light"
+      safeAreaEdges={['left', 'right', 'bottom']}
+    >
       {/* 推广弹窗 */}
       <PromoModal 
         visible={false}
@@ -729,7 +735,10 @@ export default function ChatScreen() {
       >
         <ScrollView
           ref={scrollViewRef}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent, 
+            { paddingTop: insets.top + Spacing.md }
+          ]}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {/* Header */}

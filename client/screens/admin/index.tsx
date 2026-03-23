@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -52,6 +53,7 @@ export default function AdminDashboardScreen() {
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ key?: string }>();
   const adminKey = params.key || '';
+  const insets = useSafeAreaInsets();
   
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -206,7 +208,11 @@ export default function AdminDashboardScreen() {
   ];
 
   return (
-    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+    <Screen 
+      backgroundColor={theme.backgroundRoot} 
+      statusBarStyle="light"
+      safeAreaEdges={['left', 'right', 'bottom']}
+    >
       <View style={{ flex: 1, flexDirection: 'row' }}>
         {/* 侧边栏 */}
         <View style={{
@@ -215,6 +221,7 @@ export default function AdminDashboardScreen() {
           paddingVertical: Spacing.lg,
           borderRightWidth: 1,
           borderRightColor: isDark ? '#1E293B' : '#334155',
+          paddingTop: insets.top + Spacing.lg,
         }}>
           {/* Logo */}
           <View style={{ 

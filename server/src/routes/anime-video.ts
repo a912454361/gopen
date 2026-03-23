@@ -284,7 +284,7 @@ router.post('/project', async (req: Request, res: Response) => {
 });
 
 /**
- * 后台生成项目所有场景
+ * 后台生成项目所有场景（支持续传：跳过已生成的场景）
  */
 async function generateProjectScenes(params: {
   userId: string;
@@ -302,14 +302,47 @@ async function generateProjectScenes(params: {
   
   const videoUrls: string[] = [];
   const errors: string[] = [];
+  let completedCount = 0;
+
+  // 获取已存在的场景视频
+  const { data: existingVideos } = await client
+    .from('anime_scene_videos')
+    .select('scene_id, video_url')
+    .eq('project_id', projectId);
+  
+  const existingSceneIds = new Set((existingVideos || []).map(v => v.scene_id));
+  const existingVideoMap = new Map((existingVideos || []).map(v => [v.scene_id, v.video_url]));
+  
+  console.log(`[AnimeVideo] Found ${existingSceneIds.size} existing videos, will skip them`);
 
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
+    const sceneId = scene.sceneId || i + 1;
+    
+    // 检查是否已存在该场景视频
+    if (existingSceneIds.has(sceneId)) {
+      const existingUrl = existingVideoMap.get(sceneId);
+      if (existingUrl) {
+        videoUrls.push(existingUrl);
+        completedCount++;
+        console.log(`[AnimeVideo] Scene ${sceneId} already exists, skipping`);
+        
+        // 更新进度
+        const progress = Math.floor((completedCount / scenes.length) * 100);
+        await client
+          .from('generation_tasks')
+          .update({ progress })
+          .eq('id', mainTaskId);
+        continue;
+      }
+    }
+    
     const scenePrompt = scene.imagePrompt || `${scene.location}，${scene.description}`;
     
     try {
-      // 更新主任务进度
-      const progress = Math.floor((i / scenes.length) * 100);
+      // 更新主任务进度（考虑已完成的数量）
+      completedCount++;
+      const progress = Math.floor((completedCount / scenes.length) * 100);
       await client
         .from('generation_tasks')
         .update({ progress })
@@ -338,7 +371,7 @@ async function generateProjectScenes(params: {
           .from('anime_scene_videos')
           .insert([{
             project_id: projectId,
-            scene_id: scene.sceneId,
+            scene_id: sceneId,
             video_url: response.videoUrl,
             duration: 5,
             created_at: new Date().toISOString(),
@@ -353,21 +386,21 @@ async function generateProjectScenes(params: {
             const { getPrivilegedUserAliyunDriveClient } = await import('../services/aliyun-drive.js');
             const driveClient = getPrivilegedUserAliyunDriveClient();
             
-            const fileName = `场景${i + 1}_${scene.location || '未命名'}.mp4`;
+            const fileName = `场景${sceneId}_${scene.location || '未命名'}.mp4`;
             await driveClient.syncGeneratedFile(response.videoUrl, fileName, 'anime');
           } catch (err) {
             console.error('[AnimeVideo] AliyunDrive sync error:', err);
           }
         }
 
-        console.log(`[AnimeVideo] Scene ${i + 1}/${scenes.length} generated`);
+        console.log(`[AnimeVideo] Scene ${sceneId}/${scenes.length} generated`);
       } else {
-        errors.push(`Scene ${i + 1}: ${response.response?.error_message || 'Unknown error'}`);
+        errors.push(`Scene ${sceneId}: ${response.response?.error_message || 'Unknown error'}`);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      errors.push(`Scene ${i + 1}: ${errorMsg}`);
-      console.error(`[AnimeVideo] Scene ${i + 1} error:`, err);
+      errors.push(`Scene ${sceneId}: ${errorMsg}`);
+      console.error(`[AnimeVideo] Scene ${sceneId} error:`, err);
     }
   }
 
@@ -387,17 +420,18 @@ async function generateProjectScenes(params: {
     })
     .eq('id', mainTaskId);
 
-  // 更新项目
+  // 更新项目（合并已有视频和新视频）
+  const allVideoUrls = [...(existingVideos || []).map(v => v.video_url), ...videoUrls.filter(url => !existingVideoMap.has(url))];
   await client
     .from('anime_projects')
     .update({
-      video_urls: videoUrls,
-      video_status: errors.length === scenes.length ? 'failed' : 'completed',
+      video_urls: allVideoUrls,
+      video_status: errors.length === scenes.length - existingSceneIds.size ? 'failed' : 'completed',
       updated_at: new Date().toISOString(),
     })
     .eq('id', projectId);
 
-  console.log(`[AnimeVideo] Project ${projectId} completed: ${videoUrls.length}/${scenes.length} videos`);
+  console.log(`[AnimeVideo] Project ${projectId} completed: ${allVideoUrls.length}/${scenes.length} videos`);
 }
 
 /**

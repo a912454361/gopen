@@ -95,6 +95,60 @@ const VIDEO_DURATIONS = [
   { value: 300, label: '5分钟', gPoints: 300 },
 ];
 
+// 主流视频生成模型推荐
+const RECOMMENDED_VIDEO_MODELS = [
+  { 
+    id: 'seedance-1.5-pro',
+    code: 'seedance-1.5-pro',
+    name: 'Seedance 1.5 Pro',
+    provider: '字节跳动',
+    description: '高质量文生视频，支持多种风格',
+    features: ['4K画质', '流畅动画', '多样风格'],
+    color: '#00D9FF',
+    recommended: true,
+  },
+  { 
+    id: 'sora',
+    code: 'sora',
+    name: 'Sora',
+    provider: 'OpenAI',
+    description: '顶尖视频生成模型，画面细腻真实',
+    features: ['真实感强', '长视频支持', '物理准确'],
+    color: '#10A37F',
+    recommended: true,
+  },
+  { 
+    id: 'kling',
+    code: 'kling',
+    name: '可灵 Kling',
+    provider: '快手',
+    description: '国产优秀视频生成模型',
+    features: ['国风优化', '中文理解', '性价比高'],
+    color: '#FF4906',
+    recommended: true,
+  },
+  { 
+    id: 'runway-gen3',
+    code: 'runway-gen3',
+    name: 'Runway Gen-3',
+    provider: 'Runway',
+    description: '专业级视频创作工具',
+    features: ['电影级画质', '创意控制', '风格迁移'],
+    color: '#7C3AED',
+    recommended: true,
+  },
+  { 
+    id: 'pika-labs',
+    code: 'pika-labs',
+    name: 'Pika Labs',
+    provider: 'Pika',
+    description: '创意视频生成新锐',
+    features: ['创意无限', '操作简单', '快速生成'],
+    color: '#F472B6',
+    recommended: true,
+  },
+];
+
 export default function CreateScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -500,6 +554,79 @@ export default function CreateScreen() {
             <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
           ) : (
             <ScrollView style={styles.pickerList}>
+              {/* 视频生成推荐模型区域 */}
+              {activeType === 'video' && (
+                <View style={styles.favoriteSection}>
+                  <View style={styles.sectionHeader}>
+                    <FontAwesome6 name="fire" size={14} color="#F59E0B" solid />
+                    <ThemedText variant="label" color={theme.textPrimary} style={{ marginLeft: 6 }}>
+                      主流推荐
+                    </ThemedText>
+                  </View>
+                  {RECOMMENDED_VIDEO_MODELS.map((model) => {
+                    const isSelected = selectedModel?.code === model.code;
+                    return (
+                      <TouchableOpacity
+                        key={`rec-${model.id}`}
+                        style={[
+                          styles.modelItem,
+                          isSelected && { borderColor: model.color, backgroundColor: `${model.color}10` },
+                        ]}
+                        onPress={() => {
+                          // 设置选中的推荐模型
+                          setSelectedModel({
+                            id: model.id,
+                            code: model.code,
+                            name: model.name,
+                            provider: model.provider,
+                            category: 'video',
+                            inputPrice: '0',
+                            outputPrice: '0',
+                            is_free: false,
+                            member_only: false,
+                            super_member_only: false,
+                            max_tokens: 0,
+                            description: model.description,
+                          });
+                          setShowModelPicker(false);
+                        }}
+                      >
+                        <View style={styles.modelInfo}>
+                          <View style={styles.modelNameRow}>
+                            <ThemedText variant="label" color={theme.textPrimary}>{model.name}</ThemedText>
+                            <View style={[styles.freeTag, { backgroundColor: `${model.color}20` }]}>
+                              <ThemedText variant="tiny" color={model.color}>推荐</ThemedText>
+                            </View>
+                          </View>
+                          <ThemedText variant="caption" color={theme.textMuted}>
+                            {model.provider} · {model.description}
+                          </ThemedText>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                            {model.features.map((feature, idx) => (
+                              <View 
+                                key={idx}
+                                style={{ 
+                                  paddingHorizontal: 6, 
+                                  paddingVertical: 2, 
+                                  borderRadius: 4, 
+                                  backgroundColor: `${model.color}15` 
+                                }}
+                              >
+                                <ThemedText variant="tiny" color={model.color}>{feature}</ThemedText>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                        {isSelected && (
+                          <FontAwesome6 name="check" size={16} color={model.color} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <View style={styles.sectionDivider} />
+                </View>
+              )}
+
               {/* 收藏模型区域 */}
               {favoriteModels.length > 0 && (
                 <View style={styles.favoriteSection}>
@@ -648,6 +775,19 @@ export default function CreateScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
+            <TouchableOpacity 
+              style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 20, 
+                backgroundColor: `${theme.primary}15`,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => router.push('/projects')}
+            >
+              <FontAwesome6 name="arrow-left" size={16} color={theme.primary} />
+            </TouchableOpacity>
             <View style={styles.headerIcon}>
               <FontAwesome6 name="wand-magic-sparkles" size={28} color={theme.primary} />
             </View>

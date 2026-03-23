@@ -96,6 +96,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="anime-progress"
+        options={{
+          title: '生成进度',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="play-circle" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="qrcode-promo"
         options={{
           title: '收款码',

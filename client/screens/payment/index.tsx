@@ -94,9 +94,10 @@ export default function PaymentScreen() {
   const router = useSafeRouter();
   const { checkMembership } = useMembership();
   
-  const params = useSafeSearchParams<{ amount?: string; productType?: string }>();
+  const params = useSafeSearchParams<{ amount?: string; productType?: string; gPoints?: string }>();
   const defaultAmount = parseInt(params.amount || '2900', 10);
   const productType = params.productType || 'membership';
+  const gPoints = params.gPoints ? parseInt(params.gPoints, 10) : 0;
 
   const [payMethod, setPayMethod] = useState<PayMethod>('alipay');
   const [paymentAccounts, setPaymentAccounts] = useState<Record<PayMethod, PaymentAccount> | null>(null);
@@ -249,6 +250,28 @@ export default function PaymentScreen() {
         <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
           选择支付方式
         </ThemedText>
+        
+        {/* 产品信息 */}
+        <View style={[styles.productInfo, { backgroundColor: theme.backgroundDefault, marginBottom: Spacing.lg }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <ThemedText variant="label" color={theme.textPrimary}>
+                {productType === 'gpoints' ? 'G点充值' : 
+                 productType === 'recharge' ? '账户充值' : 
+                 productType === 'membership' ? '会员开通' : '商品支付'}
+              </ThemedText>
+              {gPoints > 0 && (
+                <ThemedText variant="caption" color="#F59E0B">
+                  获得 {gPoints.toLocaleString()} G点
+                </ThemedText>
+              )}
+            </View>
+            <ThemedText variant="h3" color={theme.primary}>
+              {formatAmount(defaultAmount)}
+            </ThemedText>
+          </View>
+        </View>
+        
         <View style={styles.payMethodRow}>
           {PAY_METHODS.map(method => (
             <TouchableOpacity

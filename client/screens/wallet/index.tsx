@@ -177,7 +177,7 @@ export default function WalletScreen() {
     }, 300);
   };
 
-  // G点充值
+  // G点充值 - 跳转到支付页面
   const handleGPointRecharge = async (option: typeof GPOINT_RECHARGE_OPTIONS[0]) => {
     if (!userId) {
       Alert.alert('请先登录', '您需要登录后才能充值', [
@@ -187,37 +187,15 @@ export default function WalletScreen() {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      /**
-       * 服务端文件：server/src/routes/billing.ts
-       * 接口：POST /api/v1/billing/g-points/recharge
-       * Body 参数：userId: string, amount: number, description?: string
-       */
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/g-points/recharge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          amount: option.amount,
-          description: `钱包充值G点`,
-        }),
+    // 跳转到支付页面，金额单位为分
+    setGPointModal(false);
+    setTimeout(() => {
+      router.push('/payment', { 
+        amount: String(option.amount * 100), 
+        productType: 'gpoints',
+        gPoints: String(option.gPoints + (option.bonus || 0))
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        Alert.alert('充值成功', `成功充值${option.amount}元，获得${option.gPoints + (option.bonus || 0)}G点`);
-        setGPointModal(false);
-        fetchData(); // 刷新余额
-      } else {
-        Alert.alert('充值失败', data.error || '请稍后重试');
-      }
-    } catch (error) {
-      console.error('G-point recharge error:', error);
-      Alert.alert('充值失败', '网络错误，请稍后重试');
-    } finally {
-      setSubmitting(false);
-    }
+    }, 300);
   };
 
   const getModelIcon = (provider: string, category: string): keyof typeof FontAwesome6.glyphMap => {

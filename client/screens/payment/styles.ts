@@ -23,6 +23,14 @@ export const createStyles = (theme: Theme) => {
       paddingHorizontal: Spacing.md,
     },
 
+    // 产品信息
+    productInfo: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
     // 支付方式选择
     payMethodRow: {
       flexDirection: 'row',

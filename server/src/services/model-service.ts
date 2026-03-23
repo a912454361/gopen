@@ -639,11 +639,12 @@ export class QwenAdapter extends ModelAdapter {
     
     const data = await response.json() as any;
     
+    // Qwen API 返回格式: { output: { text, finish_reason }, usage: { ... } }
     return {
       id: data.request_id,
       model: request.model,
-      content: data.output.choices[0].message.content,
-      finishReason: data.output.choices[0].finish_reason,
+      content: data.output?.text || data.output?.choices?.[0]?.message?.content || '',
+      finishReason: data.output?.finish_reason || 'stop',
       usage: {
         promptTokens: data.usage?.input_tokens || 0,
         completionTokens: data.usage?.output_tokens || 0,

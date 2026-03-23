@@ -1,7 +1,12 @@
 // ============================================================
 // 环境变量加载 - 必须在最开始执行
 // ============================================================
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+loadEnv({ path: resolve(__dirname, '../.env') });
 
 import express, { type Request, type Response } from "express";
 import cors from "cors";

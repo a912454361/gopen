@@ -12,6 +12,23 @@ import {
   quickGenerateVideo,
   PARALLEL_CONFIG 
 } from '../services/parallel-video-generator.js';
+import { 
+  multiModelGenerateVideo,
+  VIDEO_SERVICES,
+  multiModelGenerator,
+} from '../services/multi-model-video-generator.js';
+import { 
+  gpuRenderer,
+  cloudGPUScheduler,
+  acceleratedRender,
+} from '../services/gpu-accelerated-renderer.js';
+import {
+  distributedDispatcher,
+  submitDistributedTask,
+} from '../services/distributed-task-dispatcher.js';
+
+// 视频服务类型
+type VideoServiceKey = keyof typeof VIDEO_SERVICES;
 
 const router = express.Router();
 const client = getSupabaseClient();
@@ -624,8 +641,429 @@ router.get('/config', async (req: Request, res: Response) => {
         default_concurrency: PARALLEL_CONFIG.defaultConcurrency,
         privileged_concurrency: PARALLEL_CONFIG.privilegedConcurrency,
       },
+      multi_model: {
+        services: Object.keys(VIDEO_SERVICES).map(key => ({
+          key,
+          name: VIDEO_SERVICES[key as VideoServiceKey].name,
+          status: VIDEO_SERVICES[key as VideoServiceKey].status,
+          maxConcurrent: VIDEO_SERVICES[key as VideoServiceKey].maxConcurrent,
+        })),
+      },
+      distributed: {
+        clusterStatus: distributedDispatcher.getClusterStatus(),
+      },
     },
   });
 });
+
+/**
+ * 多模型并行生成视频
+ * POST /api/v1/anime-video/multi-model
+ * Body: { user_id, prompt, style?, services?, race_mode? }
+ */
+router.post('/multi-model', async (req: Request, res: Response) => {
+  try {
+    const { user_id, prompt, style, services, race_mode } = req.body;
+
+    if (!user_id || !prompt) {
+      return res.status(400).json({ error: 'user_id and prompt are required' });
+    }
+
+    console.log(`[AnimeVideo] Multi-model generate for user ${user_id}`);
+
+    const result = await multiModelGenerateVideo({
+      prompt,
+      style: style || '国风动漫',
+      preferredServices: services as VideoServiceKey[],
+      raceMode: race_mode !== false,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        video_url: result.videoUrl,
+        service: result.service,
+        service_name: VIDEO_SERVICES[result.service].name,
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] Multi-model generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 获取多模型服务状态
+ * GET /api/v1/anime-video/services/status
+ */
+router.get('/services/status', async (req: Request, res: Response) => {
+  const statuses = multiModelGenerator.getServiceStatuses();
+  const statusArray = Array.from(statuses.entries()).map(([key, status]) => ({
+    service: key,
+    ...VIDEO_SERVICES[key],
+    ...status,
+  }));
+
+  res.json({
+    success: true,
+    data: statusArray,
+  });
+});
+
+/**
+ * GPU加速渲染
+ * POST /api/v1/anime-video/gpu-render
+ * Body: { user_id, type, prompt, style?, duration?, resolution? }
+ */
+router.post('/gpu-render', async (req: Request, res: Response) => {
+  try {
+    const { user_id, type, prompt, style, duration, resolution } = req.body;
+
+    if (!user_id || !prompt) {
+      return res.status(400).json({ error: 'user_id and prompt are required' });
+    }
+
+    // 检查GPU可用性
+    const gpuStatus = await gpuRenderer.getGPUStatus();
+    const gpuAvailable = gpuRenderer.isAvailable();
+
+    console.log(`[AnimeVideo] GPU render request, available: ${gpuAvailable}`);
+
+    if (!gpuAvailable) {
+      // 降级到多模型生成
+      const result = await multiModelGenerateVideo({
+        prompt,
+        style: style || '国风动漫',
+        duration: duration || 5,
+        resolution: resolution || '1080p',
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          video_url: result.videoUrl,
+          render_type: 'api_fallback',
+          message: 'GPU不可用，已使用API服务生成',
+        },
+      });
+    }
+
+    // 使用GPU加速渲染
+    const result = await acceleratedRender({
+      type: type || 'scene',
+      prompt,
+      style: style || '国风动漫',
+      duration: duration || 5,
+      resolution: resolution || '1080p',
+    });
+
+    res.json({
+      success: true,
+      data: {
+        video_url: result.videoUrl,
+        render_type: result.renderType,
+        render_time: result.renderTime,
+        gpu_status: gpuStatus,
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] GPU render error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 获取GPU状态
+ * GET /api/v1/anime-video/gpu/status
+ */
+router.get('/gpu/status', async (req: Request, res: Response) => {
+  const gpuStatus = await gpuRenderer.getGPUStatus();
+  const cloudQueueStatus = cloudGPUScheduler.getQueueStatus();
+
+  res.json({
+    success: true,
+    data: {
+      local_gpu: {
+        available: gpuRenderer.isAvailable(),
+        device_count: gpuRenderer.getDeviceCount(),
+        status: gpuStatus,
+      },
+      cloud_gpu: cloudQueueStatus,
+    },
+  });
+});
+
+/**
+ * 分布式任务提交
+ * POST /api/v1/anime-video/distributed
+ * Body: { user_id, type, priority, payload }
+ */
+router.post('/distributed', async (req: Request, res: Response) => {
+  try {
+    const { user_id, type, priority, payload } = req.body;
+
+    if (!user_id || !payload) {
+      return res.status(400).json({ error: 'user_id and payload are required' });
+    }
+
+    console.log(`[AnimeVideo] Distributed task submit from user ${user_id}`);
+
+    const taskId = await submitDistributedTask({
+      type: type || 'video_generation',
+      priority: priority || 'normal',
+      payload: {
+        ...payload,
+        userId: user_id,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        task_id: taskId,
+        cluster_status: distributedDispatcher.getClusterStatus(),
+        message: '任务已提交到分布式集群',
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] Distributed task error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 获取分布式集群状态
+ * GET /api/v1/anime-video/cluster/status
+ */
+router.get('/cluster/status', async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: distributedDispatcher.getClusterStatus(),
+  });
+});
+
+/**
+ * 超高速生成（多模型 + GPU + 分布式）
+ * POST /api/v1/anime-video/turbo
+ * Body: { user_id, anime_project_id, style?, resolution? }
+ */
+router.post('/turbo', async (req: Request, res: Response) => {
+  try {
+    const { user_id, anime_project_id, style, resolution } = req.body;
+
+    if (!user_id || !anime_project_id) {
+      return res.status(400).json({ error: 'user_id and anime_project_id are required' });
+    }
+
+    // 获取动漫项目
+    const { data: project, error: projectError } = await client
+      .from('anime_projects')
+      .select('*')
+      .eq('id', anime_project_id)
+      .eq('user_id', user_id)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ error: 'Anime project not found' });
+    }
+
+    // 检查特权
+    const privilege = await checkAnimeVideoPrivilege(user_id);
+    const scenes = project.scenes || [];
+
+    // 创建主任务
+    const { data: mainTask } = await client
+      .from('generation_tasks')
+      .insert([{
+        user_id,
+        task_type: 'anime',
+        prompt: `Turbo生成: ${project.title}`,
+        model: 'multi-model-turbo',
+        parameters: {
+          project_id: anime_project_id,
+          scene_count: scenes.length,
+          mode: 'turbo',
+        },
+        status: 'processing',
+        progress: 0,
+        started_at: new Date().toISOString(),
+        is_privileged: privilege.isPrivileged,
+      }])
+      .select('id')
+      .single();
+
+    const mainTaskId = mainTask?.id;
+
+    // 并行 + 多模型 + GPU加速
+    const turboConfig = {
+      concurrency: privilege.isPrivileged ? 5 : 3,
+      services: ['seedance', 'pika', 'kling'] as VideoServiceKey[],
+      useGPU: gpuRenderer.isAvailable(),
+      distributed: false, // 单机模式下禁用分布式
+    };
+
+    console.log(`[AnimeVideo] Turbo mode: ${scenes.length} scenes, concurrency ${turboConfig.concurrency}, GPU ${turboConfig.useGPU}`);
+
+    // 后台执行Turbo生成
+    turboGenerateVideos({
+      userId: user_id,
+      projectId: anime_project_id,
+      scenes,
+      style: style || project.style || '国风动漫',
+      resolution: resolution || privilege.resolution,
+      mainTaskId,
+      config: turboConfig,
+    }).catch(err => {
+      console.error('[AnimeVideo] Turbo generation error:', err);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        task_id: mainTaskId,
+        scene_count: scenes.length,
+        turbo_config: turboConfig,
+        estimated_speedup: `${turboConfig.concurrency * (turboConfig.services.length)}x`,
+        message: `Turbo模式启动，预计提速${turboConfig.concurrency * turboConfig.services.length}倍`,
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] Turbo generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * Turbo生成核心逻辑
+ */
+async function turboGenerateVideos(params: {
+  userId: string;
+  projectId: string;
+  scenes: any[];
+  style: string;
+  resolution: string;
+  mainTaskId: string;
+  config: {
+    concurrency: number;
+    services: VideoServiceKey[];
+    useGPU: boolean;
+    distributed: boolean;
+  };
+}): Promise<void> {
+  const { userId, projectId, scenes, style, resolution, mainTaskId, config } = params;
+
+  const startTime = Date.now();
+  let completedCount = 0;
+
+  // 获取已存在的场景视频
+  const { data: existingVideos } = await client
+    .from('anime_scene_videos')
+    .select('scene_id, video_url')
+    .eq('project_id', projectId);
+
+  const existingSceneIds = new Set((existingVideos || []).map(v => v.scene_id));
+  const videoUrls: string[] = (existingVideos || []).map(v => v.video_url);
+
+  // 过滤需要生成的场景
+  const scenesToGenerate = scenes.filter((scene, index) => {
+    const sceneId = scene.sceneId || index + 1;
+    return !existingSceneIds.has(sceneId);
+  });
+
+  console.log(`[Turbo] Generating ${scenesToGenerate.length} scenes`);
+
+  // 并发生成（多模型）
+  const batchSize = config.concurrency;
+  for (let i = 0; i < scenesToGenerate.length; i += batchSize) {
+    const batch = scenesToGenerate.slice(i, i + batchSize);
+
+    const promises = batch.map(async (scene, batchIndex) => {
+      const sceneId = scene.sceneId || scenes.indexOf(scene) + 1;
+      const scenePrompt = scene.imagePrompt || `${scene.location}，${scene.description || ''}`;
+
+      try {
+        // 使用多模型生成
+        const result = await multiModelGenerateVideo({
+          prompt: scenePrompt,
+          style,
+          duration: 5,
+          resolution,
+          preferredServices: config.services,
+          raceMode: true,
+        });
+
+        // 保存到数据库
+        await client
+          .from('anime_scene_videos')
+          .insert([{
+            project_id: projectId,
+            scene_id: sceneId,
+            video_url: result.videoUrl,
+            duration: 5,
+            created_at: new Date().toISOString(),
+          }]);
+
+        return { sceneId, videoUrl: result.videoUrl, service: result.service };
+      } catch (err) {
+        console.error(`[Turbo] Scene ${sceneId} failed:`, err);
+        return { sceneId, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    });
+
+    const results = await Promise.all(promises);
+
+    // 更新进度
+    completedCount += batch.length;
+    const progress = Math.floor(((existingSceneIds.size + completedCount) / scenes.length) * 100);
+
+    await client
+      .from('generation_tasks')
+      .update({ progress })
+      .eq('id', mainTaskId);
+
+    // 收集结果
+    for (const result of results) {
+      if ('videoUrl' in result) {
+        videoUrls.push(result.videoUrl);
+      }
+    }
+  }
+
+  // 更新任务完成
+  const totalTime = Date.now() - startTime;
+  await client
+    .from('generation_tasks')
+    .update({
+      status: 'completed',
+      progress: 100,
+      result_data: {
+        video_count: videoUrls.length,
+        total_time_ms: totalTime,
+        avg_time_per_scene: Math.floor(totalTime / scenesToGenerate.length),
+      },
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', mainTaskId);
+
+  // 更新项目
+  await client
+    .from('anime_projects')
+    .update({
+      video_urls: videoUrls,
+      video_status: 'completed',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', projectId);
+
+  console.log(`[Turbo] Completed: ${videoUrls.length} videos in ${totalTime}ms`);
+}
 
 export default router;

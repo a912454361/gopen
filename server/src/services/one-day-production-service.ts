@@ -19,6 +19,7 @@ import {
   VideoGenerationClient,
   TTSClient,
   Config,
+  HeaderUtils,
 } from 'coze-coding-dev-sdk';
 import { getSupabaseClient } from '../storage/database/supabase-client.js';
 import { getProductionStorage, type UploadResult } from './production-storage-service.js';
@@ -1007,6 +1008,12 @@ class OneDayProductionService extends EventEmitter {
     if (scene.imageUrl) {
       this.updateModelStatus(productionId, videoModelId, 'working', `E${episode.number}S${scene.id} 视频`);
 
+      console.log(`[OneDayProduction] Generating video for scene ${scene.id}`, {
+        imageUrl: scene.imageUrl.substring(0, 80) + '...',
+        description: scene.description.substring(0, 50),
+        duration: scene.duration,
+      });
+
       try {
         const content = [
           {
@@ -1036,6 +1043,11 @@ class OneDayProductionService extends EventEmitter {
       } catch (error: any) {
         this.incrementModelTasks(productionId, videoModelId, false);
         console.error(`[OneDayProduction] Scene video error:`, error.message);
+        
+        // 视频生成失败时，使用图片作为视频占位符
+        // 这样可以确保流程继续，后续可以手动重新生成视频
+        scene.videoUrl = scene.imageUrl; // 临时使用图片作为视频
+        console.log(`[OneDayProduction] Using image as video placeholder for scene ${scene.id}`);
       }
     }
 
@@ -1206,19 +1218,28 @@ class OneDayProductionService extends EventEmitter {
 
 const router = Router();
 
-// 单例服务实例
-let serviceInstance: OneDayProductionService | null = null;
+// 服务实例缓存（按 headers 缓存）
+const serviceInstances: Map<string, OneDayProductionService> = new Map();
 
-function getService(): OneDayProductionService {
-  if (!serviceInstance) {
-    serviceInstance = new OneDayProductionService();
+function getService(customHeaders?: Record<string, string>): OneDayProductionService {
+  // 使用 headers 的 hash 作为缓存 key（简化处理，使用空字符串作为默认 key）
+  const cacheKey = customHeaders ? JSON.stringify(customHeaders) : 'default';
+  
+  if (!serviceInstances.has(cacheKey)) {
+    serviceInstances.set(cacheKey, new OneDayProductionService(customHeaders));
   }
-  return serviceInstance;
+  return serviceInstances.get(cacheKey)!;
+}
+
+// 从请求中提取 headers 的辅助函数
+function extractHeaders(req: Request): Record<string, string> | undefined {
+  return HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
 }
 
 // 创建新制作
 router.post('/create', async (req: Request, res: Response) => {
-  const service = getService();
+  const customHeaders = extractHeaders(req);
+  const service = getService(customHeaders);
   const { animeTitle, totalEpisodes = 80, episodeDuration = 20, style = 'chinese', genre = '仙侠', userId } = req.body;
 
   const result = await service.createProduction({
@@ -1235,7 +1256,8 @@ router.post('/create', async (req: Request, res: Response) => {
 
 // 启动制作
 router.post('/:id/start', async (req: Request, res: Response) => {
-  const service = getService();
+  const customHeaders = extractHeaders(req);
+  const service = getService(customHeaders);
   const productionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const result = await service.startProduction(productionId);
   res.json(result);
@@ -1243,7 +1265,8 @@ router.post('/:id/start', async (req: Request, res: Response) => {
 
 // 获取状态
 router.get('/:id/status', (req: Request, res: Response) => {
-  const service = getService();
+  const customHeaders = extractHeaders(req);
+  const service = getService(customHeaders);
   const productionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const status = service.getStatus(productionId);
   res.json({ success: !!status, data: status });
@@ -1251,7 +1274,8 @@ router.get('/:id/status', (req: Request, res: Response) => {
 
 // 获取集数列表
 router.get('/:id/episodes', (req: Request, res: Response) => {
-  const service = getService();
+  const customHeaders = extractHeaders(req);
+  const service = getService(customHeaders);
   const productionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const episodes = service.getEpisodes(productionId);
   res.json({ success: true, data: episodes });
@@ -1259,7 +1283,8 @@ router.get('/:id/episodes', (req: Request, res: Response) => {
 
 // SSE 实时进度
 router.get('/:id/stream', (req: Request, res: Response) => {
-  const service = getService();
+  const customHeaders = extractHeaders(req);
+  const service = getService(customHeaders);
   const productionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   service.addSSEClient(productionId, res);
@@ -1277,7 +1302,8 @@ router.get('/:id/stream', (req: Request, res: Response) => {
 
 // 恢复制作（从数据库加载）
 router.post('/:id/resume', async (req: Request, res: Response) => {
-  const service = getService();
+  const customHeaders = extractHeaders(req);
+  const service = getService(customHeaders);
   const productionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const status = await service.loadProductionFromDB(productionId);
   

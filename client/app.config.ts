@@ -16,7 +16,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.gopen.app",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
           "alipay",
           "weixin",

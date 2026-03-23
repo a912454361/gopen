@@ -23,6 +23,12 @@
         "simulator": false
       }
     },
+    "ios-simulator": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
     "production": {
       "distribution": "store",
       "android": {

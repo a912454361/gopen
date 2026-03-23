@@ -295,6 +295,76 @@ router.post('/admin/review', async (req: Request, res: Response) => {
           details: `充值审核通过，金额: ¥${(totalAmount / 100).toFixed(2)}（含赠送 ¥${((record.bonus_amount || 0) / 100).toFixed(2)}）`,
         }]);
         
+        // 检查是否首次充值，给邀请人发放奖励
+        const { data: previousRecharges } = await client
+          .from('recharge_records')
+          .select('id')
+          .eq('user_id', record.user_id)
+          .eq('status', 'approved')
+          .neq('order_no', body.orderNo);
+        
+        if (!previousRecharges || previousRecharges.length === 0) {
+          // 首次充值，给邀请人发放奖励
+          const { data: inviteRecord } = await client
+            .from('invite_records')
+            .select('inviter_id')
+            .eq('invitee_id', record.user_id)
+            .single();
+          
+          if (inviteRecord) {
+            // 计算首充奖励：充值金额的10%（最低1元，最高50元）
+            const bonusPercent = 0.10;
+            const minBonus = 100;
+            const maxBonus = 5000;
+            const bonusAmount = Math.min(Math.max(Math.floor(record.amount * bonusPercent), minBonus), maxBonus);
+            
+            // 更新邀请人余额
+            const { data: inviterBalance } = await client
+              .from('user_balances')
+              .select('balance')
+              .eq('user_id', inviteRecord.inviter_id)
+              .single();
+            
+            if (inviterBalance) {
+              await client
+                .from('user_balances')
+                .update({
+                  balance: inviterBalance.balance + bonusAmount,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', inviteRecord.inviter_id);
+            } else {
+              await client
+                .from('user_balances')
+                .insert([{
+                  user_id: inviteRecord.inviter_id,
+                  balance: bonusAmount,
+                }]);
+            }
+            
+            // 更新邀请记录
+            await client
+              .from('invite_records')
+              .update({
+                first_recharge_given: true,
+                first_recharge_bonus: bonusAmount,
+                first_recharge_at: new Date().toISOString(),
+              })
+              .eq('invitee_id', record.user_id);
+            
+            // 记录奖励日志
+            await client.from('reward_records').insert([{
+              user_id: inviteRecord.inviter_id,
+              reward_type: 'invite',
+              reward_key: 'first_recharge_bonus',
+              amount: bonusAmount,
+              description: `好友首充奖励（充值${(record.amount / 100).toFixed(2)}元）`,
+            }]);
+            
+            console.log(`[Recharge] First recharge bonus for inviter: ${inviteRecord.inviter_id}, bonus: ${bonusAmount}厘`);
+          }
+        }
+        
       } else if (record.recharge_type === 'membership' || record.recharge_type === 'super_member') {
         // 会员充值：激活会员
         const memberLevel = record.recharge_type === 'super_member' ? 'super' : 'member';

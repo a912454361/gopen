@@ -285,6 +285,38 @@ export default function WalletScreen() {
           </View>
         </View>
 
+        {/* 邀请好友 - 核心获客功能 */}
+        <TouchableOpacity 
+          onPress={() => router.push('/invite')}
+          style={{
+            backgroundColor: `linear-gradient(135deg, ${theme.success}, #059669)`,
+            borderRadius: BorderRadius.xl,
+            padding: Spacing.lg,
+            marginBottom: Spacing.xl,
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: `${theme.success}30`,
+          }}
+        >
+          <View style={{ 
+            width: 56, 
+            height: 56, 
+            borderRadius: BorderRadius.lg, 
+            backgroundColor: 'rgba(255,255,255,0.2)', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            marginRight: Spacing.lg,
+          }}>
+            <FontAwesome6 name="gift" size={28} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="h4" color="#fff" style={{ marginBottom: 4 }}>邀请好友，双方得奖励</ThemedText>
+            <ThemedText variant="small" color="rgba(255,255,255,0.8)">好友首充再得10%奖励，上不封顶</ThemedText>
+          </View>
+          <FontAwesome6 name="chevron-right" size={16} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
+
         {/* 充值说明 */}
         <View style={{ backgroundColor: theme.backgroundDefault, borderRadius: BorderRadius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: theme.border }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>

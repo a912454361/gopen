@@ -74,7 +74,7 @@ export default function InviteScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <LinearGradient
-          colors={[theme.primary, theme.accent]}
+          colors={[theme.success, '#059669']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.header}
@@ -84,7 +84,7 @@ export default function InviteScreen() {
             邀请好友，双方得奖励
           </ThemedText>
           <ThemedText variant="body" color="rgba(255,255,255,0.9)" style={{ marginTop: Spacing.sm }}>
-            每邀请一位好友注册，双方各得 10 次创作次数
+            好友注册你得0.5元，好友首充再得10%
           </ThemedText>
         </LinearGradient>
 

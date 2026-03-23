@@ -302,8 +302,9 @@ export class RewardService {
     inviterReward: number;
     inviteeReward: number;
   }> {
-    const INVITER_REWARD = 100; // 邀请人奖励（厘）
-    const INVITEE_REWARD = 50;  // 被邀请人奖励（厘）
+    // 提升邀请奖励激励用户推广
+    const INVITER_REWARD = 500;  // 邀请人奖励（厘）= 0.5元
+    const INVITEE_REWARD = 200;  // 被邀请人奖励（厘）= 0.2元
 
     try {
       // 给邀请人发奖励

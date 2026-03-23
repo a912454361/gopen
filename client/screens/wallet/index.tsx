@@ -203,43 +203,79 @@ export default function WalletScreen() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        const { orderId, payUrl, deepLink } = result.data;
+        const { orderId, payUrl, deepLink, paymentAccount } = result.data;
 
-        // 尝试打开支付App
-        if (deepLink) {
-          const canOpen = await Linking.canOpenURL(deepLink);
-          if (canOpen) {
-            // 保存订单ID，支付成功后查询
-            await AsyncStorage.setItem('pendingPaymentOrder', orderId);
-            
-            // 打开支付App
-            await Linking.openURL(deepLink);
-            
-            // 延迟提示用户返回查看支付状态
-            setTimeout(() => {
-              Alert.alert(
-                '支付完成？',
-                '请在支付完成后返回查看订单状态',
-                [
-                  { text: '稍后查看', style: 'cancel' },
-                  { text: '查看订单', onPress: () => router.push('/bill') },
-                ]
-              );
-            }, 1000);
-          } else {
-            // 无法打开App，使用网页支付
-            if (payUrl) {
-              await Linking.openURL(payUrl);
-            } else {
-              Alert.alert('提示', '请先安装' + PAY_METHODS.find(p => p.id === selectedPayMethod)?.name);
-            }
-          }
-        } else if (payUrl) {
-          // 使用网页支付
-          await Linking.openURL(payUrl);
+        // Web端：直接跳转到支付页面显示二维码
+        if (Platform.OS === 'web') {
+          setRechargeModal(false);
+          setTimeout(() => {
+            router.push('/payment', { 
+              amount: String(amount), 
+              productType: 'recharge',
+              payMethod: selectedPayMethod,
+            });
+          }, 300);
+          return;
         }
-        
-        setRechargeModal(false);
+
+        // 移动端：尝试唤起支付App
+        if (deepLink) {
+          try {
+            const canOpen = await Linking.canOpenURL(deepLink);
+            if (canOpen) {
+              // 保存订单ID，支付成功后查询
+              await AsyncStorage.setItem('pendingPaymentOrder', orderId);
+              
+              // 打开支付App
+              await Linking.openURL(deepLink);
+              
+              setRechargeModal(false);
+              
+              // 延迟提示用户返回查看支付状态
+              setTimeout(() => {
+                Alert.alert(
+                  '支付完成？',
+                  '请在支付完成后返回查看订单状态',
+                  [
+                    { text: '稍后查看', style: 'cancel' },
+                    { text: '查看订单', onPress: () => router.push('/bill') },
+                  ]
+                );
+              }, 1000);
+            } else {
+              // 无法打开App，跳转到扫码支付页面
+              setRechargeModal(false);
+              setTimeout(() => {
+                router.push('/payment', { 
+                  amount: String(amount), 
+                  productType: 'recharge',
+                  payMethod: selectedPayMethod,
+                });
+              }, 300);
+            }
+          } catch (linkError) {
+            console.error('Linking error:', linkError);
+            // 唤起失败，跳转到扫码支付页面
+            setRechargeModal(false);
+            setTimeout(() => {
+              router.push('/payment', { 
+                amount: String(amount), 
+                productType: 'recharge',
+                payMethod: selectedPayMethod,
+              });
+            }, 300);
+          }
+        } else {
+          // 没有deepLink，跳转到扫码支付页面
+          setRechargeModal(false);
+          setTimeout(() => {
+            router.push('/payment', { 
+              amount: String(amount), 
+              productType: 'recharge',
+              payMethod: selectedPayMethod,
+            });
+          }, 300);
+        }
       } else {
         Alert.alert('支付失败', result.error || '创建订单失败');
       }
@@ -562,50 +598,72 @@ export default function WalletScreen() {
                 <ThemedText variant="label" color={theme.textMuted} style={{ marginBottom: Spacing.md }}>
                   支付模式
                 </ThemedText>
-                <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      padding: Spacing.lg,
-                      borderRadius: BorderRadius.md,
-                      borderWidth: 2,
-                      borderColor: paymentMode === 'app' ? theme.primary : theme.border,
-                      backgroundColor: paymentMode === 'app' ? `${theme.primary}10` : theme.backgroundTertiary,
-                    }}
-                    onPress={() => setPaymentMode('app')}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
-                      <FontAwesome6 name="mobile-screen-button" size={16} color={paymentMode === 'app' ? theme.primary : theme.textPrimary} />
-                      <ThemedText variant="label" color={paymentMode === 'app' ? theme.primary : theme.textPrimary}>
-                        App支付
+                {Platform.OS === 'web' ? (
+                  // Web端提示
+                  <View style={{ 
+                    padding: Spacing.lg, 
+                    borderRadius: BorderRadius.md, 
+                    backgroundColor: `${theme.primary}10`,
+                    borderWidth: 1,
+                    borderColor: theme.primary,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                      <FontAwesome6 name="info-circle" size={16} color={theme.primary} />
+                      <ThemedText variant="small" color={theme.textPrimary}>
+                        Web端仅支持扫码支付，点击充值后将显示收款码
                       </ThemedText>
                     </View>
-                    <ThemedText variant="tiny" color={theme.textMuted}>
-                      跳转{PAY_METHODS.find(p => p.id === selectedPayMethod)?.name}App支付
-                    </ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      padding: Spacing.lg,
-                      borderRadius: BorderRadius.md,
-                      borderWidth: 2,
-                      borderColor: paymentMode === 'qrcode' ? theme.primary : theme.border,
-                      backgroundColor: paymentMode === 'qrcode' ? `${theme.primary}10` : theme.backgroundTertiary,
-                    }}
-                    onPress={() => setPaymentMode('qrcode')}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
-                      <FontAwesome6 name="qrcode" size={16} color={paymentMode === 'qrcode' ? theme.primary : theme.textPrimary} />
-                      <ThemedText variant="label" color={paymentMode === 'qrcode' ? theme.primary : theme.textPrimary}>
-                        扫码支付
+                    <ThemedText variant="tiny" color={theme.textMuted} style={{ marginTop: Spacing.sm }}>
+                        如需App跳转支付，请使用移动端App
                       </ThemedText>
-                    </View>
-                    <ThemedText variant="tiny" color={theme.textMuted}>
-                      使用扫码功能付款
-                    </ThemedText>
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                ) : (
+                  // 移动端显示选项
+                  <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        padding: Spacing.lg,
+                        borderRadius: BorderRadius.md,
+                        borderWidth: 2,
+                        borderColor: paymentMode === 'app' ? theme.primary : theme.border,
+                        backgroundColor: paymentMode === 'app' ? `${theme.primary}10` : theme.backgroundTertiary,
+                      }}
+                      onPress={() => setPaymentMode('app')}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
+                        <FontAwesome6 name="mobile-screen-button" size={16} color={paymentMode === 'app' ? theme.primary : theme.textPrimary} />
+                        <ThemedText variant="label" color={paymentMode === 'app' ? theme.primary : theme.textPrimary}>
+                          App支付
+                        </ThemedText>
+                      </View>
+                      <ThemedText variant="tiny" color={theme.textMuted}>
+                        跳转{PAY_METHODS.find(p => p.id === selectedPayMethod)?.name}App支付
+                      </ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        padding: Spacing.lg,
+                        borderRadius: BorderRadius.md,
+                        borderWidth: 2,
+                        borderColor: paymentMode === 'qrcode' ? theme.primary : theme.border,
+                        backgroundColor: paymentMode === 'qrcode' ? `${theme.primary}10` : theme.backgroundTertiary,
+                      }}
+                      onPress={() => setPaymentMode('qrcode')}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
+                        <FontAwesome6 name="qrcode" size={16} color={paymentMode === 'qrcode' ? theme.primary : theme.textPrimary} />
+                        <ThemedText variant="label" color={paymentMode === 'qrcode' ? theme.primary : theme.textPrimary}>
+                          扫码支付
+                        </ThemedText>
+                      </View>
+                      <ThemedText variant="tiny" color={theme.textMuted}>
+                        使用扫码功能付款
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             )}
 

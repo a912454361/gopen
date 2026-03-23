@@ -15,14 +15,41 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "alipay",
+          "weixin",
+          "weixinULAPI",
+          "uppay",
+          "mqq",
+          "mqqapi"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A0A0F"
       },
-      "package": "com.gopen.app"
+      "package": "com.gopen.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "alipay" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "weixin" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "uppay" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

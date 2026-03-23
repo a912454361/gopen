@@ -130,8 +130,8 @@ const PAYMENT_ACCOUNTS = {
   },
   unionpay: {
     name: '银联收款',
-    account: '6216****7932', // 银联卡号后四位
-    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/unionpay-qrcode_e1c61a35.png?sign=1805653583-2d0669e23c-0-39f08b1673e207d6461e0a60acc8404d0fc600012a5216924634610aa28e8283', // 银联收款码
+    account: '6216****7932', // 银联卡号后四位（中国银行储蓄卡）
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/proxy_a4e3f067?sign=1776824400-01e4246bd0-0-b657f6bdd3bdfa3dd23fad0c6e5da0d1bccbd1bd7d06a6f252b856961c3bb636', // 云闪付银联收款码
     realName: '郭涛',
     desc: '请使用云闪付扫码支付',
     color: '#E60012',

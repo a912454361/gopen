@@ -272,12 +272,17 @@ export const Screen = ({
 
   // 状态栏背景高度（仅在需要时添加）
   const statusBarBackgroundHeight = hasTop ? 0 : insets.top;
+  
+  // Android 上状态栏背景色：沉浸式模式下使用页面背景色
+  const androidStatusBarColor = Platform.OS === 'android' && !hasTop 
+    ? backgroundColor 
+    : statusBarColor;
 
   return (
     // 核心原则：严禁使用 SafeAreaView，统一使用 View + padding 手动管理
     <View style={wrapperStyle}>
-      {/* 状态栏背景层：当不包含 top 安全区时，确保背景色延伸到状态栏区域 */}
-      {statusBarBackgroundHeight > 0 && (
+      {/* 状态栏背景层：iOS 上沉浸式模式需要额外背景层 */}
+      {statusBarBackgroundHeight > 0 && Platform.OS === 'ios' && (
         <View
           style={{
             position: 'absolute',
@@ -286,7 +291,7 @@ export const Screen = ({
             right: 0,
             height: statusBarBackgroundHeight,
             backgroundColor,
-            zIndex: 0,
+            zIndex: -1,
           }}
           pointerEvents="none"
         />
@@ -294,7 +299,7 @@ export const Screen = ({
       {/* 状态栏配置：强制透明背景 + 沉浸式，以支持背景图延伸 */}
       <StatusBar
         style={statusBarStyle}
-        backgroundColor={statusBarColor}
+        backgroundColor={androidStatusBarColor}
         translucent
       />
 

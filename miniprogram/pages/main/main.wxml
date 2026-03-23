@@ -1,0 +1,162 @@
+<!--游戏主页面 - 3D粒子效果-->
+<view class="container">
+  
+  <!-- 3D画布 -->
+  <view class="canvas-container">
+    <canvas 
+      type="webgl"
+      id="gameCanvas"
+      class="game-canvas"
+      bindtap="onCanvasTap"
+    ></canvas>
+    
+    <!-- 顶部UI -->
+    <view class="top-ui">
+      <!-- 用户信息 -->
+      <view class="user-info card-glass">
+        <view class="user-header">
+          <view class="avatar">
+            <text class="vip-badge" wx:if="{{user.vip > 0}}">V{{user.vip}}</text>
+          </view>
+          <view class="user-basic">
+            <text class="nickname">{{user.nickname}}</text>
+            <text class="level">Lv.{{user.level}}</text>
+          </view>
+          <view class="power">
+            <text class="power-value">{{user.power}}</text>
+            <text class="power-label">战力</text>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 货币栏 -->
+      <view class="currency-bar card-glass">
+        <view class="currency-item" bindtap="showRecharge">
+          <text class="currency-icon">💰</text>
+          <text class="currency-value">{{user.gold}}</text>
+        </view>
+        <view class="currency-item" bindtap="showRecharge">
+          <text class="currency-icon">💎</text>
+          <text class="currency-value">{{user.gem}}</text>
+        </view>
+        <view class="currency-item">
+          <text class="currency-icon">⚡</text>
+          <text class="currency-value">{{user.energy}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 底部UI -->
+    <view class="bottom-ui">
+      <!-- 画质选择 -->
+      <view class="quality-selector">
+        <text class="quality-label">画质:</text>
+        <text class="quality-btn {{quality === 'low' ? 'active' : ''}}" 
+              data-quality="low" bindtap="setQuality">低</text>
+        <text class="quality-btn {{quality === 'medium' ? 'active' : ''}}" 
+              data-quality="medium" bindtap="setQuality">中</text>
+        <text class="quality-btn {{quality === 'high' ? 'active' : ''}}" 
+              data-quality="high" bindtap="setQuality">高</text>
+        <text class="quality-btn {{quality === 'ultra' ? 'active' : ''}}" 
+              data-quality="ultra" bindtap="setQuality">极致</text>
+      </view>
+      
+      <!-- 粒子数 -->
+      <text class="particle-count">粒子数: {{particleCount}}</text>
+    </view>
+  </view>
+
+  <!-- 功能按钮 -->
+  <view class="action-buttons">
+    <button class="action-btn primary" bindtap="goToStory">
+      <text class="btn-icon">⚔️</text>
+      <text class="btn-text">开始冒险</text>
+    </button>
+    
+    <button class="action-btn" bindtap="showRecharge">
+      <text class="btn-icon">💎</text>
+      <text class="btn-text">充值</text>
+    </button>
+    
+    <button class="action-btn" bindtap="goToAchievements">
+      <text class="btn-icon">🏆</text>
+      <text class="btn-text">成就</text>
+    </button>
+    
+    <button class="action-btn" bindtap="showGMPanel">
+      <text class="btn-icon">🔧</text>
+      <text class="btn-text">调试</text>
+    </button>
+  </view>
+
+  <!-- 充值弹窗 -->
+  <view class="modal-overlay" wx:if="{{showRecharge}}" bindtap="hideRecharge">
+    <view class="modal-content recharge-modal" catchtap>
+      <view class="modal-header">
+        <text class="modal-title">💎 充值中心</text>
+        <text class="modal-close" bindtap="hideRecharge">✕</text>
+      </view>
+      
+      <scroll-view class="recharge-packages" scroll-y>
+        <view class="package-item {{item.recommended ? 'recommended' : ''}} {{item.hot ? 'hot' : ''}} {{item.bestValue ? 'best-value' : ''}}" 
+              wx:for="{{packages}}" 
+              wx:key="id"
+              data-id="{{item.id}}"
+              bindtap="handleRecharge">
+          <view class="package-badge" wx:if="{{item.recommended || item.hot || item.bestValue}}">
+            {{item.bestValue ? '最超值' : item.hot ? '热卖' : '推荐'}}
+          </view>
+          <text class="package-name">{{item.name}}</text>
+          <text class="package-bonus">赠送{{item.bonus}}</text>
+          <view class="package-items">
+            <text class="item-text" wx:for="{{item.items}}" wx:for-item="reward" wx:key="*this">
+              {{reward.type === 'gold' ? '💰' : reward.type === 'gem' ? '💎' : '🎁'}} 
+              {{reward.amount || reward.count}}
+            </text>
+          </view>
+          <view class="package-price">
+            <text class="price-symbol">¥</text>
+            <text class="price-value">{{item.price}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- GM面板 -->
+  <view class="modal-overlay" wx:if="{{showGM}}" bindtap="hideGM">
+    <view class="modal-content gm-modal" catchtap>
+      <view class="modal-header">
+        <text class="modal-title">🔧 GM调试面板</text>
+        <text class="modal-close" bindtap="hideGM">✕</text>
+      </view>
+      
+      <view class="gm-section">
+        <text class="gm-section-title">添加货币</text>
+        <view class="gm-buttons">
+          <button class="gm-btn" data-type="gold" bindtap="gmAddCurrency">+10000 💰</button>
+          <button class="gm-btn" data-type="gem" bindtap="gmAddCurrency">+10000 💎</button>
+          <button class="gm-btn" data-type="energy" bindtap="gmAddCurrency">+100 ⚡</button>
+        </view>
+      </view>
+      
+      <view class="gm-section">
+        <text class="gm-section-title">其他操作</text>
+        <view class="gm-buttons">
+          <button class="gm-btn danger" bindtap="gmReset">重置数据</button>
+        </view>
+      </view>
+      
+      <view class="gm-section">
+        <text class="gm-section-title">用户数据</text>
+        <view class="gm-data">
+          <text>UID: {{user.uid}}</text>
+          <text>等级: {{user.level}}</text>
+          <text>VIP: {{user.vip}}</text>
+          <text>战力: {{user.power}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+</view>

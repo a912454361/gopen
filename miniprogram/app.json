@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/main/main",
     "pages/index/index",
     "pages/game/game",
     "pages/ending/ending",
@@ -20,10 +21,16 @@
     "borderStyle": "black",
     "list": [
       {
+        "pagePath": "pages/main/main",
+        "text": "游戏",
+        "iconPath": "assets/icons/game.png",
+        "selectedIconPath": "assets/icons/game-active.png"
+      },
+      {
         "pagePath": "pages/index/index",
-        "text": "开始",
-        "iconPath": "assets/icons/play.png",
-        "selectedIconPath": "assets/icons/play-active.png"
+        "text": "剧情",
+        "iconPath": "assets/icons/story.png",
+        "selectedIconPath": "assets/icons/story-active.png"
       },
       {
         "pagePath": "pages/achievements/achievements",
@@ -33,9 +40,9 @@
       },
       {
         "pagePath": "pages/stats/stats",
-        "text": "统计",
-        "iconPath": "assets/icons/chart.png",
-        "selectedIconPath": "assets/icons/chart-active.png"
+        "text": "我的",
+        "iconPath": "assets/icons/user.png",
+        "selectedIconPath": "assets/icons/user-active.png"
       }
     ]
   },

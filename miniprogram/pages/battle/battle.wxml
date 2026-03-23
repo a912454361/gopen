@@ -1,0 +1,119 @@
+<!--横屏战斗页面-->
+<view class="battle-container">
+  
+  <!-- 战斗场景 -->
+  <view class="battle-scene">
+    
+    <!-- 敌人区域 -->
+    <view class="enemy-area">
+      <!-- 敌人信息 -->
+      <view class="enemy-info">
+        <view class="enemy-header">
+          <text class="enemy-name">{{enemy.name}}</text>
+          <text class="enemy-level">Lv.{{enemy.level}}</text>
+          <view class="boss-badge" wx:if="{{enemy.type === 'boss'}}">BOSS</view>
+        </view>
+        <view class="hp-bar enemy-hp">
+          <view class="hp-fill" style="width: {{enemy.hp / enemy.maxHp * 100}}%"></view>
+          <text class="hp-text">{{enemy.hp}} / {{enemy.maxHp}}</text>
+        </view>
+      </view>
+      
+      <!-- 敌人形象 -->
+      <view class="enemy-sprite {{enemy.type}}">
+        <view class="enemy-shadow"></view>
+        <image class="enemy-image" src="/images/enemy-{{enemy.type}}.png" mode="aspectFit" />
+        <!-- 受击特效 -->
+        <view class="hit-effect" wx:if="{{battleState === 'fighting'}}"></view>
+      </view>
+    </view>
+    
+    <!-- 玩家区域 -->
+    <view class="player-area">
+      <!-- 玩家形象 -->
+      <view class="player-sprite">
+        <view class="player-shadow"></view>
+        <image class="player-image" src="/images/player-sword.png" mode="aspectFit" />
+      </view>
+      
+      <!-- 玩家信息 -->
+      <view class="player-info">
+        <view class="player-header">
+          <text class="player-name">{{player.name}}</text>
+          <text class="player-level">Lv.{{player.level}}</text>
+        </view>
+        
+        <!-- HP条 -->
+        <view class="hp-bar player-hp">
+          <view class="hp-fill" style="width: {{player.hp / player.maxHp * 100}}%"></view>
+          <text class="hp-text">{{player.hp}} / {{player.maxHp}}</text>
+        </view>
+        
+        <!-- MP条 -->
+        <view class="mp-bar">
+          <view class="mp-fill" style="width: {{player.mp / player.maxMp * 100}}%"></view>
+          <text class="mp-text">{{player.mp}} / {{player.maxMp}}</text>
+        </view>
+      </view>
+    </view>
+    
+  </view>
+
+  <!-- 战斗日志 -->
+  <view class="battle-log">
+    <scroll-view class="log-scroll" scroll-y scroll-into-view="log-bottom">
+      <view wx:for="{{log}}" wx:key="time" class="log-item">
+        <text>{{item.text}}</text>
+      </view>
+      <view id="log-bottom"></view>
+    </scroll-view>
+  </view>
+
+  <!-- 控制面板 -->
+  <view class="control-panel">
+    
+    <!-- 准备状态 -->
+    <view wx:if="{{battleState === 'ready'}}" class="ready-panel">
+      <text class="stage-info">第{{chapter}}章 第{{stage}}关</text>
+      <button class="start-btn" bindtap="startBattle">开始战斗</button>
+      <button class="flee-btn" bindtap="flee">逃跑</button>
+    </view>
+    
+    <!-- 战斗中 -->
+    <view wx:elif="{{battleState === 'fighting'}}" class="battle-panel">
+      <view class="action-buttons">
+        <button class="action-btn attack" bindtap="attack">
+          <text class="icon">⚔️</text>
+          <text class="label">攻击</text>
+        </button>
+        <button class="action-btn skill" bindtap="skillAttack">
+          <text class="icon">✨</text>
+          <text class="label">技能</text>
+          <text class="cost">-100MP</text>
+        </button>
+        <button class="action-btn item" bindtap="useItem">
+          <text class="icon">🎒</text>
+          <text class="label">物品</text>
+        </button>
+        <button class="action-btn auto {{autoMode ? 'active' : ''}}" bindtap="toggleAuto">
+          <text class="icon">{{autoMode ? '⏸️' : '▶️'}}</text>
+          <text class="label">{{autoMode ? '停止' : '自动'}}</text>
+        </button>
+      </view>
+      
+      <view class="status-bar">
+        <text class="turn">回合: {{turn}}</text>
+        <text class="speed" bindtap="toggleSpeed">速度: x{{speed}}</text>
+      </view>
+    </view>
+    
+    <!-- 结束状态 -->
+    <view wx:else class="end-panel {{battleState}}">
+      <text class="result-text">{{battleState === 'victory' ? '🎉 胜利！' : '💀 失败'}}</text>
+      <button class="retry-btn" bindtap="retryBattle">重新挑战</button>
+      <button class="back-btn" bindtap="flee">返回</button>
+    </view>
+    
+  </view>
+
+</view>

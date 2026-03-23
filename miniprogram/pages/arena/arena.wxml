@@ -1,23 +1,18 @@
-<!--竞技场页面-->
-<view class="arena-page">
-  <!-- 竞技场信息 -->
-  <view class="arena-header">
-    <view class="season">
-      <text class="label">第{{arenaInfo?.season || 1}}赛季</text>
+<!--横屏竞技场页面-->
+<view class="arena-landscape">
+  
+  <!-- 左侧竞技场信息 -->
+  <view class="arena-info-area">
+    <view class="season-badge">
+      <text>第{{arenaInfo?.season || 1}}赛季</text>
     </view>
     
-    <view class="rank-info">
-      <view class="rank-item">
-        <text class="label">当前积分</text>
-        <text class="value">{{arenaInfo?.rank || 1000}}</text>
-      </view>
-      <view class="rank-item">
-        <text class="label">最高积分</text>
-        <text class="value">{{arenaInfo?.best_rank || 1000}}</text>
-      </view>
+    <view class="rank-display">
+      <text class="rank-value">{{arenaInfo?.rank || 1000}}</text>
+      <text class="rank-label">当前积分</text>
     </view>
     
-    <view class="stats">
+    <view class="stats-row">
       <view class="stat">
         <text class="num">{{arenaInfo?.wins || 0}}</text>
         <text class="text">胜利</text>
@@ -31,11 +26,16 @@
         <text class="text">连胜</text>
       </view>
     </view>
+    
+    <view class="best-rank">
+      <text class="label">最高积分</text>
+      <text class="value">{{arenaInfo?.best_rank || 1000}}</text>
+    </view>
   </view>
 
-  <!-- 对手列表 -->
-  <view class="opponents-section">
-    <view class="section-header">
+  <!-- 中间对手列表 -->
+  <view class="opponents-area">
+    <view class="area-header">
       <text class="title">匹配对手</text>
       <text class="refresh" bindtap="refreshOpponents">刷新</text>
     </view>
@@ -52,12 +52,16 @@
         <view class="info">
           <text class="name">{{item.nickname || '剑客'}}</text>
           <text class="level">Lv.{{item.level}}</text>
-          <text class="power">战力: {{item.power}}</text>
         </view>
-        <view class="rank-badge">
-          <text>{{item.game_arena?.[0]?.rank || 1000}}</text>
-          <text class="unit">积分</text>
+        <view class="power-info">
+          <text class="power">{{item.power}}</text>
+          <text class="label">战力</text>
         </view>
+        <view class="rank-info">
+          <text class="rank">{{item.game_arena?.[0]?.rank || 1000}}</text>
+          <text class="label">积分</text>
+        </view>
+        <button class="challenge-btn">挑战</button>
       </view>
       
       <view wx:if="{{opponents.length === 0}}" class="empty">
@@ -66,11 +70,12 @@
     </view>
   </view>
 
-  <!-- 奖励预览 -->
-  <view class="rewards-section">
-    <text class="section-title">赛季奖励</text>
+  <!-- 右侧赛季奖励 -->
+  <view class="rewards-area">
+    <text class="area-title">赛季奖励</text>
+    
     <view class="rewards-list">
-      <view class="reward-item">
+      <view class="reward-item top">
         <text class="rank">前10名</text>
         <text class="prize">传说称号 + 10000金币</text>
       </view>
@@ -82,15 +87,21 @@
         <text class="rank">前500名</text>
         <text class="prize">稀有称号 + 2000金币</text>
       </view>
+      <view class="reward-item">
+        <text class="rank">参与奖</text>
+        <text class="prize">500金币</text>
+      </view>
     </view>
+    
     <button class="claim-btn" bindtap="claimRewards">领取奖励</button>
   </view>
-</view>
 
-<!--战斗遮罩-->
-<view wx:if="{{battling}}" class="battle-mask">
-  <view class="battle-animation">
-    <image class="sword" src="/images/sword.png" mode="aspectFit" />
-    <text class="text">⚔️ 战斗中 ⚔️</text>
+  <!-- 战斗遮罩 -->
+  <view wx:if="{{battling}}" class="battle-mask">
+    <view class="battle-animation">
+      <text class="sword-icon">⚔️</text>
+      <text class="battle-text">战斗中...</text>
+    </view>
   </view>
+  
 </view>

@@ -35,6 +35,22 @@ const CREATE_TYPES = [
     category: 'chat' 
   },
   { 
+    id: 'anime', 
+    name: '动漫创作', 
+    icon: 'wand-magic-sparkles', 
+    color: '#FF6B9D', 
+    desc: 'AI动漫，梦幻生成',
+    category: 'image' 
+  },
+  { 
+    id: 'game', 
+    name: '游戏创作', 
+    icon: 'gamepad', 
+    color: '#10B981', 
+    desc: '游戏场景，一键生成',
+    category: 'image' 
+  },
+  { 
     id: 'image', 
     name: '图像生成', 
     icon: 'image', 
@@ -86,6 +102,26 @@ interface GeneratedResult {
   createdAt: string;
   duration?: number;
   gPointsCost?: number;
+}
+
+// 创作任务接口
+interface GenerationTask {
+  id: string;
+  user_id: string;
+  task_type: 'chat' | 'image' | 'audio' | 'video' | 'anime' | 'game';
+  prompt: string;
+  model: string;
+  parameters: Record<string, any>;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  result_url?: string;
+  result_data?: Record<string, any>;
+  error_message?: string;
+  g_points_cost: number;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  is_privileged: boolean;
 }
 
 // 特权用户ID（郭涛）
@@ -208,6 +244,10 @@ export default function CreateScreen() {
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteModels, setFavoriteModels] = useState<Model[]>([]);
+  
+  // 创作任务进度状态
+  const [activeTasks, setActiveTasks] = useState<GenerationTask[]>([]);
+  const [showProgressPanel, setShowProgressPanel] = useState(true);
 
   // 特权用户检查
   const isPrivilegedUser = userId === PRIVILEGED_USER_ID;
@@ -279,6 +319,47 @@ export default function CreateScreen() {
       fetchGPointsBalance();
     }
   }, [userId, fetchGPointsBalance]);
+
+  // 获取活动中的创作任务
+  const fetchActiveTasks = useCallback(async () => {
+    if (!userId) return;
+    try {
+      /**
+       * 服务端文件：server/src/routes/generation-tasks.ts
+       * 接口：GET /api/v1/generation-tasks/user/:userId/active
+       */
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/generation-tasks/user/${userId}/active`
+      );
+      const data = await response.json();
+      if (data.success) {
+        setActiveTasks(data.data);
+      }
+    } catch (error) {
+      console.error('Fetch active tasks error:', error);
+    }
+  }, [userId]);
+
+  // 获取活动任务
+  useEffect(() => {
+    if (userId) {
+      fetchActiveTasks();
+    }
+  }, [userId, fetchActiveTasks]);
+
+  // 轮询活动任务进度（每3秒）
+  useEffect(() => {
+    if (!userId || activeTasks.length === 0) return;
+    
+    const hasProcessing = activeTasks.some(t => t.status === 'pending' || t.status === 'processing');
+    if (!hasProcessing) return;
+
+    const interval = setInterval(() => {
+      fetchActiveTasks();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [userId, activeTasks, fetchActiveTasks]);
 
   // 获取模型列表
   useEffect(() => {
@@ -854,6 +935,109 @@ export default function CreateScreen() {
             end={{ x: 1, y: 0 }}
             style={styles.neonLine}
           />
+
+          {/* 创作进度面板 */}
+          {activeTasks.length > 0 && showProgressPanel && (
+            <View style={[styles.progressPanel, { backgroundColor: theme.backgroundDefault, borderColor: theme.border }]}>
+              <View style={styles.progressPanelHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <FontAwesome6 name="spinner" size={16} color={theme.primary} spin />
+                  <ThemedText variant="label" color={theme.textPrimary}>创作进度</ThemedText>
+                  <View style={[styles.taskBadge, { backgroundColor: theme.primary }]}>
+                    <ThemedText variant="tiny" color="#fff">{activeTasks.length}</ThemedText>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setShowProgressPanel(false)}>
+                  <FontAwesome6 name="chevron-up" size={14} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
+              
+              <View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.taskList}>
+                {activeTasks.map((task) => (
+                  <View key={task.id} style={[styles.taskCard, { backgroundColor: theme.backgroundTertiary, borderColor: theme.borderLight }]}>
+                    <View style={styles.taskHeader}>
+                      <View style={[styles.taskTypeIcon, { backgroundColor: `${CREATE_TYPES.find(t => t.id === task.task_type)?.color || theme.primary}20` }]}>
+                        <FontAwesome6 
+                          name={CREATE_TYPES.find(t => t.id === task.task_type)?.icon as any || 'cube'} 
+                          size={14} 
+                          color={CREATE_TYPES.find(t => t.id === task.task_type)?.color || theme.primary} 
+                        />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 8 }}>
+                        <ThemedText variant="smallMedium" color={theme.textPrimary} numberOfLines={1}>
+                          {CREATE_TYPES.find(t => t.id === task.task_type)?.name || task.task_type}
+                        </ThemedText>
+                        <ThemedText variant="tiny" color={theme.textMuted}>
+                          {task.status === 'pending' ? '等待中...' : task.status === 'processing' ? '生成中...' : task.status === 'completed' ? '已完成' : '失败'}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    
+                    {/* 进度条 */}
+                    <View style={styles.progressBarContainer}>
+                      <View style={[styles.progressBarBg, { backgroundColor: theme.border }]}>
+                        <View 
+                          style={[
+                            styles.progressBarFill, 
+                            { 
+                              width: `${task.progress}%`,
+                              backgroundColor: task.status === 'failed' ? theme.error : theme.primary 
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <ThemedText variant="tiny" color={theme.textMuted}>{task.progress}%</ThemedText>
+                    </View>
+                    
+                    {/* 提示词预览 */}
+                    <ThemedText variant="caption" color={theme.textSecondary} numberOfLines={2} style={{ marginTop: 8 }}>
+                      {task.prompt || '无提示词'}
+                    </ThemedText>
+                    
+                    {/* 完成后显示结果 */}
+                    {task.status === 'completed' && task.result_url && (
+                      <TouchableOpacity 
+                        style={[styles.viewResultBtn, { backgroundColor: theme.primary }]}
+                        onPress={() => {
+                          if (task.task_type === 'video' || task.task_type === 'anime' || task.task_type === 'game') {
+                            // 视频类型，设置结果
+                            setResult({
+                              type: 'video',
+                              content: task.prompt,
+                              videoUrl: task.result_url,
+                              model: task.model,
+                              prompt: task.prompt,
+                              createdAt: task.completed_at || task.created_at,
+                            });
+                          } else if (task.task_type === 'image') {
+                            setResult({
+                              type: 'image',
+                              content: task.prompt,
+                              imageUrl: task.result_url,
+                              model: task.model,
+                              prompt: task.prompt,
+                              createdAt: task.completed_at || task.created_at,
+                            });
+                          }
+                        }}
+                      >
+                        <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>查看结果</ThemedText>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* 失败显示错误 */}
+                    {task.status === 'failed' && task.error_message && (
+                      <ThemedText variant="tiny" color={theme.error} style={{ marginTop: 8 }}>
+                        {task.error_message}
+                      </ThemedText>
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+              </View>
+            </View>
+          )}
 
           {/* 创作类型选择 */}
           <View style={styles.typeSection}>

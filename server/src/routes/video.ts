@@ -140,6 +140,25 @@ router.post('/generate', async (req: Request, res: Response) => {
 
     console.log(`[Video] Generating video for user ${user_id}, duration: ${actualDuration}s, resolution: ${actualResolution}, privileged: ${isPrivileged}`);
 
+    // 创建创作任务记录
+    const { data: taskData } = await client
+      .from('generation_tasks')
+      .insert([{
+        user_id,
+        task_type: 'video',
+        prompt: prompt || '',
+        model: model || VIDEO_CONFIG.model,
+        parameters: { duration: actualDuration, resolution: actualResolution, ratio, effect },
+        status: 'processing',
+        progress: 10,
+        started_at: new Date().toISOString(),
+        is_privileged: isPrivileged,
+      }])
+      .select('id')
+      .single();
+
+    const taskId = taskData?.id;
+
     // 调用视频生成API
     const response = await videoClient.videoGeneration(contentItems, {
       model: model || VIDEO_CONFIG.model,
@@ -182,6 +201,20 @@ router.post('/generate', async (req: Request, res: Response) => {
         if (error) console.error('[Video] Failed to save record:', error);
       }
 
+      // 更新创作任务状态为完成
+      if (taskId) {
+        await client
+          .from('generation_tasks')
+          .update({
+            status: 'completed',
+            progress: 100,
+            result_url: response.videoUrl,
+            result_data: { duration: actualDuration, resolution: actualResolution },
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', taskId);
+      }
+
       // 特权用户自动同步到阿里云盘
       if (isPrivileged && user_id === PRIVILEGED_USER_ID) {
         try {
@@ -214,7 +247,7 @@ router.post('/generate', async (req: Request, res: Response) => {
           video_url: response.videoUrl,
           duration: actualDuration,
           model: model || VIDEO_CONFIG.model,
-          task_id: response.response?.id,
+          task_id: taskId,
           privileged: isPrivileged,
           charged: !isPrivileged,
         },
@@ -222,12 +255,29 @@ router.post('/generate', async (req: Request, res: Response) => {
     } else {
       console.error('[Video] Generation failed:', response.response?.error_message);
       
+      // 更新创作任务状态为失败
+      if (taskId) {
+        await client
+          .from('generation_tasks')
+          .update({
+            status: 'failed',
+            error_message: response.response?.error_message || 'Video generation failed',
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', taskId);
+      }
+      
       return res.status(500).json({
         error: response.response?.error_message || 'Video generation failed',
+        task_id: taskId,
       });
     }
   } catch (error) {
     console.error('[Video] Generate error:', error);
+    
+    // 更新创作任务状态为失败（如果有taskId）
+    // 注意：taskId可能在try块中创建失败，需要检查
+    
     res.status(500).json({
       error: error instanceof Error ? error.message : 'Internal server error',
     });

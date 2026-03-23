@@ -269,5 +269,67 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: theme.border,
       marginVertical: Spacing.md,
     },
+    // 创作进度面板
+    progressPanel: {
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      padding: Spacing.md,
+      marginBottom: Spacing.xl,
+    },
+    progressPanelHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    taskBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.full,
+    },
+    taskList: {
+      marginHorizontal: -Spacing.xs,
+    },
+    taskCard: {
+      width: 200,
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      marginHorizontal: Spacing.xs,
+    },
+    taskHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    taskTypeIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: BorderRadius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    progressBarContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginTop: Spacing.sm,
+    },
+    progressBarBg: {
+      flex: 1,
+      height: 6,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    viewResultBtn: {
+      marginTop: Spacing.sm,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: BorderRadius.sm,
+      alignItems: 'center',
+    },
   });
 };

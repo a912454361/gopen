@@ -3,107 +3,122 @@ import { Spacing, BorderRadius, Theme } from '@/constants/theme';
 
 export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.backgroundRoot,
-    },
     scrollContent: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing['2xl'],
+      flexGrow: 1,
       paddingBottom: Spacing['5xl'],
-      maxWidth: 800,
-      alignSelf: 'center',
-      width: '100%',
-    },
-    header: {
-      marginBottom: Spacing.xl,
-      alignItems: 'center',
-    },
-    neonLine: {
-      height: 2,
-      borderRadius: 1,
-      marginTop: Spacing.lg,
-      width: 120,
     },
     heroSection: {
       alignItems: 'center',
-      marginBottom: Spacing['2xl'],
-      padding: Spacing.xl,
-      borderRadius: BorderRadius.lg,
-      backgroundColor: theme.backgroundDefault,
+      paddingVertical: Spacing['3xl'],
+      paddingHorizontal: Spacing.lg,
+      borderBottomLeftRadius: BorderRadius.xl,
+      borderBottomRightRadius: BorderRadius.xl,
     },
-    appIcon: {
+    logoContainer: {
       width: 80,
       height: 80,
-      borderRadius: 20,
+      borderRadius: 40,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
       marginBottom: Spacing.lg,
     },
-    platformGrid: {
+    appName: {
+      fontWeight: '700',
+    },
+    appSlogan: {
+      marginTop: Spacing.xs,
+    },
+    appDesc: {
+      marginTop: Spacing.xs,
+    },
+    featuresSection: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.xl,
+    },
+    sectionTitle: {
+      marginBottom: Spacing.lg,
+    },
+    featuresGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: Spacing.lg,
-      justifyContent: 'center',
+      gap: Spacing.md,
     },
-    platformCard: {
-      width: '45%',
-      minWidth: 280,
-      backgroundColor: theme.backgroundDefault,
+    featureItem: {
+      width: '47%',
+      padding: Spacing.lg,
       borderRadius: BorderRadius.lg,
+      alignItems: 'center',
+    },
+    featureIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    downloadSection: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.xl,
+      gap: Spacing.md,
+    },
+    downloadCard: {
+      borderRadius: BorderRadius.lg,
+      padding: Spacing.lg,
       borderWidth: 1,
       borderColor: theme.border,
-      padding: Spacing.xl,
+    },
+    downloadCardContent: {
+      flexDirection: 'row',
       alignItems: 'center',
     },
     platformIcon: {
-      width: 64,
-      height: 64,
-      borderRadius: 16,
+      width: 56,
+      height: 56,
+      borderRadius: BorderRadius.lg,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: Spacing.md,
     },
-    downloadButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: Spacing.sm,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.xl,
-      borderRadius: BorderRadius.md,
-      marginTop: Spacing.md,
-      width: '100%',
+    platformInfo: {
+      flex: 1,
+      marginLeft: Spacing.lg,
     },
-    featureList: {
+    recommendCard: {
+      marginHorizontal: Spacing.lg,
       marginTop: Spacing.xl,
       padding: Spacing.lg,
-      backgroundColor: theme.backgroundDefault,
       borderRadius: BorderRadius.lg,
+      borderWidth: 1,
     },
-    featureItem: {
+    recommendHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.md,
-      paddingVertical: Spacing.sm,
     },
-    storeSection: {
-      marginTop: Spacing.xl,
-      alignItems: 'center',
-    },
-    storeGrid: {
+    recommendButton: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: Spacing.md,
+      alignItems: 'center',
       justifyContent: 'center',
-      marginTop: Spacing.lg,
-    },
-    storeBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
       paddingVertical: Spacing.md,
       paddingHorizontal: Spacing.lg,
       borderRadius: BorderRadius.md,
-      backgroundColor: theme.backgroundTertiary,
+      marginTop: Spacing.lg,
+    },
+    backupSection: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.xl,
+      gap: Spacing.sm,
+    },
+    backupLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.md,
+      borderRadius: BorderRadius.md,
+    },
+    footer: {
+      alignItems: 'center',
+      paddingTop: Spacing['2xl'],
+      gap: Spacing.xs,
     },
   });
 };

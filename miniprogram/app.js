@@ -8,6 +8,9 @@ App({
     // 游戏版本
     version: '1.0.0',
     
+    // API基础URL
+    apiBase: 'http://localhost:9091',
+    
     // 玩家数据
     player: {
       id: '',

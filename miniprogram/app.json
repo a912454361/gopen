@@ -1,20 +1,14 @@
 {
   "pages": [
     "pages/main/main",
-    "pages/index/index",
-    "pages/game/game",
-    "pages/ending/ending",
-    "pages/achievements/achievements",
-    "pages/stats/stats",
+    "pages/battle/battle",
+    "pages/stage/stage",
     "pages/ranking/ranking",
     "pages/arena/arena",
     "pages/guild/guild",
     "pages/pet/pet",
     "pages/friend/friend",
-    "pages/stage/stage",
-    "pages/shop/shop",
-    "pages/vip/vip",
-    "pages/battle/battle"
+    "pages/shop/shop"
   ],
   "window": {
     "backgroundTextStyle": "dark",
@@ -22,39 +16,8 @@
     "navigationBarTitleText": "剑破苍穹",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#0f0f1a",
+    "navigationStyle": "custom",
     "pageOrientation": "landscape"
-  },
-  "tabBar": {
-    "color": "#666666",
-    "selectedColor": "#ffd700",
-    "backgroundColor": "#1a1a2e",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/main/main",
-        "text": "游戏",
-        "iconPath": "assets/icons/game.png",
-        "selectedIconPath": "assets/icons/game-active.png"
-      },
-      {
-        "pagePath": "pages/index/index",
-        "text": "剧情",
-        "iconPath": "assets/icons/story.png",
-        "selectedIconPath": "assets/icons/story-active.png"
-      },
-      {
-        "pagePath": "pages/achievements/achievements",
-        "text": "成就",
-        "iconPath": "assets/icons/trophy.png",
-        "selectedIconPath": "assets/icons/trophy-active.png"
-      },
-      {
-        "pagePath": "pages/stats/stats",
-        "text": "我的",
-        "iconPath": "assets/icons/user.png",
-        "selectedIconPath": "assets/icons/user-active.png"
-      }
-    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

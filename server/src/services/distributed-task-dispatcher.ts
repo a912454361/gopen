@@ -54,12 +54,14 @@ interface DistributedTask {
   type: 'video_generation' | 'scene_render' | 'batch_process';
   priority: 'high' | 'normal' | 'low';
   payload: {
-    prompt: string;
-    style: string;
+    prompt?: string;
+    style?: string;
     duration?: number;
     resolution?: string;
     projectId?: string;
     sceneIds?: number[];
+    userId?: string;
+    [key: string]: any;
   };
   status: 'queued' | 'assigned' | 'processing' | 'completed' | 'failed';
   assignedNode?: string;
@@ -337,8 +339,8 @@ export class DistributedTaskDispatcher {
       const { multiModelGenerateVideo } = await import('./multi-model-video-generator.js');
 
       const result = await multiModelGenerateVideo({
-        prompt: task.payload.prompt,
-        style: task.payload.style,
+        prompt: task.payload.prompt || '动漫场景',
+        style: task.payload.style || '国风动漫',
         duration: task.payload.duration || 5,
         resolution: task.payload.resolution || '1080p',
       });
@@ -481,12 +483,14 @@ export async function submitDistributedTask(params: {
   type: 'video_generation' | 'scene_render' | 'batch_process';
   priority?: 'high' | 'normal' | 'low';
   payload: {
-    prompt: string;
-    style: string;
+    prompt?: string;
+    style?: string;
     duration?: number;
     resolution?: string;
     projectId?: string;
     sceneIds?: number[];
+    userId?: string;
+    [key: string]: any;
   };
 }): Promise<string> {
   return distributedDispatcher.submitTask({

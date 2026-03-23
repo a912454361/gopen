@@ -701,9 +701,14 @@ router.post('/multi-model', async (req: Request, res: Response) => {
 router.get('/services/status', async (req: Request, res: Response) => {
   const statuses = multiModelGenerator.getServiceStatuses();
   const statusArray = Array.from(statuses.entries()).map(([key, status]) => ({
-    service: key,
-    ...VIDEO_SERVICES[key],
-    ...status,
+    service_key: key,
+    name: VIDEO_SERVICES[key].name,
+    provider: VIDEO_SERVICES[key].provider,
+    status: VIDEO_SERVICES[key].status,
+    maxConcurrent: VIDEO_SERVICES[key].maxConcurrent,
+    activeTasks: status.activeTasks,
+    totalGenerated: status.totalGenerated,
+    isHealthy: status.isHealthy,
   }));
 
   res.json({
@@ -987,7 +992,7 @@ async function turboGenerateVideos(params: {
 
     const promises = batch.map(async (scene, batchIndex) => {
       const sceneId = scene.sceneId || scenes.indexOf(scene) + 1;
-      const scenePrompt = scene.imagePrompt || `${scene.location}，${scene.description || ''}`;
+      const scenePrompt = scene.imagePrompt || `${scene.location || ''}，${scene.description || ''}` || '动漫场景';
 
       try {
         // 使用多模型生成
@@ -1011,7 +1016,7 @@ async function turboGenerateVideos(params: {
             created_at: new Date().toISOString(),
           }]);
 
-        return { sceneId, videoUrl: result.videoUrl, service: result.service };
+        return { sceneId, videoUrl: result.videoUrl as string, service: result.service };
       } catch (err) {
         console.error(`[Turbo] Scene ${sceneId} failed:`, err);
         return { sceneId, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -1031,7 +1036,7 @@ async function turboGenerateVideos(params: {
 
     // 收集结果
     for (const result of results) {
-      if ('videoUrl' in result) {
+      if (result && 'videoUrl' in result && result.videoUrl) {
         videoUrls.push(result.videoUrl);
       }
     }
@@ -1047,7 +1052,7 @@ async function turboGenerateVideos(params: {
       result_data: {
         video_count: videoUrls.length,
         total_time_ms: totalTime,
-        avg_time_per_scene: Math.floor(totalTime / scenesToGenerate.length),
+        avg_time_per_scene: scenesToGenerate.length > 0 ? Math.floor(totalTime / scenesToGenerate.length) : 0,
       },
       completed_at: new Date().toISOString(),
     })

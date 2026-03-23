@@ -74,7 +74,14 @@
 
     <!-- 主功能按钮 -->
     <view class="main-actions">
-      <button class="action-btn large primary" bindtap="showRecharge">
+      <button class="action-btn large primary" bindtap="goToCreate">
+        <text class="btn-icon">🎬</text>
+        <view class="btn-content">
+          <text class="btn-title">动漫创作</text>
+          <text class="btn-desc">AI帮你创作动漫</text>
+        </view>
+      </button>
+      <button class="action-btn large" bindtap="showRecharge">
         <text class="btn-icon">💎</text>
         <view class="btn-content">
           <text class="btn-title">充值中心</text>

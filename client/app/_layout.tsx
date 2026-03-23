@@ -55,6 +55,10 @@ function RootLayoutContent() {
         <Stack.Screen name="consumption" options={{ title: "消费明细" }} />
         <Stack.Screen name="rewards" options={{ title: "奖励中心" }} />
         <Stack.Screen name="providers" options={{ title: "厂商管理" }} />
+        <Stack.Screen name="free-anime" options={{ title: "AI动漫创作" }} />
+        <Stack.Screen name="anime-detail" options={{ title: "动漫详情" }} />
+        <Stack.Screen name="anime-list" options={{ title: "动漫列表" }} />
+        <Stack.Screen name="guofeng-create" options={{ title: "国风创作" }} />
       </Stack>
     </View>
   );

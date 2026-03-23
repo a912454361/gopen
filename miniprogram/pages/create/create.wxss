@@ -1,0 +1,416 @@
+/* 动漫创作页面样式 - 横屏布局 */
+
+.create-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+/* 左侧创作面板 */
+.create-panel {
+  width: 40%;
+  min-width: 400px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: block;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 5px;
+  display: block;
+}
+
+/* 表单样式 */
+.create-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.input-textarea {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 15px;
+  color: #ffffff;
+  font-size: 14px;
+  min-height: 100px;
+}
+
+/* 风格选择 */
+.style-options {
+  display: flex;
+  gap: 10px;
+}
+
+.style-option {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 15px 10px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.style-option.active {
+  background: rgba(79, 172, 254, 0.2);
+  border-color: #4facfe;
+}
+
+.style-icon {
+  font-size: 24px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.style-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 高级选项 */
+.advanced-options {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.option-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  width: 80px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.checkbox-item text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 5px;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.btn-primary, .btn-secondary, .btn-accent {
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, #fa709a, #fee140);
+  color: #ffffff;
+}
+
+.btn-icon {
+  font-size: 20px;
+}
+
+/* 右侧预览面板 */
+.preview-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 标签页 */
+.tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0 20px;
+}
+
+.tab {
+  padding: 15px 30px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.tab.active {
+  color: #4facfe;
+  border-bottom-color: #4facfe;
+}
+
+/* 预览内容 */
+.preview-content {
+  flex: 1;
+  padding: 20px;
+}
+
+.tab-content {
+  height: 100%;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #4facfe;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.empty-text {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+}
+
+/* 构思卡片 */
+.concept-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.concept-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffffff;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.concept-synopsis {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.concept-section {
+  margin-top: 15px;
+}
+
+.section-title {
+  font-size: 14px;
+  color: #4facfe;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.character-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.character-tag {
+  background: rgba(79, 172, 254, 0.2);
+  color: #4facfe;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.scene-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scene-item {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+/* 故事内容 */
+.story-content {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.story-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+/* 角色网格 */
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.character-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.character-image, .character-placeholder {
+  width: 100%;
+  height: 120px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.character-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.character-info {
+  padding: 10px;
+}
+
+.character-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
+  display: block;
+}
+
+.character-role {
+  font-size: 11px;
+  color: #4facfe;
+  display: block;
+  margin: 3px 0;
+}
+
+.character-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 媒体网格 */
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.media-item {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.media-image, .media-video {
+  width: 100%;
+  height: 150px;
+}
+
+.media-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}

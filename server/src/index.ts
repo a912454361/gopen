@@ -71,6 +71,7 @@ import gmRouter from "./routes/gm.js";
 import gameExtendedRouter from "./routes/game-extended.js";
 import videoStoryRouter from "./routes/video-story.js";
 import cloudSyncRouter from "./routes/cloud-sync.js";
+import freeAnimeRouter from "./routes/free-anime.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -135,6 +136,7 @@ app.use('/api/v1/gm', gmRouter);
 app.use('/api/v1/game', gameExtendedRouter);
 app.use('/api/v1/video/story', videoStoryRouter);
 app.use('/api/v1/cloud-sync', cloudSyncRouter);
+app.use('/api/v1/free-anime', freeAnimeRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

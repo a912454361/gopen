@@ -241,7 +241,7 @@ export default function AdminMobileScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        {activeTab === 'dashboard' && <DashboardTab adminKey={adminKey} />}
+        {activeTab === 'dashboard' && <DashboardTab adminKey={adminKey} onNavigate={setActiveTab} />}
         {activeTab === 'profit' && <ProfitTab adminKey={adminKey} />}
         {activeTab === 'orders' && <OrdersTab adminKey={adminKey} />}
         {activeTab === 'recharge' && <RechargePanel adminKey={adminKey} />}
@@ -382,7 +382,12 @@ export default function AdminMobileScreen() {
 }
 
 // ==================== 数据概览 ====================
-function DashboardTab({ adminKey }: { adminKey: string }) {
+interface DashboardTabProps {
+  adminKey: string;
+  onNavigate?: (tab: TabType) => void;
+}
+
+function DashboardTab({ adminKey, onNavigate }: DashboardTabProps) {
   const { theme } = useTheme();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -411,12 +416,12 @@ function DashboardTab({ adminKey }: { adminKey: string }) {
   }
 
   const statItems = [
-    { label: '总用户', value: stats?.totalUsers || 0, icon: 'users', color: '#4F46E5' },
-    { label: '会员用户', value: stats?.memberUsers || 0, icon: 'crown', color: '#F59E0B' },
-    { label: '今日订单', value: stats?.todayOrders || 0, icon: 'clipboard-list', color: '#10B981' },
-    { label: '今日收入', value: `¥${stats?.todayAmount || 0}`, icon: 'coins', color: '#EF4444' },
-    { label: '待处理订单', value: stats?.pendingOrders || 0, icon: 'hourglass-half', color: '#F59E0B' },
-    { label: '总收入', value: `¥${stats?.totalRevenue || 0}`, icon: 'wallet', color: '#8B5CF6' },
+    { label: '总用户', value: stats?.totalUsers || 0, icon: 'users', color: '#4F46E5', tab: 'users' as TabType },
+    { label: '会员用户', value: stats?.memberUsers || 0, icon: 'crown', color: '#F59E0B', tab: 'users' as TabType },
+    { label: '今日订单', value: stats?.todayOrders || 0, icon: 'clipboard-list', color: '#10B981', tab: 'orders' as TabType },
+    { label: '今日收入', value: `¥${stats?.todayAmount || 0}`, icon: 'coins', color: '#EF4444', tab: 'profit' as TabType },
+    { label: '待处理订单', value: stats?.pendingOrders || 0, icon: 'hourglass-half', color: '#F59E0B', tab: 'orders' as TabType },
+    { label: '总收入', value: `¥${stats?.totalRevenue || 0}`, icon: 'wallet', color: '#8B5CF6', tab: 'profit' as TabType },
   ];
 
   return (
@@ -426,7 +431,7 @@ function DashboardTab({ adminKey }: { adminKey: string }) {
       </ThemedText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md }}>
         {statItems.map((item, index) => (
-          <View
+          <TouchableOpacity
             key={index}
             style={{
               width: '47%',
@@ -436,21 +441,71 @@ function DashboardTab({ adminKey }: { adminKey: string }) {
               borderWidth: 1,
               borderColor: theme.border,
             }}
+            onPress={() => onNavigate?.(item.tab)}
+            activeOpacity={0.7}
           >
             <View style={{
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               borderRadius: BorderRadius.md,
               backgroundColor: item.color + '20',
               justifyContent: 'center',
               alignItems: 'center',
               marginBottom: Spacing.sm,
             }}>
-              <FontAwesome6 name={item.icon as any} size={18} color={item.color} />
+              <FontAwesome6 name={item.icon as any} size={20} color={item.color} />
             </View>
             <ThemedText variant="h3" color={theme.textPrimary}>{item.value}</ThemedText>
-            <ThemedText variant="caption" color={theme.textMuted}>{item.label}</ThemedText>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <ThemedText variant="caption" color={theme.textMuted}>{item.label}</ThemedText>
+              <FontAwesome6 name="chevron-right" size={10} color={theme.textMuted} />
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* 快捷操作 */}
+      <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg }}>
+        快捷操作
+      </ThemedText>
+      <View style={{ gap: Spacing.md }}>
+        {[
+          { label: '充值审核', desc: '审核用户充值申请', icon: 'credit-card', color: '#10B981', tab: 'recharge' as TabType },
+          { label: '用户管理', desc: '管理用户账户和会员', icon: 'users', color: '#4F46E5', tab: 'users' as TabType },
+          { label: '推广中心', desc: '管理推广活动和佣金', icon: 'bullhorn', color: '#F59E0B', tab: 'promotion' as TabType },
+          { label: '系统配置', desc: '配置系统参数', icon: 'gear', color: '#6B7280', tab: 'config' as TabType },
+        ].map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: theme.backgroundDefault,
+              borderRadius: BorderRadius.lg,
+              padding: Spacing.lg,
+              borderWidth: 1,
+              borderColor: theme.border,
+              gap: Spacing.lg,
+            }}
+            onPress={() => onNavigate?.(item.tab)}
+            activeOpacity={0.7}
+          >
+            <View style={{
+              width: 48,
+              height: 48,
+              borderRadius: BorderRadius.lg,
+              backgroundColor: item.color + '20',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <FontAwesome6 name={item.icon as any} size={22} color={item.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="smallMedium" color={theme.textPrimary}>{item.label}</ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>{item.desc}</ThemedText>
+            </View>
+            <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+          </TouchableOpacity>
         ))}
       </View>
     </View>
@@ -733,6 +788,7 @@ function UsersTab({ adminKey }: { adminKey: string }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<'all' | 'free' | 'member'>('all');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -753,15 +809,36 @@ function UsersTab({ adminKey }: { adminKey: string }) {
     fetchUsers();
   }, [adminKey]);
 
-  const filteredUsers = users.filter(u => 
+  // 按类型筛选用户
+  const filteredByType = users.filter(u => {
+    if (filter === 'all') return true;
+    if (filter === 'free') return !u.membership_type || u.membership_type === 'free';
+    if (filter === 'member') return u.membership_type === 'premium' || u.membership_type === 'super';
+    return true;
+  });
+
+  // 按搜索词筛选
+  const filteredUsers = filteredByType.filter(u => 
     u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // 统计用户数量
+  const freeCount = users.filter(u => !u.membership_type || u.membership_type === 'free').length;
+  const memberCount = users.filter(u => u.membership_type === 'premium' || u.membership_type === 'super').length;
 
   const getMembershipColor = (type: string) => {
     switch (type) {
       case 'super': return '#8B5CF6';
       case 'premium': return '#F59E0B';
-      default: return theme.textMuted;
+      default: return '#6B7280';
+    }
+  };
+
+  const getMembershipLabel = (type: string) => {
+    switch (type) {
+      case 'super': return '超级会员';
+      case 'premium': return '普通会员';
+      default: return '普通用户';
     }
   };
 
@@ -770,6 +847,73 @@ function UsersTab({ adminKey }: { adminKey: string }) {
       <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.md }}>
         用户管理
       </ThemedText>
+
+      {/* 用户分类统计 */}
+      <View style={{ 
+        flexDirection: 'row', 
+        gap: Spacing.md, 
+        marginBottom: Spacing.lg 
+      }}>
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: filter === 'all' ? theme.primary : theme.backgroundDefault,
+            borderRadius: BorderRadius.lg,
+            padding: Spacing.lg,
+            borderWidth: 1,
+            borderColor: filter === 'all' ? theme.primary : theme.border,
+            alignItems: 'center',
+          }}
+          onPress={() => setFilter('all')}
+        >
+          <ThemedText variant="h3" color={filter === 'all' ? '#fff' : theme.textPrimary}>
+            {users.length}
+          </ThemedText>
+          <ThemedText variant="caption" color={filter === 'all' ? '#fff' : theme.textMuted}>
+            全部用户
+          </ThemedText>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: filter === 'free' ? '#6B7280' : theme.backgroundDefault,
+            borderRadius: BorderRadius.lg,
+            padding: Spacing.lg,
+            borderWidth: 1,
+            borderColor: filter === 'free' ? '#6B7280' : theme.border,
+            alignItems: 'center',
+          }}
+          onPress={() => setFilter('free')}
+        >
+          <ThemedText variant="h3" color={filter === 'free' ? '#fff' : theme.textPrimary}>
+            {freeCount}
+          </ThemedText>
+          <ThemedText variant="caption" color={filter === 'free' ? '#fff' : theme.textMuted}>
+            普通用户
+          </ThemedText>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: filter === 'member' ? '#F59E0B' : theme.backgroundDefault,
+            borderRadius: BorderRadius.lg,
+            padding: Spacing.lg,
+            borderWidth: 1,
+            borderColor: filter === 'member' ? '#F59E0B' : theme.border,
+            alignItems: 'center',
+          }}
+          onPress={() => setFilter('member')}
+        >
+          <ThemedText variant="h3" color={filter === 'member' ? '#fff' : theme.textPrimary}>
+            {memberCount}
+          </ThemedText>
+          <ThemedText variant="caption" color={filter === 'member' ? '#fff' : theme.textMuted}>
+            会员用户
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
 
       {/* 搜索框 */}
       <View style={{
@@ -782,19 +926,38 @@ function UsersTab({ adminKey }: { adminKey: string }) {
         borderWidth: 1,
         borderColor: theme.border,
       }}>
-        <FontAwesome6 name="magnifying-glass" size={16} color={theme.textMuted} />
+        <FontAwesome6 name="magnifying-glass" size={18} color={theme.textMuted} />
         <TextInput
           style={{
             flex: 1,
             paddingVertical: Spacing.md,
             paddingHorizontal: Spacing.sm,
             color: theme.textPrimary,
+            fontSize: 16,
           }}
           placeholder="搜索用户邮箱..."
           placeholderTextColor={theme.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <FontAwesome6 name="xmark" size={16} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* 用户列表标题 */}
+      <View style={{ 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: Spacing.md 
+      }}>
+        <ThemedText variant="smallMedium" color={theme.textSecondary}>
+          {filter === 'all' ? '全部用户' : filter === 'free' ? '普通用户' : '会员用户'} 
+          ({filteredUsers.length})
+        </ThemedText>
       </View>
 
       {loading ? (
@@ -808,7 +971,7 @@ function UsersTab({ adminKey }: { adminKey: string }) {
         </View>
       ) : (
         filteredUsers.map(user => (
-          <View
+          <TouchableOpacity
             key={user.id}
             style={{
               backgroundColor: theme.backgroundDefault,
@@ -818,41 +981,73 @@ function UsersTab({ adminKey }: { adminKey: string }) {
               borderWidth: 1,
               borderColor: theme.border,
             }}
+            activeOpacity={0.7}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
               <View style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: theme.primary + '20',
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: getMembershipColor(user.membership_type) + '20',
                 justifyContent: 'center',
                 alignItems: 'center',
               }}>
-                <FontAwesome6 name="user" size={16} color={theme.primary} />
+                <FontAwesome6 
+                  name={user.membership_type === 'super' || user.membership_type === 'premium' ? 'crown' : 'user'} 
+                  size={20} 
+                  color={getMembershipColor(user.membership_type)} 
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <ThemedText variant="smallMedium" color={theme.textPrimary}>
                   {user.email || '未设置邮箱'}
                 </ThemedText>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 4 }}>
                   <View style={{
                     paddingHorizontal: Spacing.sm,
-                    paddingVertical: 1,
+                    paddingVertical: 2,
                     borderRadius: BorderRadius.sm,
                     backgroundColor: getMembershipColor(user.membership_type) + '20',
                   }}>
                     <ThemedText variant="tiny" color={getMembershipColor(user.membership_type)}>
-                      {user.membership_type === 'super' ? '超级会员' : 
-                       user.membership_type === 'premium' ? '普通会员' : '免费用户'}
+                      {getMembershipLabel(user.membership_type)}
                     </ThemedText>
                   </View>
-                  <ThemedText variant="tiny" color={theme.textMuted}>
-                    消费 ¥{user.total_spent || 0}
-                  </ThemedText>
+                  {user.membership_expire_at && (
+                    <ThemedText variant="tiny" color={theme.textMuted}>
+                      到期: {new Date(user.membership_expire_at).toLocaleDateString('zh-CN')}
+                    </ThemedText>
+                  )}
                 </View>
               </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText variant="smallMedium" color={theme.success}>
+                  ¥{user.total_spent || 0}
+                </ThemedText>
+                <ThemedText variant="tiny" color={theme.textMuted}>
+                  累计消费
+                </ThemedText>
+              </View>
             </View>
-          </View>
+            
+            {/* 用户详细信息 */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginTop: Spacing.md,
+              paddingTop: Spacing.md,
+              borderTopWidth: 1,
+              borderTopColor: theme.border,
+            }}>
+              <View>
+                <ThemedText variant="tiny" color={theme.textMuted}>注册时间</ThemedText>
+                <ThemedText variant="caption" color={theme.textSecondary}>
+                  {new Date(user.created_at).toLocaleDateString('zh-CN')}
+                </ThemedText>
+              </View>
+              <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+            </View>
+          </TouchableOpacity>
         ))
       )}
     </View>

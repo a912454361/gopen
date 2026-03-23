@@ -392,7 +392,7 @@ router.get('/episodes', (req: Request, res: Response) => {
  * GET /api/v1/one-day-production/episodes/:number
  */
 router.get('/episodes/:number', (req: Request, res: Response) => {
-  const episodeNumber = parseInt(req.params.number, 10);
+  const episodeNumber = parseInt(req.params.number as string, 10);
   const instance = getProductionInstance();
   const episode = instance.getEpisodeStatus(episodeNumber);
   

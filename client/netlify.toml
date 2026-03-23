@@ -1,6 +1,7 @@
 [build]
   command = "pnpm install && npx expo export --platform web"
   publish = "dist"
+  base = "."
 
 [build.environment]
   NODE_VERSION = "20"

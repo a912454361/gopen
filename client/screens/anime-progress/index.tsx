@@ -128,7 +128,7 @@ export default function AnimeProgressScreen() {
         {/* Header */}
         <ThemedView level="root" style={styles.header}>
           <View style={styles.titleRow}>
-            <FontAwesome6 name="play-circle" size={24} color={theme.primary} />
+            <FontAwesome6 name="circle-play" size={24} color={theme.primary} />
             <ThemedText variant="h2" style={styles.title}>生成进度</ThemedText>
           </View>
           <ThemedText variant="body" color={theme.textSecondary}>
@@ -182,7 +182,7 @@ export default function AnimeProgressScreen() {
                   <View key={`${scene.episode}-${scene.sceneId}`} style={styles.sceneItem}>
                     <View style={styles.sceneStatus}>
                       {scene.status === 'completed' ? (
-                        <FontAwesome6 name="check-circle" size={16} color={theme.success} />
+                        <FontAwesome6 name="circle-check" size={16} color={theme.success} />
                       ) : (
                         <FontAwesome6 name="circle" size={16} color={theme.textMuted} />
                       )}
@@ -203,7 +203,7 @@ export default function AnimeProgressScreen() {
         {/* Status Info */}
         <ThemedView level="tertiary" style={styles.statusCard}>
           <View style={styles.statusRow}>
-            <FontAwesome6 name="info-circle" size={16} color={theme.accent} />
+            <FontAwesome6 name="circle-info" size={16} color={theme.accent} />
             <ThemedText variant="small" color={theme.textSecondary} style={styles.statusText}>
               后台脚本持续运行中，每30秒检测API状态
             </ThemedText>

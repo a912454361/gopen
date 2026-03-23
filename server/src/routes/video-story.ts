@@ -175,7 +175,7 @@ async function generateVideoWithSeedance(config: { prompt: string; duration: num
   
   // 返回视频URL（实际应从API获取）
   // 使用本地视频占位符
-  return `https://example.com/videos/chapter${config.chapter}_stage${config.duration}.mp4`;
+  return `https://example.com/videos/generated_${Date.now()}.mp4`;
 }
 
 /**

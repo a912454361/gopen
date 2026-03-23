@@ -100,7 +100,7 @@ export default function TabLayout() {
         options={{
           title: '生成进度',
           tabBarIcon: ({ color }) => (
-            <FontAwesome6 name="play-circle" size={20} color={color} />
+            <FontAwesome6 name="circle-play" size={20} color={color} />
           ),
         }}
       />

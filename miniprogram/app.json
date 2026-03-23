@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/main/main",
+    "pages/create/create",
     "pages/shop/shop"
   ],
   "window": {

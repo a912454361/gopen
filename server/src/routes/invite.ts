@@ -235,10 +235,10 @@ router.post('/first-recharge-bonus', async (req: Request, res: Response) => {
       return;
     }
 
-    // 计算首充奖励：充值金额的10%（最低1元，最高50元）
-    const bonusPercent = 0.10;
+    // 计算首充奖励：充值金额的5%（最低1元，最高20元）
+    const bonusPercent = 0.05;
     const minBonus = 100; // 1元 = 100厘
-    const maxBonus = 5000; // 50元 = 5000厘
+    const maxBonus = 2000; // 20元 = 2000厘
     const bonusAmount = Math.min(Math.max(Math.floor(recharge_amount * bonusPercent), minBonus), maxBonus);
 
     // 给邀请人发放奖励

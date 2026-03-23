@@ -84,7 +84,7 @@ export default function InviteScreen() {
             邀请好友，双方得奖励
           </ThemedText>
           <ThemedText variant="body" color="rgba(255,255,255,0.9)" style={{ marginTop: Spacing.sm }}>
-            好友注册你得0.5元，好友首充再得10%
+            好友注册你得0.5元，好友首充再得5%
           </ThemedText>
         </LinearGradient>
 

@@ -312,7 +312,7 @@ export default function WalletScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText variant="h4" color="#fff" style={{ marginBottom: 4 }}>邀请好友，双方得奖励</ThemedText>
-            <ThemedText variant="small" color="rgba(255,255,255,0.8)">好友首充再得10%奖励，上不封顶</ThemedText>
+            <ThemedText variant="small" color="rgba(255,255,255,0.8)">好友首充再得5%奖励，上不封顶</ThemedText>
           </View>
           <FontAwesome6 name="chevron-right" size={16} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>

@@ -312,10 +312,10 @@ router.post('/admin/review', async (req: Request, res: Response) => {
             .single();
           
           if (inviteRecord) {
-            // 计算首充奖励：充值金额的10%（最低1元，最高50元）
-            const bonusPercent = 0.10;
+            // 计算首充奖励：充值金额的5%（最低1元，最高20元）
+            const bonusPercent = 0.05;
             const minBonus = 100;
-            const maxBonus = 5000;
+            const maxBonus = 2000;
             const bonusAmount = Math.min(Math.max(Math.floor(record.amount * bonusPercent), minBonus), maxBonus);
             
             // 更新邀请人余额

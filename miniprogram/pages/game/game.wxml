@@ -1,0 +1,131 @@
+<!--游戏主页面-->
+<view class="container game-container {{animating ? 'fade-out' : 'fade-in'}}">
+  
+  <!-- 视频区域 -->
+  <view class="video-section" wx:if="{{showVideo && !inBattle}}">
+    <video 
+      id="storyVideo"
+      class="story-video"
+      src="{{videoUrl}}"
+      poster="{{videoUrl}}"
+      autoplay="{{true}}"
+      loop="{{true}}"
+      muted="{{true}}"
+      show-center-play-btn="{{false}}"
+      show-play-btn="{{false}}"
+      controls="{{false}}"
+      object-fit="cover"
+      binderror="onVideoError"
+    />
+    <view class="video-overlay"></view>
+  </view>
+
+  <!-- 章节标题 -->
+  <view class="chapter-header">
+    <view class="badge badge-primary">{{chapterTitle}}</view>
+    <text class="node-title">{{node.title}}</text>
+  </view>
+
+  <!-- 战斗界面 -->
+  <view class="battle-section" wx:if="{{inBattle}}">
+    <!-- 敌人信息 -->
+    <view class="enemy-info card">
+      <view class="enemy-header">
+        <text class="enemy-name">{{battleState.enemy.name}}</text>
+        <text class="enemy-hp-text">HP: {{enemyHP}}/{{maxEnemyHP}}</text>
+      </view>
+      <view class="hp-bar">
+        <view class="hp-fill enemy" style="width: {{enemyHP / maxEnemyHP * 100}}%"></view>
+      </view>
+    </view>
+
+    <!-- 战斗日志 -->
+    <view class="battle-log card">
+      <view class="log-item" wx:for="{{battleLog}}" wx:key="index">
+        {{item}}
+      </view>
+    </view>
+
+    <!-- 玩家状态 -->
+    <view class="player-status card">
+      <view class="status-row">
+        <view class="status-item">
+          <text class="status-label">HP</text>
+          <view class="hp-bar">
+            <view class="hp-fill player" style="width: {{playerHP / maxPlayerHP * 100}}%"></view>
+          </view>
+          <text class="status-value">{{playerHP}}/{{maxPlayerHP}}</text>
+        </view>
+        <view class="status-item">
+          <text class="status-label">MP</text>
+          <view class="hp-bar mp-bar">
+            <view class="hp-fill mp" style="width: {{playerMP / maxPlayerMP * 100}}%"></view>
+          </view>
+          <text class="status-value">{{playerMP}}/{{maxPlayerMP}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 技能按钮 -->
+    <view class="skill-section">
+      <view class="skill-btn {{playerMP < item.cost ? 'disabled' : ''}}" 
+            wx:for="{{skills}}" 
+            wx:key="id"
+            data-skill="{{item}}"
+            bindtap="useSkill">
+        <text class="skill-icon">{{item.icon}}</text>
+        <text class="skill-name">{{item.name}}</text>
+        <text class="skill-cost">MP: {{item.cost}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 剧情内容 (非战斗状态) -->
+  <view class="story-section" wx:if="{{!inBattle}}">
+    <!-- 剧情描述 -->
+    <view class="card description-card">
+      <text class="description-text">{{node.description}}</text>
+    </view>
+
+    <!-- 选择按钮 -->
+    <view class="choices-section" wx:if="{{node.choices && node.choices.length > 0}}">
+      <text class="choices-title">你的选择：</text>
+      
+      <view class="choice-btn" 
+            wx:for="{{node.choices}}" 
+            wx:key="index"
+            data-index="{{index}}"
+            bindtap="handleChoice">
+        <view class="choice-icon">
+          <text>{{item.letter || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[index]}}</text>
+        </view>
+        <text class="choice-text">{{item.text}}</text>
+        <view class="choice-effects" wx:if="{{item.effects}}">
+          <text class="effect-tag" wx:for="{{item.effects}}" wx:for-item="val" wx:for-index="key" wx:key="key">
+            {{key}} +{{val}}
+          </text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 无选择时的继续按钮 -->
+    <view class="continue-section" wx:if="{{!node.choices || node.choices.length === 0}}">
+      <text class="text-muted">剧情结束</text>
+    </view>
+  </view>
+
+  <!-- 属性面板 -->
+  <view class="stats-panel card">
+    <text class="stats-title">角色属性</text>
+    <view class="stats-grid">
+      <view class="stat-item" wx:for="{{player.stats}}" wx:key="index">
+        <text class="stat-label">{{item.key}}</text>
+        <view class="stat-bar">
+          <view class="stat-fill" style="width: {{item.value > 100 ? 100 : item.value}}%"></view>
+        </view>
+        <text class="stat-value">{{item.value}}</text>
+      </view>
+    </view>
+  </view>
+
+</view>

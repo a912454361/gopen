@@ -1,0 +1,70 @@
+<!--首页 - 游戏入口-->
+<view class="container home-container">
+  <!-- 顶部Logo区域 -->
+  <view class="header-section">
+    <view class="logo-container pulse">
+      <text class="logo-icon">⚔️</text>
+    </view>
+    <text class="game-title">{{storyMeta.title}}</text>
+    <text class="game-subtitle">{{storyMeta.subtitle}}</text>
+  </view>
+
+  <!-- 游戏信息 -->
+  <view class="card info-card">
+    <view class="info-row">
+      <text class="info-label">作者</text>
+      <text class="info-value">{{storyMeta.author}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">版本</text>
+      <text class="info-value">{{storyMeta.version}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">章节</text>
+      <text class="info-value">{{storyMeta.totalChapters}}章</text>
+    </view>
+  </view>
+
+  <!-- 存档信息 -->
+  <view class="card save-card" wx:if="{{hasSave}}">
+    <view class="save-header">
+      <text class="title-md">存档信息</text>
+      <badge class="badge-primary">第{{player.chapter}}章</badge>
+    </view>
+    <view class="save-stats">
+      <view class="stat-mini" wx:for="{{player.stats}}" wx:key="index">
+        <text class="stat-name">{{item.key}}</text>
+        <text class="stat-val">{{item.value}}</text>
+      </view>
+    </view>
+    <view class="save-info">
+      <text class="text-muted">选择次数: {{player.choices.length}}</text>
+      <text class="text-muted">成就: {{player.achievements.length}}</text>
+    </view>
+  </view>
+
+  <!-- 按钮区域 -->
+  <view class="button-section">
+    <button class="btn btn-primary" bindtap="startNewGame">
+      开始新游戏
+    </button>
+    
+    <button class="btn btn-secondary" wx:if="{{hasSave}}" bindtap="continueGame">
+      继续游戏
+    </button>
+
+    <view class="secondary-buttons">
+      <button class="btn-text" bindtap="goToAchievements">
+        🏆 成就
+      </button>
+      <button class="btn-text" bindtap="goToStats">
+        📊 统计
+      </button>
+    </view>
+  </view>
+
+  <!-- 简介 -->
+  <view class="description-section">
+    <text class="text-secondary">{{storyMeta.description}}</text>
+  </view>
+</view>

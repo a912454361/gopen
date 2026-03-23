@@ -1746,7 +1746,28 @@ export default function ProjectsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {Object.entries(groupedProjects).map(([type, projects]) => (
+        {projects.length === 0 ? (
+          // 空状态提示
+          <View style={styles.emptyContainer}>
+            <View style={[styles.emptyIcon, { backgroundColor: `${theme.primary}15` }]}>
+              <FontAwesome6 name="folder-open" size={48} color={theme.primary} />
+            </View>
+            <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
+              暂无项目
+            </ThemedText>
+            <ThemedText variant="body" color={theme.textMuted} style={{ marginTop: Spacing.sm, textAlign: 'center' }}>
+              {'前往AI创作中心开始创作\n项目将自动保存到这里'}
+            </ThemedText>
+            <TouchableOpacity 
+              style={[styles.createButton, { backgroundColor: theme.primary, marginTop: Spacing.xl }]}
+              onPress={() => router.push('/create')}
+            >
+              <FontAwesome6 name="wand-magic-sparkles" size={16} color="#fff" style={{ marginRight: Spacing.sm }} />
+              <ThemedText variant="label" color="#fff">前往AI创作中心</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          Object.entries(groupedProjects).map(([type, projects]) => (
           <View key={type} style={styles.categorySection}>
             {/* 分类标题 */}
             <View style={styles.categoryHeader}>
@@ -1785,7 +1806,7 @@ export default function ProjectsScreen() {
               </ScrollView>
             </View>
           </View>
-        ))}
+        )))}
       </ScrollView>
 
       {/* 项目详情Modal */}
@@ -2117,5 +2138,28 @@ const styles = {
   loadingDots: {
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
+  },
+  // 空状态样式
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingVertical: Spacing['3xl'],
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  createButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
   },
 };

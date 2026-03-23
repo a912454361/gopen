@@ -189,12 +189,12 @@ export default function AdminMobileScreen() {
     >
       {/* 顶部栏 - 沉浸式设计，延伸到状态栏 */}
       <View style={{
-        paddingTop: insets.top,
+        paddingTop: insets.top + Spacing.xs,
+        paddingBottom: Spacing.xs,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
         backgroundColor: theme.backgroundDefault,
         borderBottomWidth: 1,
         borderBottomColor: theme.border,
@@ -234,7 +234,8 @@ export default function AdminMobileScreen() {
       <ScrollView 
         style={{ flex: 1 }} 
         contentContainerStyle={{ 
-          padding: Spacing.md, 
+          paddingHorizontal: Spacing.md, 
+          paddingTop: Spacing.sm,
           paddingBottom: 100 + insets.bottom 
         }}
         refreshControl={

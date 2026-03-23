@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -964,10 +965,12 @@ function ProjectDetailModal({
   visible,
   project,
   onClose,
+  onProjectUpdate,
 }: {
   visible: boolean;
   project: Project | null;
   onClose: () => void;
+  onProjectUpdate?: () => void;
 }) {
   const { theme } = useTheme();
   const [stage, setStage] = useState<ModalStage>('services');
@@ -978,6 +981,103 @@ function ProjectDetailModal({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sseRef = useRef<any>(null);
   const typingAnim = useMemo(() => new Animated.Value(1), []);
+  
+  // 启动项目（将pending状态改为active）
+  const handleStartProject = async () => {
+    if (!project) return;
+    
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) {
+      Alert.alert('提示', '请先登录');
+      return;
+    }
+
+    try {
+      /**
+       * 服务端文件：server/src/routes/projects.ts
+       * 接口：PUT /api/v1/projects/:projectId
+       * Body 参数：userId: string, status: string, progress: number
+       */
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/projects/${project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          status: 'active', 
+          progress: 5 // 启动时设置最小进度
+        }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        Alert.alert('成功', '项目已启动，开始创作吧！', [
+          { text: '好的', onPress: () => {
+            onProjectUpdate?.();
+            onClose();
+          }}
+        ]);
+      } else {
+        Alert.alert('失败', data.error || '启动失败');
+      }
+    } catch (error) {
+      console.error('Start project error:', error);
+      Alert.alert('错误', '网络错误');
+    }
+  };
+
+  // 删除项目
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) {
+      Alert.alert('提示', '请先登录');
+      return;
+    }
+
+    Alert.alert(
+      '确认删除',
+      `确定要删除项目「${project.title}」吗？此操作不可恢复。`,
+      [
+        { text: '取消', style: 'cancel' },
+        { 
+          text: '删除', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              /**
+               * 服务端文件：server/src/routes/projects.ts
+               * 接口：DELETE /api/v1/projects/:projectId
+               * Query 参数：userId: string
+               */
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/projects/${project.id}?userId=${userId}`,
+                { method: 'DELETE' }
+              );
+              const data = await response.json();
+              
+              if (data.success) {
+                Alert.alert('成功', '项目已删除', [
+                  { text: '好的', onPress: () => {
+                    onProjectUpdate?.();
+                    onClose();
+                  }}
+                ]);
+              } else {
+                Alert.alert('失败', data.error || '删除失败');
+              }
+            } catch (error) {
+              console.error('Delete project error:', error);
+              Alert.alert('错误', '网络错误');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 判断项目是否为待处理状态
+  const isPending = project?.status === 'pending' || project?.progress === 0;
 
   // 重置状态
   React.useEffect(() => {
@@ -1235,6 +1335,26 @@ function ProjectDetailModal({
                 ))}
               </View>
             </View>
+            
+            {/* 待处理项目操作按钮 */}
+            {isPending && (
+              <View style={styles.pendingActions}>
+                <TouchableOpacity 
+                  style={[styles.startButton, { backgroundColor: theme.success }]}
+                  onPress={handleStartProject}
+                >
+                  <FontAwesome6 name="play" size={16} color="#fff" style={{ marginRight: 8 }} />
+                  <ThemedText variant="label" color="#fff">启动项目</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.deleteButton, { borderColor: theme.error }]}
+                  onPress={handleDeleteProject}
+                >
+                  <FontAwesome6 name="trash" size={14} color={theme.error} style={{ marginRight: 6 }} />
+                  <ThemedText variant="label" color={theme.error}>删除</ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         );
 
@@ -1473,10 +1593,12 @@ export default function ProjectsScreen() {
     return new Date(dateStr).toLocaleDateString();
   };
 
-  // 加载项目数据
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+  // 加载项目数据 - 使用 useFocusEffect 确保页面返回时刷新
+  useFocusEffect(
+    useCallback(() => {
+      fetchProjects();
+    }, [fetchProjects])
+  );
 
   // 按类型分组项目
   const groupedProjects = useMemo(() => {
@@ -1671,6 +1793,7 @@ export default function ProjectsScreen() {
         visible={modalVisible}
         project={selectedProject}
         onClose={() => setModalVisible(false)}
+        onProjectUpdate={fetchProjects}
       />
     </Screen>
   );
@@ -1912,6 +2035,33 @@ const styles = {
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
     marginBottom: Spacing.sm,
+  },
+  // 待处理项目操作按钮
+  pendingActions: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  startButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+  },
+  deleteButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
   },
   // 新阶段样式
   promptPreview: {

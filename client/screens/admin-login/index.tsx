@@ -1,6 +1,7 @@
 /**
  * 管理后台登录页面
- * 支持账号密码登录和Face ID扫脸登录
+ * 支持账号密码登录
+ * Web端和移动端通用
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -13,15 +14,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   ScrollView,
+  Text,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
-import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { createStyles } from './styles';
 
@@ -35,7 +35,6 @@ const ADMIN_CREDENTIALS = {
 };
 
 const LOGIN_STORAGE_KEY = 'admin_login_status';
-const BIOMETRIC_ENABLED_KEY = 'admin_biometric_enabled';
 
 export default function AdminLoginScreen() {
   const { theme, isDark } = useTheme();
@@ -46,119 +45,62 @@ export default function AdminLoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [biometricType, setBiometricType] = useState<string>('');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [error, setError] = useState('');
 
-  // 检查生物识别支持
+  // Web端显示提示
   useEffect(() => {
-    checkBiometricSupport();
-    checkAutoLogin();
+    console.log('[AdminLogin] Page loaded, Platform:', Platform.OS);
   }, []);
 
-  // 检查生物识别支持
-  const checkBiometricSupport = async () => {
-    try {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      if (!compatible) {
-        console.log('设备不支持生物识别');
-        return;
-      }
-
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (!enrolled) {
-        console.log('未设置生物识别');
-        return;
-      }
-
-      // 获取支持的生物识别类型
-      const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-        setBiometricType('Face ID');
-      } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-        setBiometricType('指纹');
+  // 显示提示（兼容Web和移动端）
+  const showAlert = (title: string, message: string, buttons?: { text: string; style?: string; onPress?: () => void }[]) => {
+    if (Platform.OS === 'web') {
+      // Web端使用浏览器原生确认框
+      const confirmMessage = `${title}\n\n${message}`;
+      if (buttons && buttons.length > 1) {
+        const result = window.confirm(confirmMessage);
+        if (result && buttons[1]?.onPress) {
+          buttons[1].onPress();
+        } else if (!result && buttons[0]?.onPress) {
+          buttons[0].onPress();
+        }
       } else {
-        setBiometricType('生物识别');
+        window.alert(`${title}\n\n${message}`);
+        if (buttons && buttons[0]?.onPress) {
+          buttons[0].onPress();
+        }
       }
-
-      // 检查是否已启用生物识别登录
-      const enabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
-      if (enabled === 'true') {
-        setBiometricEnabled(true);
-      }
-    } catch (error) {
-      console.error('检查生物识别支持失败:', error);
-    }
-  };
-
-  // 检查自动登录
-  const checkAutoLogin = async () => {
-    try {
-      const loginStatus = await AsyncStorage.getItem(LOGIN_STORAGE_KEY);
-      if (loginStatus === 'true' && biometricEnabled) {
-        // 如果已登录且启用了生物识别，尝试生物识别登录
-        authenticateWithBiometric();
-      }
-    } catch (error) {
-      console.error('检查自动登录失败:', error);
-    }
-  };
-
-  // 生物识别登录
-  const authenticateWithBiometric = async () => {
-    if (!biometricEnabled) {
-      Alert.alert('提示', '请先使用账号密码登录，然后启用生物识别登录');
-      return;
-    }
-
-    setIsAuthenticating(true);
-
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: '验证身份以登录管理后台',
-        fallbackLabel: '使用密码',
-        cancelLabel: '取消',
-        disableDeviceFallback: false,
-      });
-
-      if (result.success) {
-        // 生物识别成功，保存登录状态
-        await AsyncStorage.setItem(LOGIN_STORAGE_KEY, 'true');
-        
-        // 跳转到管理后台
-        router.replace('/admin', { key: ADMIN_CREDENTIALS.adminKey });
-      } else {
-        // 生物识别失败，提示使用账号密码登录
-        Alert.alert('验证失败', '请使用账号密码登录');
-      }
-    } catch (error) {
-      console.error('生物识别登录失败:', error);
-      Alert.alert('错误', '生物识别登录失败，请使用账号密码登录');
-    } finally {
-      setIsAuthenticating(false);
+    } else {
+      Alert.alert(title, message, buttons as any);
     }
   };
 
   // 账号密码登录
   const handleLogin = async () => {
+    console.log('[AdminLogin] handleLogin called');
+    
+    // 清除之前的错误
+    setError('');
+    
     // 验证输入
     if (!phone.trim()) {
-      Alert.alert('提示', '请输入手机号');
+      setError('请输入手机号');
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert('提示', '请输入密码');
+      setError('请输入密码');
       return;
     }
 
     // 验证账号密码
     if (phone !== ADMIN_CREDENTIALS.phone || password !== ADMIN_CREDENTIALS.password) {
-      Alert.alert('登录失败', '手机号或密码错误');
+      setError('手机号或密码错误');
       return;
     }
 
     setLoading(true);
+    console.log('[AdminLogin] Verifying admin key...');
 
     try {
       // 验证管理员密钥
@@ -166,63 +108,26 @@ export default function AdminLoginScreen() {
         `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/verify?key=${ADMIN_CREDENTIALS.adminKey}`
       );
       const result = await response.json();
+      console.log('[AdminLogin] Verify result:', result);
 
       if (result.success) {
         // 保存登录状态
         await AsyncStorage.setItem(LOGIN_STORAGE_KEY, 'true');
         
-        // 提示启用生物识别
-        if (biometricType && !biometricEnabled) {
-          Alert.alert(
-            '启用快速登录',
-            `是否启用${biometricType}登录？下次可以使用${biometricType}快速登录`,
-            [
-              {
-                text: '暂不启用',
-                style: 'cancel',
-                onPress: () => {
-                  // 直接跳转
-                  router.replace('/admin', { key: ADMIN_CREDENTIALS.adminKey });
-                },
-              },
-              {
-                text: '启用',
-                onPress: async () => {
-                  // 启用生物识别登录
-                  await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true');
-                  setBiometricEnabled(true);
-                  
-                  // 跳转到管理后台
-                  router.replace('/admin', { key: ADMIN_CREDENTIALS.adminKey });
-                },
-              },
-            ]
-          );
-        } else {
-          // 跳转到管理后台
-          router.replace('/admin', { key: ADMIN_CREDENTIALS.adminKey });
-        }
+        console.log('[AdminLogin] Login successful, redirecting to /admin');
+        
+        // 跳转到管理后台
+        router.replace('/admin', { key: ADMIN_CREDENTIALS.adminKey });
       } else {
-        Alert.alert('登录失败', '管理员验证失败');
+        setError('管理员验证失败');
       }
     } catch (error) {
-      console.error('登录失败:', error);
-      Alert.alert('错误', '网络错误，请稍后重试');
+      console.error('[AdminLogin] Login failed:', error);
+      setError('网络错误，请稍后重试');
     } finally {
       setLoading(false);
     }
   };
-
-  // 登出
-  const handleLogout = useCallback(async () => {
-    try {
-      await AsyncStorage.removeItem(LOGIN_STORAGE_KEY);
-      await AsyncStorage.removeItem(BIOMETRIC_ENABLED_KEY);
-      router.replace('/');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  }, [router]);
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
@@ -248,35 +153,6 @@ export default function AdminLoginScreen() {
               </ThemedText>
             </View>
 
-            {/* 生物识别登录按钮 */}
-            {biometricEnabled && biometricType && (
-              <TouchableOpacity
-                style={styles.biometricButton}
-                onPress={authenticateWithBiometric}
-                disabled={isAuthenticating}
-              >
-                <FontAwesome6
-                  name={biometricType === 'Face ID' ? 'face-smile' : 'fingerprint'}
-                  size={32}
-                  color={theme.primary}
-                />
-                <ThemedText variant="bodyMedium" color={theme.textPrimary} style={styles.biometricText}>
-                  {isAuthenticating ? '正在验证...' : `使用${biometricType}登录`}
-                </ThemedText>
-              </TouchableOpacity>
-            )}
-
-            {/* 分隔线 */}
-            {biometricEnabled && biometricType && (
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <ThemedText variant="caption" color={theme.textMuted} style={styles.dividerText}>
-                  或使用账号密码登录
-                </ThemedText>
-                <View style={styles.dividerLine} />
-              </View>
-            )}
-
             {/* 登录表单 */}
             <View style={styles.form}>
               {/* 手机号输入 */}
@@ -300,6 +176,7 @@ export default function AdminLoginScreen() {
                     keyboardType="phone-pad"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    editable={!loading}
                   />
                 </View>
               </View>
@@ -325,6 +202,7 @@ export default function AdminLoginScreen() {
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
+                    editable={!loading}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
@@ -338,6 +216,23 @@ export default function AdminLoginScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* 错误提示 */}
+              {error ? (
+                <View style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  gap: Spacing.sm,
+                  paddingVertical: Spacing.sm,
+                  paddingHorizontal: Spacing.md,
+                  backgroundColor: theme.error + '15',
+                  borderRadius: BorderRadius.md,
+                  marginTop: Spacing.md,
+                }}>
+                  <FontAwesome6 name="circle-exclamation" size={14} color={theme.error} />
+                  <Text style={{ color: theme.error, fontSize: 13 }}>{error}</Text>
+                </View>
+              ) : null}
 
               {/* 登录按钮 */}
               <TouchableOpacity

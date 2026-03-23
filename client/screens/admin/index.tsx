@@ -58,10 +58,9 @@ export default function AdminDashboardScreen() {
   const [authorized, setAuthorized] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   
-  // 检测是否为PC端
-  const isPC = Platform.OS === 'web' && Dimensions.get('window').width >= 1024;
-  const screenWidth = Dimensions.get('window').width;
-  const isMobile = !isPC || Platform.OS !== 'web';
+  // Web端始终显示PC版，移动端显示移动版
+  const isPC = Platform.OS === 'web';
+  const isMobile = Platform.OS !== 'web';
 
   // 登出
   const handleLogout = useCallback(async () => {

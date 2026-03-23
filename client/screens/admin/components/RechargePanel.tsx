@@ -262,10 +262,10 @@ export default function RechargePanel({ adminKey }: RechargePanelProps) {
   const renderStatsCards = () => (
     <View style={styles.statsContainer}>
       <View style={[styles.statsCard, { backgroundColor: '#FEF3C7' }]}>
-        <FontAwesome6 name="clock" size={20} color="#D97706" />
+        <FontAwesome6 name="clock" size={24} color="#D97706" />
         <View style={styles.statsInfo}>
-          <ThemedText variant="h4" color="#92400E">{stats.pendingCount}</ThemedText>
-          <ThemedText variant="tiny" color="#92400E">待审核</ThemedText>
+          <ThemedText variant="h3" color="#92400E">{stats.pendingCount}</ThemedText>
+          <ThemedText variant="caption" color="#92400E">待审核</ThemedText>
         </View>
         <ThemedText variant="smallMedium" color="#D97706">
           {formatAmount(stats.pendingAmount)}
@@ -273,10 +273,10 @@ export default function RechargePanel({ adminKey }: RechargePanelProps) {
       </View>
       
       <View style={[styles.statsCard, { backgroundColor: '#DBEAFE' }]}>
-        <FontAwesome6 name="circle-check" size={20} color="#2563EB" />
+        <FontAwesome6 name="circle-check" size={24} color="#2563EB" />
         <View style={styles.statsInfo}>
-          <ThemedText variant="h4" color="#1E40AF">{stats.todayCount}</ThemedText>
-          <ThemedText variant="tiny" color="#1E40AF">今日审核</ThemedText>
+          <ThemedText variant="h3" color="#1E40AF">{stats.todayCount}</ThemedText>
+          <ThemedText variant="caption" color="#1E40AF">今日审核</ThemedText>
         </View>
         <ThemedText variant="smallMedium" color="#2563EB">
           {formatAmount(stats.todayAmount)}
@@ -284,10 +284,10 @@ export default function RechargePanel({ adminKey }: RechargePanelProps) {
       </View>
       
       <View style={[styles.statsCard, { backgroundColor: '#D1FAE5' }]}>
-        <FontAwesome6 name="coins" size={20} color="#059669" />
+        <FontAwesome6 name="coins" size={24} color="#059669" />
         <View style={styles.statsInfo}>
-          <ThemedText variant="h4" color="#065F46">{stats.totalApproved}</ThemedText>
-          <ThemedText variant="tiny" color="#065F46">累计充值</ThemedText>
+          <ThemedText variant="h3" color="#065F46">{stats.totalApproved}</ThemedText>
+          <ThemedText variant="caption" color="#065F46">累计充值</ThemedText>
         </View>
         <ThemedText variant="smallMedium" color="#059669">
           {formatAmount(stats.totalAmount)}
@@ -335,24 +335,24 @@ export default function RechargePanel({ adminKey }: RechargePanelProps) {
         {/* 充值详情 */}
         <View style={styles.recordDetails}>
           <View style={styles.detailItem}>
-            <ThemedText variant="tiny" color={theme.textMuted}>类型</ThemedText>
-            <ThemedText variant="small" color={theme.textPrimary}>
+            <ThemedText variant="caption" color={theme.textMuted}>类型</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>
               {RECHARGE_TYPE_NAMES[record.recharge_type]}
             </ThemedText>
           </View>
           
           <View style={styles.detailItem}>
-            <ThemedText variant="tiny" color={theme.textMuted}>支付方式</ThemedText>
+            <ThemedText variant="caption" color={theme.textMuted}>支付方式</ThemedText>
             <View style={[styles.payMethodBadge, { backgroundColor: payMethodColor + '20' }]}>
-              <Text style={{ color: payMethodColor, fontSize: 11 }}>
+              <Text style={{ color: payMethodColor, fontSize: 13 }}>
                 {PAY_METHOD_NAMES[record.pay_method]}
               </Text>
             </View>
           </View>
           
           <View style={styles.detailItem}>
-            <ThemedText variant="tiny" color={theme.textMuted}>流水号</ThemedText>
-            <ThemedText variant="small" color={theme.textPrimary}>
+            <ThemedText variant="caption" color={theme.textMuted}>流水号</ThemedText>
+            <ThemedText variant="small" color={theme.textPrimary} numberOfLines={1}>
               {record.transaction_id || '-'}
             </ThemedText>
           </View>
@@ -426,8 +426,8 @@ export default function RechargePanel({ adminKey }: RechargePanelProps) {
               }}
               disabled={isProcessing}
             >
-              <FontAwesome6 name="xmark" size={14} color="#EF4444" />
-              <Text style={{ color: '#EF4444', fontSize: 13, marginLeft: 4 }}>拒绝</Text>
+              <FontAwesome6 name="xmark" size={16} color="#EF4444" />
+              <Text style={{ color: '#EF4444', fontSize: 15, marginLeft: 6, fontWeight: '600' }}>拒绝</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -435,8 +435,8 @@ export default function RechargePanel({ adminKey }: RechargePanelProps) {
               onPress={() => handleApprove(record)}
               disabled={isProcessing}
             >
-              <FontAwesome6 name="check" size={14} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 13, marginLeft: 4 }}>通过</Text>
+              <FontAwesome6 name="check" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 15, marginLeft: 6, fontWeight: '600' }}>通过</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -590,19 +590,21 @@ const createStyles = (theme: any) => ({
   },
   statsContainer: {
     flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: Spacing.sm,
     marginBottom: Spacing.lg,
   },
   statsCard: {
     flex: 1,
+    minWidth: 100,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    flexDirection: 'row' as const,
+    flexDirection: 'column' as const,
     alignItems: 'center' as const,
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   statsInfo: {
-    flex: 1,
+    alignItems: 'center' as const,
   },
   tabNav: {
     flexDirection: 'row' as const,
@@ -615,7 +617,7 @@ const createStyles = (theme: any) => ({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
     gap: Spacing.sm,
   },
   activeTabButton: {
@@ -623,7 +625,7 @@ const createStyles = (theme: any) => ({
     borderBottomColor: theme.primary,
   },
   tabButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600' as const,
   },
   content: {
@@ -637,25 +639,26 @@ const createStyles = (theme: any) => ({
   },
   recordItem: {
     backgroundColor: theme.backgroundDefault,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
   },
   recordHeader: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   orderInfo: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: Spacing.sm,
+    flexWrap: 'wrap' as const,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: BorderRadius.full,
   },
   userInfo: {
@@ -664,33 +667,33 @@ const createStyles = (theme: any) => ({
     marginBottom: Spacing.sm,
   },
   memberBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.sm,
     marginLeft: Spacing.sm,
   },
   recordDetails: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.border,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
+    gap: Spacing.sm,
   },
   detailItem: {
-    flex: 1,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
   },
   payMethodBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: BorderRadius.sm,
   },
   amountContainer: {
     flexDirection: 'row' as const,
     justifyContent: 'space-around' as const,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
   },
   amountInfo: {
     alignItems: 'center' as const,
@@ -699,35 +702,38 @@ const createStyles = (theme: any) => ({
     backgroundColor: theme.primary + '10',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.md,
   },
   timeInfo: {
     flexDirection: 'row' as const,
     justifyContent: 'center' as const,
+    flexWrap: 'wrap' as const,
     paddingVertical: Spacing.sm,
   },
   remarkBox: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
     marginTop: Spacing.sm,
   },
   actionButtons: {
     flexDirection: 'row' as const,
-    justifyContent: 'flex-end' as const,
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: theme.border,
   },
   actionButton: {
+    flex: 1,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
+    minHeight: 48,
   },
   rejectButton: {
     backgroundColor: '#FEF2F2',
@@ -742,9 +748,10 @@ const createStyles = (theme: any) => ({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
+    padding: Spacing.lg,
   },
   modalContent: {
-    width: '90%' as const,
+    width: '100%' as const,
     maxWidth: 400,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
@@ -759,19 +766,21 @@ const createStyles = (theme: any) => ({
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    fontSize: 14,
-    minHeight: 80,
+    fontSize: 16,
+    minHeight: 100,
     textAlignVertical: 'top' as const,
   },
   modalButtons: {
     flexDirection: 'row' as const,
-    justifyContent: 'flex-end' as const,
-    gap: Spacing.sm,
+    gap: Spacing.md,
     marginTop: Spacing.lg,
   },
   modalButton: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    flex: 1,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
+    alignItems: 'center' as const,
+    minHeight: 48,
+    justifyContent: 'center' as const,
   },
 });

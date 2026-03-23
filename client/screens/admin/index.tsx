@@ -58,9 +58,18 @@ export default function AdminDashboardScreen() {
   const [authorized, setAuthorized] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   
-  // Web端始终显示PC版，移动端显示移动版
-  const isPC = Platform.OS === 'web';
-  const isMobile = Platform.OS !== 'web';
+  // 响应式布局：根据屏幕宽度决定显示 PC 版还是移动版
+  // 宽度小于 768px 显示移动版，包括 iOS Safari 等移动浏览器
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const isMobile = screenWidth < 768;
+
+  // 监听屏幕尺寸变化
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription.remove();
+  }, []);
 
   // 登出
   const handleLogout = useCallback(async () => {

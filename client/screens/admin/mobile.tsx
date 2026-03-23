@@ -31,7 +31,7 @@ import RechargePanel from './components/RechargePanel';
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs' | 'more';
 
 interface AdminStats {
   totalUsers: number;
@@ -71,6 +71,7 @@ export default function AdminMobileScreen() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // 登出
   const handleLogout = useCallback(async () => {
@@ -152,18 +153,30 @@ export default function AdminMobileScreen() {
     );
   }
 
-  // 底部导航
-  const tabs: { key: TabType; label: string; icon: string }[] = [
+  // 底部导航 - 主功能（前5个常用）
+  const mainTabs: { key: TabType; label: string; icon: string }[] = [
     { key: 'dashboard', label: '概览', icon: 'chart-pie' },
-    { key: 'profit', label: '利润', icon: 'coins' },
-    { key: 'orders', label: '订单', icon: 'clipboard-list' },
-    { key: 'recharge', label: '充值', icon: 'wallet' },
+    { key: 'recharge', label: '充值', icon: 'credit-card' },
     { key: 'users', label: '用户', icon: 'users' },
     { key: 'promotion', label: '推广', icon: 'bullhorn' },
-    { key: 'model-sync', label: '同步', icon: 'rotate' },
-    { key: 'config', label: '配置', icon: 'gear' },
-    { key: 'logs', label: '日志', icon: 'clock-rotate-left' },
+    { key: 'more', label: '更多', icon: 'bars' },
   ];
+
+  // 更多功能菜单
+  const moreTabs: { key: TabType; label: string; icon: string }[] = [
+    { key: 'profit', label: '利润统计', icon: 'coins' },
+    { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
+    { key: 'model-sync', label: '模型同步', icon: 'rotate' },
+    { key: 'config', label: '系统配置', icon: 'gear' },
+    { key: 'logs', label: '操作日志', icon: 'clock-rotate-left' },
+  ];
+
+  // 当前 Tab 标题
+  const getTabTitle = () => {
+    const allTabs = [...mainTabs.filter(t => t.key !== 'more'), ...moreTabs];
+    const tab = allTabs.find(t => t.key === activeTab);
+    return tab?.label || '管理后台';
+  };
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
@@ -180,39 +193,39 @@ export default function AdminMobileScreen() {
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
           <View style={{
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             borderRadius: BorderRadius.lg,
             backgroundColor: theme.primary,
             justifyContent: 'center',
             alignItems: 'center',
           }}>
-            <FontAwesome6 name="g" size={16} color="#fff" />
+            <FontAwesome6 name="g" size={18} color="#fff" />
           </View>
           <View>
             <ThemedText variant="smallMedium" color={theme.textPrimary}>G Open</ThemedText>
-            <ThemedText variant="tiny" color={theme.textMuted}>管理后台</ThemedText>
+            <ThemedText variant="tiny" color={theme.textMuted}>{getTabTitle()}</ThemedText>
           </View>
         </View>
         <TouchableOpacity
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
             backgroundColor: theme.error + '20',
             justifyContent: 'center',
             alignItems: 'center',
           }}
           onPress={handleLogout}
         >
-          <FontAwesome6 name="right-from-bracket" size={16} color={theme.error} />
+          <FontAwesome6 name="right-from-bracket" size={18} color={theme.error} />
         </TouchableOpacity>
       </View>
 
       {/* 主内容区 */}
       <ScrollView 
         style={{ flex: 1 }} 
-        contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: Spacing.md, paddingBottom: 90 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
@@ -228,7 +241,7 @@ export default function AdminMobileScreen() {
         {activeTab === 'logs' && <LogsTab adminKey={adminKey} />}
       </ScrollView>
 
-      {/* 底部导航 */}
+      {/* 底部导航 - 5个主功能 */}
       <View style={{
         position: 'absolute',
         bottom: 0,
@@ -240,32 +253,119 @@ export default function AdminMobileScreen() {
         borderTopColor: theme.border,
         paddingHorizontal: Spacing.xs,
         paddingVertical: Spacing.sm,
+        paddingBottom: Spacing.md,
       }}>
-        {tabs.map((tab) => (
+        {mainTabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
             style={{
               flex: 1,
               alignItems: 'center',
-              paddingVertical: Spacing.xs,
+              paddingVertical: Spacing.sm,
+              paddingHorizontal: Spacing.xs,
             }}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => {
+              if (tab.key === 'more') {
+                setShowMoreMenu(true);
+              } else {
+                setActiveTab(tab.key);
+              }
+            }}
           >
-            <FontAwesome6
-              name={tab.icon as any}
-              size={18}
-              color={activeTab === tab.key ? theme.primary : theme.textMuted}
-            />
+            <View style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: activeTab === tab.key ? theme.primary + '20' : 'transparent',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <FontAwesome6
+                name={tab.icon as any}
+                size={22}
+                color={activeTab === tab.key ? theme.primary : theme.textMuted}
+              />
+            </View>
             <ThemedText
               variant="tiny"
               color={activeTab === tab.key ? theme.primary : theme.textMuted}
-              style={{ marginTop: 2 }}
+              style={{ marginTop: 4 }}
             >
               {tab.label}
             </ThemedText>
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* 更多菜单弹窗 */}
+      <Modal
+        visible={showMoreMenu}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMoreMenu(false)}
+      >
+        <TouchableOpacity 
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          activeOpacity={1}
+          onPress={() => setShowMoreMenu(false)}
+        >
+          <View style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: theme.backgroundDefault,
+            borderTopLeftRadius: BorderRadius.xl,
+            borderTopRightRadius: BorderRadius.xl,
+            padding: Spacing.lg,
+            paddingBottom: Spacing['2xl'],
+          }}>
+            <View style={{
+              width: 40,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: theme.border,
+              alignSelf: 'center',
+              marginBottom: Spacing.lg,
+            }} />
+            <ThemedText variant="h4" color={theme.textPrimary} style={{ marginBottom: Spacing.lg }}>
+              更多功能
+            </ThemedText>
+            {moreTabs.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Spacing.lg,
+                  paddingVertical: Spacing.lg,
+                  paddingHorizontal: Spacing.md,
+                  borderRadius: BorderRadius.lg,
+                  backgroundColor: activeTab === tab.key ? theme.primary + '10' : 'transparent',
+                }}
+                onPress={() => {
+                  setActiveTab(tab.key);
+                  setShowMoreMenu(false);
+                }}
+              >
+                <View style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: BorderRadius.lg,
+                  backgroundColor: theme.primary + '20',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <FontAwesome6 name={tab.icon as any} size={22} color={theme.primary} />
+                </View>
+                <ThemedText variant="bodyMedium" color={theme.textPrimary}>
+                  {tab.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Screen>
   );
 }

@@ -5,7 +5,16 @@
     "pages/game/game",
     "pages/ending/ending",
     "pages/achievements/achievements",
-    "pages/stats/stats"
+    "pages/stats/stats",
+    "pages/ranking/ranking",
+    "pages/arena/arena",
+    "pages/guild/guild",
+    "pages/pet/pet",
+    "pages/friend/friend",
+    "pages/stage/stage",
+    "pages/shop/shop",
+    "pages/vip/vip",
+    "pages/battle/battle"
   ],
   "window": {
     "backgroundTextStyle": "dark",

@@ -68,6 +68,9 @@ import animeAdvancedRouter from "./routes/anime-advanced.js";
 import guofengAnimeRouter from "./routes/guofeng-anime.js";
 import gameRouter from "./routes/game.js";
 import gmRouter from "./routes/gm.js";
+import gameExtendedRouter from "./routes/game-extended.js";
+import videoStoryRouter from "./routes/video-story.js";
+import cloudSyncRouter from "./routes/cloud-sync.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -129,6 +132,9 @@ app.use('/api/v1/anime-advanced', animeAdvancedRouter);
 app.use('/api/v1/guofeng-anime', guofengAnimeRouter);
 app.use('/api/v1/game', gameRouter);
 app.use('/api/v1/gm', gmRouter);
+app.use('/api/v1/game', gameExtendedRouter);
+app.use('/api/v1/video/story', videoStoryRouter);
+app.use('/api/v1/cloud-sync', cloudSyncRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

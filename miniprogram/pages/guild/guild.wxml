@@ -1,0 +1,100 @@
+<!--战盟页面-->
+<view class="guild-page">
+  <!-- 我的战盟 -->
+  <view wx:if="{{myGuild}}" class="my-guild">
+    <view class="guild-header">
+      <image class="guild-icon" src="/images/guild-icon.png" mode="aspectFill" />
+      <view class="guild-info">
+        <text class="guild-name">{{myGuild.name}}</text>
+        <text class="guild-level">Lv.{{myGuild.level}}</text>
+        <text class="guild-members">{{myGuild.members_count}}/{{myGuild.max_members}}人</text>
+      </view>
+      <view class="guild-power">
+        <text class="value">{{myGuild.power}}</text>
+        <text class="label">总战力</text>
+      </view>
+    </view>
+    
+    <view class="guild-notice">
+      <text class="title">公告</text>
+      <text class="content">{{myGuild.notice || '暂无公告'}}</text>
+    </view>
+    
+    <!-- 成员列表 -->
+    <view class="members-section">
+      <text class="section-title">成员 ({{myGuild.members_count}})</text>
+      <view class="members-list">
+        <view wx:for="{{myGuild.members}}" wx:key="uid" class="member-item">
+          <image class="avatar" src="/images/default-avatar.png" mode="aspectFill" />
+          <view class="info">
+            <text class="name">{{item.nickname}}</text>
+            <text class="level">Lv.{{item.level}}</text>
+          </view>
+          <view class="role {{item.role}}">
+            <text>{{item.role === 'leader' ? '盟主' : item.role === 'vice_leader' ? '副盟主' : item.role === 'elder' ? '长老' : '成员'}}</text>
+          </view>
+          <text class="power">{{item.power}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 操作按钮 -->
+    <view class="actions">
+      <button class="action-btn" bindtap="donate">💰 捐献</button>
+      <button class="action-btn" bindtap="guildWar">⚔️ 战盟战</button>
+      <button class="action-btn danger" bindtap="leaveGuild">退出战盟</button>
+    </view>
+  </view>
+
+  <!-- 未加入战盟 -->
+  <view wx:else class="no-guild">
+    <image class="empty-icon" src="/images/guild-empty.png" mode="aspectFit" />
+    <text class="empty-text">你还未加入战盟</text>
+    <text class="empty-desc">加入战盟，与盟友一起征战天下</text>
+    
+    <view class="btns">
+      <button class="create-btn" bindtap="showCreateModal">创建战盟</button>
+      <button class="join-btn" bindtap="showJoinModal">加入战盟</button>
+    </view>
+  </view>
+
+  <!-- 创建弹窗 -->
+  <view wx:if="{{showCreate}}" class="modal">
+    <view class="modal-content">
+      <text class="modal-title">创建战盟</text>
+      <input 
+        class="input" 
+        placeholder="请输入战盟名称(2-8字)"
+        maxlength="8"
+        bindinput="onNameInput"
+      />
+      <text class="cost">创建费用: 500💎</text>
+      <view class="modal-btns">
+        <button class="cancel" bindtap="hideCreateModal">取消</button>
+        <button class="confirm" bindtap="createGuild">创建</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加入弹窗 -->
+  <view wx:if="{{showJoin}}" class="modal">
+    <view class="modal-content">
+      <text class="modal-title">选择战盟</text>
+      <scroll-view class="guild-list" scroll-y>
+        <view 
+          wx:for="{{guildList}}" 
+          wx:key="guild_id"
+          class="guild-item"
+          data-id="{{item.guild_id}}"
+          bindtap="joinGuild"
+        >
+          <text class="name">{{item.name}}</text>
+          <text class="level">Lv.{{item.level}}</text>
+          <text class="members">{{item.members_count}}人</text>
+          <text class="power">{{item.power}}战力</text>
+        </view>
+      </scroll-view>
+      <button class="cancel" bindtap="hideJoinModal">关闭</button>
+    </view>
+  </view>
+</view>

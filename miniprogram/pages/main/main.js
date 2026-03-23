@@ -266,5 +266,47 @@ Page({
     wx.switchTab({
       url: '/pages/achievements/achievements'
     });
+  },
+
+  // 跳转到关卡
+  goToStage() {
+    wx.navigateTo({
+      url: '/pages/stage/stage'
+    });
+  },
+
+  // 跳转到排行榜
+  goToRanking() {
+    wx.navigateTo({
+      url: '/pages/ranking/ranking'
+    });
+  },
+
+  // 跳转到竞技场
+  goToArena() {
+    wx.navigateTo({
+      url: '/pages/arena/arena'
+    });
+  },
+
+  // 跳转到战盟
+  goToGuild() {
+    wx.navigateTo({
+      url: '/pages/guild/guild'
+    });
+  },
+
+  // 跳转到宠物
+  goToPet() {
+    wx.navigateTo({
+      url: '/pages/pet/pet'
+    });
+  },
+
+  // 跳转到好友
+  goToFriend() {
+    wx.navigateTo({
+      url: '/pages/friend/friend'
+    });
   }
 });

@@ -1,0 +1,108 @@
+<!--关卡选择页面-->
+<view class="stage-page">
+  <!-- 章节选择 -->
+  <view class="chapter-header">
+    <view class="chapter-nav" data-dir="-1" bindtap="changeChapter">
+      <text>‹</text>
+    </view>
+    <view class="chapter-info">
+      <text class="chapter-title">第{{currentChapter}}章</text>
+      <text class="chapter-name">剑气纵横</text>
+    </view>
+    <view class="chapter-nav" data-dir="1" bindtap="changeChapter">
+      <text>›</text>
+    </view>
+  </view>
+
+  <!-- 玩家状态 -->
+  <view class="player-status">
+    <view class="status-item">
+      <text class="label">战力</text>
+      <text class="value">{{playerPower}}</text>
+    </view>
+    <view class="status-item">
+      <text class="label">体力</text>
+      <text class="value">{{playerEnergy}}/200</text>
+    </view>
+  </view>
+
+  <!-- 关卡列表 -->
+  <view class="stages-grid">
+    <view 
+      wx:for="{{stages}}" 
+      wx:key="id"
+      class="stage-item {{item.cleared ? 'cleared' : ''}} {{selectedStage?.id === item.id ? 'selected' : ''}}"
+      data-stage="{{item}}"
+      bindtap="selectStage"
+    >
+      <view class="stage-num">{{item.stage}}</view>
+      <view class="stage-stars">
+        <text wx:for="{{3}}" wx:key="*this" class="star {{item2 < item.stars ? 'filled' : ''}}" wx:for-item="item2">★</text>
+      </view>
+      <view class="stage-power">
+        <text>{{item.requiredPower}}</text>
+      </view>
+      <view wx:if="{{item.cleared}}" class="cleared-badge">已通关</view>
+    </view>
+  </view>
+
+  <!-- 关卡详情 -->
+  <view wx:if="{{selectedStage}}" class="stage-detail">
+    <view class="detail-header">
+      <text class="title">第{{selectedStage.chapter}}章 第{{selectedStage.stage}}关</text>
+      <text class="close" bindtap="closeSelect">✕</text>
+    </view>
+    
+    <view class="detail-content">
+      <view class="info-row">
+        <text class="label">推荐战力:</text>
+        <text class="value">{{selectedStage.requiredPower}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">体力消耗:</text>
+        <text class="value">6</text>
+      </view>
+      
+      <view class="rewards-section">
+        <text class="section-title">通关奖励</text>
+        <view class="rewards-list">
+          <view class="reward-item">
+            <text class="icon">💰</text>
+            <text class="amount">x{{selectedStage.rewards.gold}}</text>
+          </view>
+          <view class="reward-item">
+            <text class="icon">⭐</text>
+            <text class="amount">x{{selectedStage.rewards.exp}}</text>
+          </view>
+          <view class="reward-item">
+            <text class="icon">🎁</text>
+            <text class="amount">{{selectedStage.rewards.drop}}</text>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 战力碾压提示 -->
+      <view wx:if="{{!selectedStage.cleared && playerPower >= selectedStage.requiredPower * 3}}" class="power-tip">
+        <text>💪 你的战力可以碾压此关卡</text>
+      </view>
+    </view>
+    
+    <view class="action-btns">
+      <button class="btn battle" bindtap="startBattle">
+        {{selectedStage.cleared ? '再次挑战' : '开始战斗'}}
+      </button>
+      <button 
+        class="btn sweep" 
+        bindtap="sweepStage"
+        wx:if="{{selectedStage.cleared || playerPower >= selectedStage.requiredPower * 3}}"
+      >
+        {{selectedStage.cleared ? '扫荡' : '碾压通关'}}
+      </button>
+    </view>
+  </view>
+
+  <!-- 批量扫荡按钮 -->
+  <view class="batch-btn" bindtap="batchSweep">
+    <text>批量扫荡</text>
+  </view>
+</view>

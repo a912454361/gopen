@@ -1,0 +1,189 @@
+/* 排行榜页面样式 */
+.ranking-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  padding-bottom: 120rpx;
+}
+
+/* Tab切换 */
+.tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20rpx;
+  gap: 10rpx;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 28rpx;
+  color: #888;
+  background: transparent;
+  border-radius: 10rpx;
+  transition: all 0.3s;
+}
+
+.tab-item.active {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+  font-weight: bold;
+}
+
+/* 加载中 */
+.loading {
+  text-align: center;
+  padding: 100rpx;
+  color: #666;
+}
+
+/* 排行榜列表 */
+.ranking-list {
+  padding: 20rpx;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s;
+}
+
+.ranking-item.top1 {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.ranking-item.top2 {
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
+  border-color: rgba(192, 192, 192, 0.3);
+}
+
+.ranking-item.top3 {
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
+  border-color: rgba(205, 127, 50, 0.3);
+}
+
+/* 排名 */
+.rank {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #666;
+}
+
+.rank.gold {
+  color: #ffd700;
+  font-size: 36rpx;
+}
+
+.rank.silver {
+  color: #c0c0c0;
+}
+
+.rank.bronze {
+  color: #cd7f32;
+}
+
+/* 玩家信息 */
+.player-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  margin-left: 16rpx;
+}
+
+.avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.info {
+  margin-left: 20rpx;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.name {
+  font-size: 30rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+.vip {
+  font-size: 20rpx;
+  color: #ffd700;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.level {
+  font-size: 24rpx;
+  color: #888;
+  margin-top: 6rpx;
+}
+
+/* 战力值 */
+.power {
+  text-align: right;
+}
+
+.power .value {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.power .unit {
+  font-size: 22rpx;
+  color: #888;
+  margin-left: 6rpx;
+}
+
+/* 空状态 */
+.empty {
+  text-align: center;
+  padding: 100rpx;
+  color: #666;
+}
+
+/* 我的排名 */
+.my-rank {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 30rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.my-rank .title {
+  font-size: 28rpx;
+  color: #888;
+}
+
+.my-rank .rank {
+  font-size: 36rpx;
+  color: #ffd700;
+  font-weight: bold;
+}

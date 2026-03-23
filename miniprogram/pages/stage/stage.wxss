@@ -1,0 +1,284 @@
+/* 关卡选择页面样式 */
+.stage-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a0f1a 0%, #0f0f1a 100%);
+  padding: 20rpx;
+  padding-bottom: 150rpx;
+}
+
+/* 章节选择 */
+.chapter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.chapter-nav {
+  width: 60rpx;
+  height: 60rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chapter-nav text {
+  font-size: 36rpx;
+  color: #fff;
+}
+
+.chapter-info {
+  text-align: center;
+}
+
+.chapter-title {
+  font-size: 36rpx;
+  color: #ffd700;
+  font-weight: bold;
+  display: block;
+}
+
+.chapter-name {
+  font-size: 26rpx;
+  color: #888;
+}
+
+/* 玩家状态 */
+.player-status {
+  display: flex;
+  justify-content: space-around;
+  padding: 20rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.status-item {
+  text-align: center;
+}
+
+.status-item .label {
+  font-size: 24rpx;
+  color: #888;
+  display: block;
+}
+
+.status-item .value {
+  font-size: 32rpx;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+/* 关卡网格 */
+.stages-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.stage-item {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  transition: all 0.3s;
+}
+
+.stage-item.cleared {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.stage-item.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 20rpx rgba(255, 215, 0, 0.3);
+}
+
+.stage-num {
+  font-size: 40rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.stage-stars {
+  margin-top: 6rpx;
+}
+
+.star {
+  font-size: 18rpx;
+  color: #444;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.stage-power {
+  margin-top: 6rpx;
+}
+
+.stage-power text {
+  font-size: 18rpx;
+  color: #888;
+}
+
+.cleared-badge {
+  position: absolute;
+  bottom: 4rpx;
+  font-size: 16rpx;
+  color: #4caf50;
+}
+
+/* 关卡详情 */
+.stage-detail {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20rpx 20rpx 0 0;
+  padding: 30rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.detail-header .title {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.detail-header .close {
+  font-size: 32rpx;
+  color: #888;
+  padding: 10rpx;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+}
+
+.info-row .label {
+  font-size: 26rpx;
+  color: #888;
+}
+
+.info-row .value {
+  font-size: 26rpx;
+  color: #fff;
+}
+
+/* 奖励 */
+.rewards-section {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  font-size: 26rpx;
+  color: #888;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.rewards-list {
+  display: flex;
+  gap: 20rpx;
+}
+
+.reward-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12rpx 20rpx;
+  border-radius: 10rpx;
+}
+
+.reward-item .icon {
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+
+.reward-item .amount {
+  font-size: 24rpx;
+  color: #fff;
+}
+
+/* 战力提示 */
+.power-tip {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+  border-radius: 10rpx;
+  text-align: center;
+}
+
+.power-tip text {
+  font-size: 26rpx;
+  color: #ffd700;
+}
+
+/* 操作按钮 */
+.action-btns {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.btn {
+  flex: 1;
+  padding: 24rpx 0;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+}
+
+.btn.battle {
+  background: linear-gradient(135deg, #e91e63, #ff5722);
+  color: #fff;
+}
+
+.btn.sweep {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+}
+
+/* 批量扫荡按钮 */
+.batch-btn {
+  position: fixed;
+  bottom: 30rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 20rpx 60rpx;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  border-radius: 30rpx;
+  z-index: 50;
+}
+
+.batch-btn text {
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: bold;
+}

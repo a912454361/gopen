@@ -66,21 +66,52 @@
     </view>
   </view>
 
-  <!-- 功能按钮 -->
+  <!-- 功能按钮 - 第一行 -->
   <view class="action-buttons">
     <button class="action-btn primary" bindtap="goToStory">
       <text class="btn-icon">⚔️</text>
       <text class="btn-text">开始冒险</text>
     </button>
     
+    <button class="action-btn" bindtap="goToStage">
+      <text class="btn-icon">🏰</text>
+      <text class="btn-text">闯关</text>
+    </button>
+    
+    <button class="action-btn" bindtap="goToRanking">
+      <text class="btn-icon">🏆</text>
+      <text class="btn-text">排行榜</text>
+    </button>
+  </view>
+
+  <!-- 功能按钮 - 第二行 -->
+  <view class="action-buttons">
+    <button class="action-btn" bindtap="goToArena">
+      <text class="btn-icon">⚡</text>
+      <text class="btn-text">竞技场</text>
+    </button>
+    
+    <button class="action-btn" bindtap="goToGuild">
+      <text class="btn-icon">🏯</text>
+      <text class="btn-text">战盟</text>
+    </button>
+    
+    <button class="action-btn" bindtap="goToPet">
+      <text class="btn-icon">🐉</text>
+      <text class="btn-text">宠物</text>
+    </button>
+  </view>
+
+  <!-- 功能按钮 - 第三行 -->
+  <view class="action-buttons">
+    <button class="action-btn" bindtap="goToFriend">
+      <text class="btn-icon">👥</text>
+      <text class="btn-text">好友</text>
+    </button>
+    
     <button class="action-btn" bindtap="showRecharge">
       <text class="btn-icon">💎</text>
       <text class="btn-text">充值</text>
-    </button>
-    
-    <button class="action-btn" bindtap="goToAchievements">
-      <text class="btn-icon">🏆</text>
-      <text class="btn-text">成就</text>
     </button>
     
     <button class="action-btn" bindtap="showGMPanel">

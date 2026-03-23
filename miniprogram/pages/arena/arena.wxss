@@ -1,0 +1,255 @@
+/* 竞技场页面样式 */
+.arena-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a0a2e 0%, #0f0f1a 100%);
+  padding: 20rpx;
+  padding-bottom: 120rpx;
+}
+
+/* 竞技场头部 */
+.arena-header {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(75, 0, 130, 0.2));
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  border: 1px solid rgba(138, 43, 226, 0.3);
+}
+
+.season {
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.season .label {
+  font-size: 28rpx;
+  color: #da70d6;
+  background: rgba(138, 43, 226, 0.3);
+  padding: 8rpx 24rpx;
+  border-radius: 20rpx;
+}
+
+.rank-info {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20rpx;
+}
+
+.rank-item {
+  text-align: center;
+}
+
+.rank-item .label {
+  font-size: 24rpx;
+  color: #888;
+  display: block;
+}
+
+.rank-item .value {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #ffd700;
+  display: block;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 20rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat .num {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #fff;
+  display: block;
+}
+
+.stat .text {
+  font-size: 22rpx;
+  color: #888;
+}
+
+/* 对手列表 */
+.opponents-section {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.section-header .title {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.section-header .refresh {
+  font-size: 26rpx;
+  color: #da70d6;
+}
+
+.opponents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.opponent-card {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.opponent-card:active {
+  background: rgba(138, 43, 226, 0.2);
+  border-color: rgba(138, 43, 226, 0.5);
+}
+
+.opponent-card .avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  border: 2px solid #da70d6;
+}
+
+.opponent-card .info {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.opponent-card .name {
+  font-size: 30rpx;
+  color: #fff;
+  font-weight: 500;
+  display: block;
+}
+
+.opponent-card .level,
+.opponent-card .power {
+  font-size: 24rpx;
+  color: #888;
+  display: block;
+  margin-top: 4rpx;
+}
+
+.rank-badge {
+  text-align: center;
+}
+
+.rank-badge text:first-child {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ffd700;
+  display: block;
+}
+
+.rank-badge .unit {
+  font-size: 20rpx;
+  color: #888;
+}
+
+/* 奖励预览 */
+.rewards-section {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20rpx;
+  padding: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.reward-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10rpx;
+}
+
+.reward-item .rank {
+  font-size: 26rpx;
+  color: #ffd700;
+}
+
+.reward-item .prize {
+  font-size: 26rpx;
+  color: #fff;
+}
+
+.claim-btn {
+  margin-top: 20rpx;
+  background: linear-gradient(135deg, #8a2be2, #4b0082);
+  color: #fff;
+  border-radius: 30rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+}
+
+/* 战斗遮罩 */
+.battle-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.battle-animation {
+  text-align: center;
+}
+
+.battle-animation .sword {
+  width: 200rpx;
+  height: 200rpx;
+  animation: rotate 1s linear infinite;
+}
+
+.battle-animation .text {
+  display: block;
+  font-size: 40rpx;
+  color: #ffd700;
+  margin-top: 30rpx;
+  animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

@@ -1082,10 +1082,21 @@ import {
 } from '../services/free-model-integration.js';
 
 /**
+ * 检查用户是否为特权用户（郭涛）
+ */
+function isPrivilegedUserForFreeModels(userId: string): boolean {
+  return userId === PRIVILEGED_USER_ID;
+}
+
+/**
  * 获取所有免费视频生成模型
  * GET /api/v1/anime-video/free-models
+ * Query: user_id (可选，用于验证特权)
  */
 router.get('/free-models', async (req: Request, res: Response) => {
+  const { user_id } = req.query;
+  const isPrivileged = user_id ? isPrivilegedUserForFreeModels(user_id as string) : false;
+
   const models = Object.entries(FREE_VIDEO_MODELS).map(([key, model]) => ({
     key,
     name: model.name,
@@ -1115,13 +1126,16 @@ router.get('/free-models', async (req: Request, res: Response) => {
       models,
       usage_stats: statsArray,
       total_free_models: models.length,
-      message: '已整合9款免费视频生成模型，支持一键急速制作优质动漫',
+      is_privileged: isPrivileged,
+      message: isPrivileged 
+        ? '已整合9款免费视频生成模型，支持一键急速制作优质动漫' 
+        : '免费模型服务仅对特权用户开放',
     },
   });
 });
 
 /**
- * 一键急速动漫生成（免费模型）
+ * 一键急速动漫生成（免费模型）- 仅限特权用户郭涛
  * POST /api/v1/anime-video/quick-free
  * Body: { user_id, prompt, style?, duration?, resolution?, mode? }
  */
@@ -1133,7 +1147,15 @@ router.post('/quick-free', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'user_id and prompt are required' });
     }
 
-    console.log(`[AnimeVideo] Quick free generate for user ${user_id}: ${prompt.substring(0, 50)}...`);
+    // 权限检查：仅限特权用户郭涛
+    if (!isPrivilegedUserForFreeModels(user_id)) {
+      return res.status(403).json({ 
+        error: '此功能仅对特权用户开放',
+        message: '一键急速动漫生成服务仅限郭涛账户使用',
+      });
+    }
+
+    console.log(`[AnimeVideo] Quick free generate for privileged user ${user_id}: ${prompt.substring(0, 50)}...`);
 
     const result = await quickAnimeGenerate({
       userId: user_id,
@@ -1164,7 +1186,7 @@ router.post('/quick-free', async (req: Request, res: Response) => {
 });
 
 /**
- * 多模型竞速生成（免费模型）
+ * 多模型竞速生成（免费模型）- 仅限特权用户郭涛
  * POST /api/v1/anime-video/race-free
  * Body: { user_id, prompt, style?, duration?, resolution?, max_models? }
  */
@@ -1176,7 +1198,15 @@ router.post('/race-free', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'user_id and prompt are required' });
     }
 
-    console.log(`[AnimeVideo] Race free generate for user ${user_id}`);
+    // 权限检查：仅限特权用户郭涛
+    if (!isPrivilegedUserForFreeModels(user_id)) {
+      return res.status(403).json({ 
+        error: '此功能仅对特权用户开放',
+        message: '多模型竞速生成服务仅限郭涛账户使用',
+      });
+    }
+
+    console.log(`[AnimeVideo] Race free generate for privileged user ${user_id}`);
 
     const result = await freeModelScheduler.raceGenerate({
       prompt,
@@ -1225,7 +1255,7 @@ router.post('/race-free', async (req: Request, res: Response) => {
 });
 
 /**
- * 批量急速生成（免费模型）
+ * 批量急速生成（免费模型）- 仅限特权用户郭涛
  * POST /api/v1/anime-video/batch-free
  * Body: { user_id, anime_project_id, style?, resolution?, concurrency? }
  */
@@ -1235,6 +1265,14 @@ router.post('/batch-free', async (req: Request, res: Response) => {
 
     if (!user_id || !anime_project_id) {
       return res.status(400).json({ error: 'user_id and anime_project_id are required' });
+    }
+
+    // 权限检查：仅限特权用户郭涛
+    if (!isPrivilegedUserForFreeModels(user_id)) {
+      return res.status(403).json({ 
+        error: '此功能仅对特权用户开放',
+        message: '批量急速生成服务仅限郭涛账户使用',
+      });
     }
 
     // 获取动漫项目
@@ -1320,10 +1358,21 @@ router.post('/batch-free', async (req: Request, res: Response) => {
 });
 
 /**
- * 获取免费模型使用统计
+ * 获取免费模型使用统计 - 仅限特权用户郭涛
  * GET /api/v1/anime-video/free-models/stats
+ * Query: user_id
  */
 router.get('/free-models/stats', async (req: Request, res: Response) => {
+  const { user_id } = req.query;
+
+  // 权限检查：仅限特权用户郭涛
+  if (!user_id || !isPrivilegedUserForFreeModels(user_id as string)) {
+    return res.status(403).json({ 
+      error: '此功能仅对特权用户开放',
+      message: '免费模型使用统计仅限郭涛账户查看',
+    });
+  }
+
   const usageStats = freeModelScheduler.getModelUsageStats();
   const statsArray = Array.from(usageStats.entries()).map(([key, stats]) => ({
     model: key,

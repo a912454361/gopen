@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -6,6 +6,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   FlatList,
+  Alert,
+  TextInput,
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Screen } from '@/components/Screen';
@@ -13,6 +15,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { createStyles } from './styles';
+
+// 特权用户ID（郭涛）
+const PRIVILEGED_USER_ID = '53714d80-6677-420b-9cf1-cb22a41191ca';
 
 interface FreeModel {
   key: string;
@@ -43,14 +48,20 @@ export default function FreeModelScreen() {
   const [usageStats, setUsageStats] = useState<UsageStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPrivileged, setIsPrivileged] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   const fetchModels = async () => {
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime-video/free-models`);
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime-video/free-models?user_id=${PRIVILEGED_USER_ID}`
+      );
       const data = await response.json();
       if (data.success) {
         setModels(data.data.models);
         setUsageStats(data.data.usage_stats);
+        setIsPrivileged(data.data.is_privileged || false);
       }
     } catch (error) {
       console.error('Failed to fetch models:', error);
@@ -60,13 +71,92 @@ export default function FreeModelScreen() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchModels();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchModels();
+  };
+
+  const handleQuickGenerate = async () => {
+    if (!prompt.trim()) {
+      Alert.alert('提示', '请输入生成提示词');
+      return;
+    }
+
+    if (!isPrivileged) {
+      Alert.alert('无权限', '此功能仅对特权用户郭涛开放');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime-video/quick-free`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: PRIVILEGED_USER_ID,
+            prompt: prompt.trim(),
+            style: '国风动漫',
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        Alert.alert('生成成功', `使用模型: ${data.data.model_name}\n耗时: ${data.data.total_time}ms`);
+      } else {
+        Alert.alert('生成失败', data.error || '未知错误');
+      }
+    } catch (error) {
+      Alert.alert('错误', '请求失败');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRaceGenerate = async () => {
+    if (!prompt.trim()) {
+      Alert.alert('提示', '请输入生成提示词');
+      return;
+    }
+
+    if (!isPrivileged) {
+      Alert.alert('无权限', '此功能仅对特权用户郭涛开放');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime-video/race-free`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: PRIVILEGED_USER_ID,
+            prompt: prompt.trim(),
+            style: '国风动漫',
+            max_models: 3,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        Alert.alert('竞速成功', data.data.message);
+      } else {
+        Alert.alert('生成失败', data.error || '未知错误');
+      }
+    } catch (error) {
+      Alert.alert('错误', '请求失败');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -261,33 +351,67 @@ export default function FreeModelScreen() {
           />
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <ThemedText variant="h4" style={styles.sectionTitle}>
-            快速操作
-          </ThemedText>
-          
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.primary }]}>
-            <FontAwesome6 name="rocket" size={20} color={theme.buttonPrimaryText} />
-            <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText} style={styles.actionText}>
-              一键急速生成
+        {/* Quick Actions - 仅特权用户可见 */}
+        {isPrivileged ? (
+          <View style={styles.section}>
+            <ThemedText variant="h4" style={styles.sectionTitle}>
+              快速操作
             </ThemedText>
-          </TouchableOpacity>
+            
+            {/* Prompt Input */}
+            <ThemedView level="tertiary" style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="输入生成提示词..."
+                placeholderTextColor={theme.textMuted}
+                value={prompt}
+                onChangeText={setPrompt}
+                multiline
+                numberOfLines={3}
+              />
+            </ThemedView>
 
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.accent }]}>
-            <FontAwesome6 name="flag-checkered" size={20} color={theme.buttonPrimaryText} />
-            <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText} style={styles.actionText}>
-              多模型竞速生成
-            </ThemedText>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: theme.primary }]}
+              onPress={handleQuickGenerate}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
+              ) : (
+                <FontAwesome6 name="rocket" size={20} color={theme.buttonPrimaryText} />
+              )}
+              <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText} style={styles.actionText}>
+                一键急速生成
+              </ThemedText>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.success }]}>
-            <FontAwesome6 name="wand-magic-sparkles" size={20} color={theme.buttonPrimaryText} />
-            <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText} style={styles.actionText}>
-              智能选择最优模型
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: theme.accent }]}
+              onPress={handleRaceGenerate}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
+              ) : (
+                <FontAwesome6 name="flag-checkered" size={20} color={theme.buttonPrimaryText} />
+              )}
+              <ThemedText variant="bodyMedium" color={theme.buttonPrimaryText} style={styles.actionText}>
+                多模型竞速生成
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ThemedView level="tertiary" style={styles.noPermissionCard}>
+            <FontAwesome6 name="lock" size={40} color={theme.textMuted} />
+            <ThemedText variant="h4" color={theme.textMuted} style={styles.noPermissionText}>
+              此功能仅对特权用户开放
             </ThemedText>
-          </TouchableOpacity>
-        </View>
+            <ThemedText variant="body" color={theme.textMuted}>
+              免费模型服务仅限郭涛账户使用
+            </ThemedText>
+          </ThemedView>
+        )}
 
         {/* Tips */}
         <ThemedView level="tertiary" style={styles.tipsCard}>

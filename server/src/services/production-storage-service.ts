@@ -201,6 +201,59 @@ class ProductionStorageService {
       return null;
     }
   }
+
+  /**
+   * 读取文件内容
+   */
+  async readFile(key: string): Promise<Buffer | null> {
+    if (!this.initialized || !this.storage) {
+      console.warn('[ProductionStorage] Storage not initialized');
+      return null;
+    }
+
+    try {
+      const buffer = await this.storage.readFile({ fileKey: key });
+      return buffer;
+    } catch (error: any) {
+      console.error(`[ProductionStorage] Read file error for ${key}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 列出指定前缀的文件
+   */
+  async listFiles(prefix: string): Promise<string[]> {
+    if (!this.initialized || !this.storage) {
+      console.warn('[ProductionStorage] Storage not initialized');
+      return [];
+    }
+
+    try {
+      const result = await this.storage.listFiles({ prefix });
+      return result.keys;
+    } catch (error: any) {
+      console.error(`[ProductionStorage] List files error for ${prefix}:`, error.message);
+      return [];
+    }
+  }
+
+  /**
+   * 通过前缀查找并读取文件
+   */
+  async readFileByPrefix(prefix: string): Promise<{ key: string; content: Buffer } | null> {
+    const keys = await this.listFiles(prefix);
+    if (keys.length === 0) {
+      return null;
+    }
+    
+    const content = await this.readFile(keys[0]);
+    if (!content) {
+      return null;
+    }
+    
+    return { key: keys[0], content };
+  }
 }
 
 // ============================================================

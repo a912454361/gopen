@@ -12,6 +12,21 @@ export const createStyles = (theme: Theme) => {
     header: {
       marginBottom: Spacing.xl,
     },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    connectionBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     title: {
       marginBottom: Spacing.xs,
     },
@@ -152,6 +167,33 @@ export const createStyles = (theme: Theme) => {
     },
     infoContent: {
       flex: 1,
+    },
+    logsCard: {
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.xl,
+      marginBottom: Spacing.lg,
+      maxHeight: 200,
+    },
+    logsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    logsList: {
+      maxHeight: 140,
+    },
+    logItem: {
+      fontFamily: 'monospace',
+      marginBottom: 2,
+    },
+    runningIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.lg,
+      marginBottom: Spacing.lg,
     },
   });
 };

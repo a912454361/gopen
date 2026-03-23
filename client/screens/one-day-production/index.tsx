@@ -1,9 +1,10 @@
 /**
  * 24小时极速制作监控页面
  * 实时监控80集动漫生产进度
+ * 使用 SSE 接收实时进度推送
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Text,
+  RefreshControl,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
@@ -18,7 +20,7 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { createStyles } from './styles';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import RNSSE from 'react-native-sse';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
@@ -37,11 +39,25 @@ interface AIModel {
   name: string;
   type: string;
   status: string;
+  currentTask?: string;
   tasksCompleted: number;
+  tasksFailed?: number;
+  totalTokens?: number;
+}
+
+// 集数状态
+interface Episode {
+  number: number;
+  title: string;
+  status: string;
+  progress: number;
+  videoUrl?: string;
+  audioUrl?: string;
 }
 
 // 生产状态
 interface ProductionStatus {
+  id: string;
   animeTitle: string;
   totalEpisodes: number;
   episodeDuration: number;
@@ -49,8 +65,17 @@ interface ProductionStatus {
   startTime: string;
   episodesCompleted: number;
   progress: number;
+  status: string;
   aiModels: AIModel[];
   estimatedCompletion: string;
+  totalTokensUsed?: number;
+}
+
+// SSE 消息
+interface SSEMessage {
+  type: 'init' | 'phase' | 'episode' | 'model' | 'progress' | 'error' | 'complete';
+  data: Record<string, unknown>;
+  timestamp: string;
 }
 
 export default function OneDayProductionScreen() {
@@ -59,80 +84,252 @@ export default function OneDayProductionScreen() {
 
   const [isStarting, setIsStarting] = useState(false);
   const [status, setStatus] = useState<ProductionStatus | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [animeTitle, setAnimeTitle] = useState('剑破苍穹');
   const [totalEpisodes, setTotalEpisodes] = useState(80);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sseConnected, setSseConnected] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
 
-  // 获取状态
-  const fetchStatus = useCallback(async () => {
-    try {
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/status`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setStatus(data.data);
-        setAutoRefresh(data.data.progress < 100);
-      }
-    } catch (error) {
-      console.error('Failed to fetch status:', error);
-    }
+  const sseRef = useRef<any>(null);
+  const productionIdRef = useRef<string | null>(null);
+
+  // 添加日志
+  const addLog = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString('zh-CN');
+    setLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 49)]);
   }, []);
 
-  // 自动刷新
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(fetchStatus, 3000);
-      return () => clearInterval(interval);
+  // 连接 SSE
+  const connectSSE = useCallback((productionId: string) => {
+    if (sseRef.current) {
+      sseRef.current.close();
     }
-  }, [autoRefresh, fetchStatus]);
 
-  // 启动生产
+    const url = `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/${productionId}/stream`;
+    addLog(`连接 SSE: ${url}`);
+
+    const sse = new RNSSE(url, {
+      headers: {
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+      },
+    });
+
+    sse.addEventListener('open', () => {
+      addLog('SSE 连接已建立');
+      setSseConnected(true);
+    });
+
+    sse.addEventListener('message', (event: any) => {
+      try {
+        if (event.data === '[DONE]') {
+          sse.close();
+          setSseConnected(false);
+          addLog('SSE 流结束');
+          return;
+        }
+
+        const message: SSEMessage = JSON.parse(event.data);
+        handleSSEMessage(message);
+      } catch (e) {
+        console.error('SSE parse error:', e);
+      }
+    });
+
+    sse.addEventListener('error', (event: any) => {
+      const errorMsg = event?.message || 'Unknown';
+      addLog(`SSE 错误: ${errorMsg}`);
+      setSseConnected(false);
+    });
+
+    sse.addEventListener('close', () => {
+      addLog('SSE 连接已关闭');
+      setSseConnected(false);
+    });
+
+    sseRef.current = sse;
+    productionIdRef.current = productionId;
+  }, [addLog]);
+
+  // 处理 SSE 消息
+  const handleSSEMessage = useCallback((message: SSEMessage) => {
+    setLastUpdate(new Date());
+
+    switch (message.type) {
+      case 'init': {
+        setStatus(message.data as unknown as ProductionStatus);
+        addLog('收到初始状态');
+        break;
+      }
+
+      case 'phase': {
+        const phaseData = message.data as { phase: string; name: string };
+        addLog(`进入阶段: ${phaseData.name}`);
+        if (status) {
+          setStatus({ ...status, currentPhase: phaseData.phase });
+        }
+        break;
+      }
+
+      case 'episode': {
+        const episodeData = message.data as { episodeNumber: number; status: string; progress: number };
+        addLog(`第${episodeData.episodeNumber}集: ${episodeData.status} (${episodeData.progress}%)`);
+        setEpisodes(prev => {
+          const updated = [...prev];
+          const idx = episodeData.episodeNumber - 1;
+          if (updated[idx]) {
+            updated[idx] = { ...updated[idx], ...episodeData };
+          }
+          return updated;
+        });
+        break;
+      }
+
+      case 'model': {
+        const modelData = message.data as { modelId: string; status: string; currentTask?: string };
+        if (status?.aiModels) {
+          setStatus({
+            ...status,
+            aiModels: status.aiModels.map(m =>
+              m.id === modelData.modelId ? { ...m, status: modelData.status, currentTask: modelData.currentTask } : m
+            ),
+          });
+        }
+        break;
+      }
+
+      case 'progress': {
+        const progressData = message.data as { progress: number; episodesCompleted: number };
+        if (status) {
+          setStatus({
+            ...status,
+            progress: progressData.progress,
+            episodesCompleted: progressData.episodesCompleted,
+          });
+        }
+        break;
+      }
+
+      case 'error': {
+        const errorData = message.data as { error: string };
+        addLog(`错误: ${errorData.error}`);
+        Alert.alert('生产错误', errorData.error);
+        break;
+      }
+
+      case 'complete': {
+        const completeData = message.data as { productionId: string; totalEpisodes: number };
+        addLog(`制作完成！共 ${completeData.totalEpisodes} 集`);
+        Alert.alert('制作完成', `24小时极速制作已完成！\n共 ${completeData.totalEpisodes} 集`);
+        if (status) {
+          setStatus({ ...status, status: 'completed', progress: 100 });
+        }
+        break;
+      }
+    }
+  }, [status, addLog]);
+
+  // 断开 SSE
+  const disconnectSSE = useCallback(() => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+    setSseConnected(false);
+    productionIdRef.current = null;
+  }, []);
+
+  // 清理
+  useEffect(() => {
+    return () => {
+      disconnectSSE();
+    };
+  }, [disconnectSSE]);
+
+  // 创建并启动生产
   const handleStartProduction = async () => {
     setIsStarting(true);
 
     try {
       /**
        * 服务端文件：server/src/services/one-day-production-service.ts
-       * 接口：POST /api/v1/one-day-production/start
-       * Body 参数：animeTitle: string, totalEpisodes: number, episodeDuration: number
+       * 接口：POST /api/v1/one-day-production/create
+       * Body 参数：animeTitle: string, totalEpisodes: number, episodeDuration: number, style: string, genre: string
        */
-      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/start`, {
+      const createResponse = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           animeTitle,
           totalEpisodes,
           episodeDuration: 20,
+          style: 'chinese',
+          genre: '仙侠',
         }),
       });
 
-      const data = await response.json();
+      const createData = await createResponse.json();
 
-      if (data.success) {
-        setStatus(data.data);
-        setAutoRefresh(true);
-        Alert.alert('启动成功', `开始24小时极速制作：${animeTitle}\n目标：${totalEpisodes}集`);
-      } else {
-        throw new Error(data.error);
+      if (!createData.success) {
+        throw new Error(createData.error);
       }
+
+      const productionId = createData.data.id;
+      addLog(`创建成功: ${productionId}`);
+
+      // 初始化集数列表
+      setEpisodes(Array.from({ length: totalEpisodes }, (_, i) => ({
+        number: i + 1,
+        title: `${animeTitle} 第${i + 1}集`,
+        status: 'pending',
+        progress: 0,
+      })));
+
+      // 启动生产
+      const startResponse = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/${productionId}/start`, {
+        method: 'POST',
+      });
+
+      const startData = await startResponse.json();
+
+      if (!startData.success) {
+        throw new Error(startData.error);
+      }
+
+      setStatus(startData.data);
+      addLog('生产已启动');
+
+      // 连接 SSE
+      connectSSE(productionId);
+
+      Alert.alert('启动成功', `开始24小时极速制作：${animeTitle}\n目标：${totalEpisodes}集`);
     } catch (error) {
       console.error('Start error:', error);
+      addLog(`启动失败: ${error instanceof Error ? error.message : 'Unknown'}`);
       Alert.alert('错误', error instanceof Error ? error.message : '启动失败');
     } finally {
       setIsStarting(false);
     }
   };
 
-  // 停止生产
-  const handleStopProduction = async () => {
+  // 手动刷新
+  const handleRefresh = async () => {
+    if (!productionIdRef.current) return;
+
+    setIsRefreshing(true);
     try {
-      await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/stop`, {
-        method: 'POST',
-      });
-      setAutoRefresh(false);
-      Alert.alert('已停止', '生产已停止');
+      const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/one-day-production/${productionIdRef.current}/status`);
+      const data = await response.json();
+      if (data.success) {
+        setStatus(data.data);
+        setLastUpdate(new Date());
+      }
     } catch (error) {
-      console.error('Stop error:', error);
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -144,7 +341,8 @@ export default function OneDayProductionScreen() {
     switch (modelStatus) {
       case 'working': return '#10B981';
       case 'error': return '#EF4444';
-      default: return '#9CA3AF';
+      case 'idle': return '#9CA3AF';
+      default: return '#F59E0B';
     }
   };
 
@@ -167,15 +365,43 @@ export default function OneDayProductionScreen() {
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.primary}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText variant="h2" color={theme.textPrimary} style={styles.title}>
-            24小时极速制作
-          </ThemedText>
-          <ThemedText variant="body" color={theme.textSecondary} style={styles.subtitle}>
-            一天完成80集国风燃爆动漫
-          </ThemedText>
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <ThemedText variant="h2" color={theme.textPrimary} style={styles.title}>
+                24小时极速制作
+              </ThemedText>
+              <ThemedText variant="body" color={theme.textSecondary} style={styles.subtitle}>
+                一天完成80集国风燃爆动漫
+              </ThemedText>
+            </View>
+            {/* SSE 连接状态 */}
+            <View style={[styles.connectionBadge, { backgroundColor: sseConnected ? '#10B981' : '#9CA3AF' }]}>
+              <FontAwesome6 
+                name={sseConnected ? 'wifi' : 'wifi-slash'} 
+                size={12} 
+                color="#fff" 
+              />
+            </View>
+          </View>
+          
+          {/* 最后更新时间 */}
+          {lastUpdate && (
+            <ThemedText variant="tiny" color={theme.textMuted}>
+              最后更新: {lastUpdate.toLocaleTimeString('zh-CN')}
+            </ThemedText>
+          )}
         </View>
 
         {/* 时间规划 */}
@@ -249,7 +475,7 @@ export default function OneDayProductionScreen() {
                 <View 
                   style={[
                     styles.progressFill, 
-                    { width: `${status.progress}%`, backgroundColor: theme.primary }
+                    { width: `${Math.min(status.progress, 100)}%`, backgroundColor: theme.primary }
                   ]} 
                 />
               </View>
@@ -278,15 +504,23 @@ export default function OneDayProductionScreen() {
                 </ThemedText>
                 <ThemedText variant="tiny" color={theme.textMuted}>预计完成</ThemedText>
               </View>
+              {status.totalTokensUsed !== undefined && (
+                <View style={styles.statItem}>
+                  <ThemedText variant="h3" color={theme.primary}>
+                    {(status.totalTokensUsed / 1000).toFixed(1)}K
+                  </ThemedText>
+                  <ThemedText variant="tiny" color={theme.textMuted}>Tokens</ThemedText>
+                </View>
+              )}
             </View>
           </ThemedView>
         )}
 
         {/* AI 模型状态 */}
-        {status?.aiModels && (
+        {status?.aiModels && status.aiModels.length > 0 && (
           <View style={styles.modelsSection}>
             <ThemedText variant="label" color={theme.textPrimary} style={styles.sectionTitle}>
-              AI 模型状态
+              AI 模型状态 ({status.aiModels.length}个并行)
             </ThemedText>
             <View style={styles.modelsGrid}>
               {status.aiModels.map(model => (
@@ -302,20 +536,46 @@ export default function OneDayProductionScreen() {
                       color={theme.textSecondary} 
                     />
                   </View>
-                  <ThemedText variant="small" color={theme.textPrimary}>
+                  <ThemedText variant="small" color={theme.textPrimary} numberOfLines={1}>
                     {model.name}
                   </ThemedText>
                   <ThemedText variant="tiny" color={theme.textMuted}>
                     完成: {model.tasksCompleted}
                   </ThemedText>
+                  {model.currentTask && (
+                    <ThemedText variant="tiny" color={theme.primary} numberOfLines={1}>
+                      {model.currentTask}
+                    </ThemedText>
+                  )}
                 </ThemedView>
               ))}
             </View>
           </View>
         )}
 
-        {/* 启动/停止按钮 */}
-        {!status || status.progress >= 100 ? (
+        {/* 实时日志 */}
+        {logs.length > 0 && (
+          <ThemedView level="default" style={styles.logsCard}>
+            <View style={styles.logsHeader}>
+              <ThemedText variant="label" color={theme.textPrimary}>
+                实时日志
+              </ThemedText>
+              <TouchableOpacity onPress={() => setLogs([])}>
+                <FontAwesome6 name="trash" size={14} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.logsList} nestedScrollEnabled>
+              {logs.map((log, index) => (
+                <ThemedText key={index} variant="tiny" color={theme.textMuted} style={styles.logItem}>
+                  {log}
+                </ThemedText>
+              ))}
+            </ScrollView>
+          </ThemedView>
+        )}
+
+        {/* 启动按钮 */}
+        {(!status || status.status === 'completed') && (
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={handleStartProduction}
@@ -332,14 +592,16 @@ export default function OneDayProductionScreen() {
               </>
             )}
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.secondaryButton, { borderColor: theme.error }]}
-            onPress={handleStopProduction}
-          >
-            <FontAwesome6 name="stop" size={18} color={theme.error} />
-            <ThemedText variant="label" color={theme.error}>停止生产</ThemedText>
-          </TouchableOpacity>
+        )}
+
+        {/* 进行中状态 */}
+        {status && status.status === 'running' && (
+          <View style={styles.runningIndicator}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <ThemedText variant="small" color={theme.textSecondary}>
+              正在生产中...
+            </ThemedText>
+          </View>
         )}
 
         {/* 目标说明 */}
@@ -349,10 +611,11 @@ export default function OneDayProductionScreen() {
             <ThemedText variant="smallMedium" color={theme.textPrimary}>
               目标：24小时内完成
             </ThemedText>
-            <ThemedText variant="small" color={theme.textSecondary}>
-              80集 × 20分钟 = 1600分钟动漫{'\n'}
-              使用8个AI模型并行工作{'\n'}
-              UE5引擎实时渲染加速
+            <ThemedText variant="tiny" color={theme.textSecondary}>
+              • 8个AI模型并行处理{'\n'}
+              • 5个生产阶段流水线{'\n'}
+              • 自动故障转移与重试{'\n'}
+              • 实时进度监控
             </ThemedText>
           </View>
         </ThemedView>

@@ -1546,4 +1546,241 @@ router.delete('/promotion/contents/:id', async (req: Request, res: Response) => 
   }
 });
 
+// ==================== 资金管理 API ====================
+
+/**
+ * 获取资金统计
+ * GET /api/v1/admin/funds/stats
+ */
+router.get('/funds/stats', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    // 获取今日日期
+    const today = new Date().toISOString().split('T')[0];
+
+    // 获取所有用户的余额和G点
+    const { data: users } = await client
+      .from('users')
+      .select('balance, g_points');
+
+    const totalBalance = (users || []).reduce((sum, u) => sum + (u.balance || 0), 0);
+    const totalGPoints = (users || []).reduce((sum, u) => sum + (u.g_points || 0), 0);
+    const totalUsers = users?.length || 0;
+
+    // 获取今日充值金额
+    const { data: todayRecharges } = await client
+      .from('recharge_records')
+      .select('amount')
+      .eq('status', 'approved')
+      .gte('review_at', today);
+    
+    const todayRecharge = (todayRecharges || []).reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    // 获取待审核充值金额
+    const { data: pendingRecharges } = await client
+      .from('recharge_records')
+      .select('amount')
+      .eq('status', 'pending');
+    
+    const pendingRecharge = (pendingRecharges || []).reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    // 获取累计充值金额
+    const { data: totalRecharges } = await client
+      .from('recharge_records')
+      .select('amount')
+      .eq('status', 'approved');
+    
+    const totalRecharge = (totalRecharges || []).reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    res.json({
+      success: true,
+      data: {
+        totalBalance,
+        totalGPoints,
+        totalUsers,
+        todayRecharge,
+        pendingRecharge,
+        totalRecharge,
+      },
+    });
+  } catch (error) {
+    console.error('Get funds stats error:', error);
+    res.status(500).json({ error: '获取资金统计失败' });
+  }
+});
+
+/**
+ * 获取用户资金列表
+ * GET /api/v1/admin/funds/users
+ */
+router.get('/funds/users', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { data: users, error } = await client
+      .from('users')
+      .select('id, nickname, email, balance, g_points, member_level, member_expire_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) {
+      console.error('Query users error:', error);
+      return res.status(500).json({ error: '查询失败' });
+    }
+
+    res.json({
+      success: true,
+      data: users || [],
+    });
+  } catch (error) {
+    console.error('Get user funds error:', error);
+    res.status(500).json({ error: '获取用户资金失败' });
+  }
+});
+
+/**
+ * 调整用户资金
+ * POST /api/v1/admin/funds/adjust
+ */
+router.post('/funds/adjust', async (req: Request, res: Response) => {
+  try {
+    const { adminKey, userId, type, amount, remark } = req.body;
+    
+    if (!verifyAdmin(adminKey)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    if (!userId || !type || !remark) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    // 获取用户当前资金
+    const { data: user } = await client
+      .from('users')
+      .select('balance, g_points')
+      .eq('id', userId)
+      .single();
+
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    let updateData: any = {};
+    let oldValue: number;
+    let newValue: number;
+
+    if (type === 'balance') {
+      oldValue = user.balance || 0;
+      newValue = oldValue + amount;
+      if (newValue < 0) {
+        return res.status(400).json({ error: '余额不能为负数' });
+      }
+      updateData.balance = newValue;
+    } else if (type === 'g_points') {
+      oldValue = user.g_points || 0;
+      newValue = oldValue + amount;
+      if (newValue < 0) {
+        return res.status(400).json({ error: 'G点不能为负数' });
+      }
+      updateData.g_points = newValue;
+    } else {
+      return res.status(400).json({ error: '无效的调整类型' });
+    }
+
+    // 更新用户资金
+    const { error: updateError } = await client
+      .from('users')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Update user funds error:', updateError);
+      return res.status(500).json({ error: '更新资金失败' });
+    }
+
+    // 记录操作日志
+    const typeName = type === 'balance' ? '余额' : 'G点';
+    const action = amount > 0 ? '增加' : '减少';
+    
+    await client.from('admin_logs').insert([{
+      action: 'adjust_funds',
+      target: userId,
+      operator: 'admin',
+      details: `${action}${typeName}: 从${type === 'balance' ? (oldValue! / 100).toFixed(2) + '元' : oldValue}到${type === 'balance' ? (newValue! / 100).toFixed(2) + '元' : newValue}，原因: ${remark}`,
+    }]);
+
+    // 记录资金变动日志
+    try {
+      await client.from('balance_logs').insert([{
+        user_id: userId,
+        type: type === 'balance' ? 'admin_adjust' : 'g_points_admin_adjust',
+        amount: amount,
+        balance_before: oldValue,
+        balance_after: newValue,
+        remark: `[管理员调整] ${remark}`,
+      }]);
+    } catch (logErr) {
+      console.log('Balance logs table may not exist');
+    }
+
+    res.json({
+      success: true,
+      message: '资金调整成功',
+      data: {
+        type,
+        oldValue,
+        newValue,
+        change: amount,
+      },
+    });
+  } catch (error) {
+    console.error('Adjust funds error:', error);
+    res.status(500).json({ error: '调整资金失败' });
+  }
+});
+
+/**
+ * 获取用户资金变动记录
+ * GET /api/v1/admin/funds/logs/:userId
+ */
+router.get('/funds/logs/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    const { data: logs, error } = await client
+      .from('balance_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('Get balance logs error:', error);
+      return res.json({ success: true, data: [] });
+    }
+
+    res.json({
+      success: true,
+      data: logs || [],
+    });
+  } catch (error) {
+    console.error('Get funds logs error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
 export default router;

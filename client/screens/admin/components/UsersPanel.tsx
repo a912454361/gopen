@@ -21,11 +21,14 @@ interface User {
   id: string;
   nickname?: string;
   phone?: string;
+  email?: string;
   member_level: string;
   member_expire_at?: string;
   created_at: string;
   total_spent?: number;
   order_count?: number;
+  balance?: number;      // 余额（分）
+  g_points?: number;     // G点
 }
 
 interface UsersPanelProps {
@@ -193,12 +196,13 @@ export function UsersPanel({ adminKey }: UsersPanelProps) {
             borderRadius: BorderRadius.lg,
           }}>
             <View style={{ flex: 2 }}><ThemedText variant="caption" color={theme.textMuted}>用户</ThemedText></View>
-            <View style={{ flex: 1 }}><ThemedText variant="caption" color={theme.textMuted}>会员等级</ThemedText></View>
-            <View style={{ flex: 1 }}><ThemedText variant="caption" color={theme.textMuted}>到期时间</ThemedText></View>
-            <View style={{ flex: 1 }}><ThemedText variant="caption" color={theme.textMuted}>消费金额</ThemedText></View>
-            <View style={{ flex: 1 }}><ThemedText variant="caption" color={theme.textMuted}>订单数</ThemedText></View>
-            <View style={{ flex: 1 }}><ThemedText variant="caption" color={theme.textMuted}>注册时间</ThemedText></View>
-            <View style={{ flex: 1 }}><ThemedText variant="caption" color={theme.textMuted}>操作</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>会员等级</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>余额</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>G点</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>消费金额</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>订单数</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>注册时间</ThemedText></View>
+            <View style={{ flex: 1, alignItems: 'center' }}><ThemedText variant="caption" color={theme.textMuted}>操作</ThemedText></View>
           </View>
 
           {/* 用户行 */}
@@ -249,27 +253,32 @@ export function UsersPanel({ adminKey }: UsersPanelProps) {
                     <ThemedText variant="tiny" color={badge.color}>{badge.label}</ThemedText>
                   </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText variant="small" color={theme.textPrimary}>
-                    {formatDate(user.member_expire_at || '')}
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>
+                    ¥{((user.balance || 0) / 100).toFixed(2)}
                   </ThemedText>
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <ThemedText variant="smallMedium" color={theme.accent}>
+                    {(user.g_points || 0).toLocaleString()}
+                  </ThemedText>
+                </View>
+                <View style={{ flex: 1, alignItems: 'center' }}>
                   <ThemedText variant="smallMedium" color={theme.primary}>
                     ¥{((user.total_spent || 0) / 100).toFixed(2)}
                   </ThemedText>
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, alignItems: 'center' }}>
                   <ThemedText variant="small" color={theme.textPrimary}>
                     {user.order_count || 0} 笔
                   </ThemedText>
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, alignItems: 'center' }}>
                   <ThemedText variant="caption" color={theme.textMuted}>
                     {formatDate(user.created_at)}
                   </ThemedText>
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, alignItems: 'center' }}>
                   <TouchableOpacity
                     style={{
                       paddingVertical: Spacing.xs,
@@ -326,6 +335,28 @@ export function UsersPanel({ adminKey }: UsersPanelProps) {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <ThemedText variant="small" color={theme.textMuted}>当前等级</ThemedText>
                 <ThemedText variant="small" color={theme.textPrimary}>{getMemberBadge(selectedUser.member_level).label}</ThemedText>
+              </View>
+              {/* 资金信息 */}
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-around', 
+                paddingVertical: Spacing.md,
+                marginTop: Spacing.sm,
+                backgroundColor: theme.backgroundTertiary,
+                borderRadius: BorderRadius.lg,
+              }}>
+                <View style={{ alignItems: 'center' }}>
+                  <ThemedText variant="tiny" color={theme.textMuted}>账户余额</ThemedText>
+                  <ThemedText variant="h4" color={theme.textPrimary}>
+                    ¥{((selectedUser.balance || 0) / 100).toFixed(2)}
+                  </ThemedText>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <ThemedText variant="tiny" color={theme.textMuted}>G点余额</ThemedText>
+                  <ThemedText variant="h4" color={theme.accent}>
+                    {(selectedUser.g_points || 0).toLocaleString()}
+                  </ThemedText>
+                </View>
               </View>
             </View>
 

@@ -31,11 +31,12 @@ import { ProfitPanel } from './components/ProfitPanel';
 import { PromotionPanel } from './components/PromotionPanel';
 import ModelSyncPanel from './components/ModelSyncPanel';
 import RechargePanel from './components/RechargePanel';
+import FundsPanel from './components/FundsPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'funds' | 'orders' | 'users' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -186,8 +187,9 @@ export default function AdminDashboardScreen() {
   const menuItems: { key: TabType; label: string; icon: string }[] = [
     { key: 'dashboard', label: '数据概览', icon: 'chart-pie' },
     { key: 'profit', label: '利润统计', icon: 'coins' },
+    { key: 'funds', label: '资金管理', icon: 'wallet' },
     { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
-    { key: 'recharge', label: '充值审核', icon: 'wallet' },
+    { key: 'recharge', label: '充值审核', icon: 'credit-card' },
     { key: 'users', label: '用户管理', icon: 'users' },
     { key: 'promotion', label: '推广中心', icon: 'bullhorn' },
     { key: 'model-sync', label: '模型同步', icon: 'rotate' },
@@ -351,6 +353,7 @@ export default function AdminDashboardScreen() {
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.xl }}>
             {activeTab === 'dashboard' && <StatsPanel stats={stats} adminKey={adminKey} onRefresh={fetchStats} />}
             {activeTab === 'profit' && <ProfitPanel adminKey={adminKey} />}
+            {activeTab === 'funds' && <FundsPanel adminKey={adminKey} />}
             {activeTab === 'orders' && <OrdersPanel adminKey={adminKey} />}
             {activeTab === 'recharge' && <RechargePanel adminKey={adminKey} />}
             {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}

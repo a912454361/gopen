@@ -195,5 +195,20 @@ export const createStyles = (theme: Theme) => {
       paddingVertical: Spacing.lg,
       marginBottom: Spacing.lg,
     },
+    systemStatusGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: Spacing.sm,
+    },
+    systemStatusItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    systemStatusHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      marginBottom: Spacing.xs,
+    },
   });
 };

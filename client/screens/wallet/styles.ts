@@ -263,5 +263,12 @@ export const createStyles = (theme: Theme) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    // G点卡片
+    gPointCard: {
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      padding: Spacing.xl,
+      marginBottom: Spacing.xl,
+    },
   });
 };

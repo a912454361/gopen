@@ -48,6 +48,7 @@ import rechargeRouter from "./routes/recharge.js";
 import consumptionRouter from "./routes/consumption.js";
 import rewardsRouter from "./routes/rewards.js";
 import providersRouter from "./routes/providers.js";
+import videoRouter from "./routes/video.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -99,6 +100,7 @@ app.use('/api/v1/recharge', rechargeRouter);
 app.use('/api/v1/consumption', consumptionRouter);
 app.use('/api/v1/rewards', rewardsRouter);
 app.use('/api/v1/providers', providersRouter);
+app.use('/api/v1/video', videoRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

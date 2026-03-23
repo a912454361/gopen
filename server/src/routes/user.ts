@@ -256,4 +256,193 @@ router.post('/:userId/avatar', upload.single('avatar'), async (req: Request, res
   }
 });
 
+// ==================== 收藏模型API ====================
+
+/**
+ * 获取用户收藏的模型列表
+ * GET /api/v1/user/:userId/favorites
+ */
+router.get('/:userId/favorites', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const { data, error } = await client
+      .from('user_favorite_models')
+      .select('model_id, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: 'Failed to fetch favorites' });
+    }
+
+    // 返回模型ID列表
+    const modelIds = data?.map(item => item.model_id) || [];
+
+    res.json({
+      success: true,
+      data: { modelIds, favorites: data || [] },
+    });
+  } catch (error) {
+    console.error('Get favorites error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 添加收藏模型
+ * POST /api/v1/user/:userId/favorites
+ * Body: { modelId: string }
+ */
+router.post('/:userId/favorites', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { modelId } = req.body;
+
+    if (!modelId) {
+      return res.status(400).json({ error: 'modelId is required' });
+    }
+
+    // 检查是否已收藏
+    const { data: existing } = await client
+      .from('user_favorite_models')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('model_id', modelId)
+      .single();
+
+    if (existing) {
+      return res.json({
+        success: true,
+        message: 'Already in favorites',
+        data: { modelId, isFavorite: true },
+      });
+    }
+
+    // 添加收藏
+    const { error } = await client
+      .from('user_favorite_models')
+      .insert([{
+        user_id: userId,
+        model_id: modelId,
+        created_at: new Date().toISOString(),
+      }]);
+
+    if (error) {
+      return res.status(500).json({ error: 'Failed to add favorite' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Added to favorites',
+      data: { modelId, isFavorite: true },
+    });
+  } catch (error) {
+    console.error('Add favorite error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 取消收藏模型
+ * DELETE /api/v1/user/:userId/favorites/:modelId
+ */
+router.delete('/:userId/favorites/:modelId', async (req: Request, res: Response) => {
+  try {
+    const { userId, modelId } = req.params;
+
+    const { error } = await client
+      .from('user_favorite_models')
+      .delete()
+      .eq('user_id', userId)
+      .eq('model_id', modelId);
+
+    if (error) {
+      return res.status(500).json({ error: 'Failed to remove favorite' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Removed from favorites',
+      data: { modelId, isFavorite: false },
+    });
+  } catch (error) {
+    console.error('Remove favorite error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 批量更新收藏模型
+ * PUT /api/v1/user/:userId/favorites
+ * Body: { modelIds: string[] }
+ */
+router.put('/:userId/favorites', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { modelIds } = req.body;
+
+    if (!Array.isArray(modelIds)) {
+      return res.status(400).json({ error: 'modelIds must be an array' });
+    }
+
+    // 先删除所有收藏
+    await client
+      .from('user_favorite_models')
+      .delete()
+      .eq('user_id', userId);
+
+    // 批量插入新收藏
+    if (modelIds.length > 0) {
+      const insertData = modelIds.map(modelId => ({
+        user_id: userId,
+        model_id: modelId,
+        created_at: new Date().toISOString(),
+      }));
+
+      const { error } = await client
+        .from('user_favorite_models')
+        .insert(insertData);
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to update favorites' });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Favorites updated',
+      data: { modelIds },
+    });
+  } catch (error) {
+    console.error('Update favorites error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 检查模型是否已收藏
+ * GET /api/v1/user/:userId/favorites/:modelId/check
+ */
+router.get('/:userId/favorites/:modelId/check', async (req: Request, res: Response) => {
+  try {
+    const { userId, modelId } = req.params;
+
+    const { data } = await client
+      .from('user_favorite_models')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('model_id', modelId)
+      .single();
+
+    res.json({
+      success: true,
+      data: { isFavorite: !!data },
+    });
+  } catch (error) {
+    console.error('Check favorite error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

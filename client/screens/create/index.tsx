@@ -124,17 +124,45 @@ export default function CreateScreen() {
     AsyncStorage.getItem('userId').then(setUserId);
   }, []);
 
-  // 加载收藏列表
-  useEffect(() => {
-    const loadFavorites = async () => {
+  // 从后端加载收藏列表
+  const loadFavorites = useCallback(async () => {
+    if (!userId) {
+      // 如果没有userId，从本地存储加载
       const saved = await AsyncStorage.getItem('modelFavorites');
       if (saved) {
-        const favoriteList = JSON.parse(saved);
-        setFavorites(favoriteList);
+        setFavorites(JSON.parse(saved));
       }
-    };
+      return;
+    }
+    
+    try {
+      /**
+       * 服务端文件：server/src/routes/user.ts
+       * 接口：GET /api/v1/user/:userId/favorites
+       */
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}/favorites`
+      );
+      const data = await response.json();
+      if (data.success) {
+        setFavorites(data.data.modelIds);
+        // 同步到本地存储
+        await AsyncStorage.setItem('modelFavorites', JSON.stringify(data.data.modelIds));
+      }
+    } catch (error) {
+      console.error('Load favorites error:', error);
+      // 失败时从本地加载
+      const saved = await AsyncStorage.getItem('modelFavorites');
+      if (saved) {
+        setFavorites(JSON.parse(saved));
+      }
+    }
+  }, [userId]);
+
+  // 加载收藏列表
+  useEffect(() => {
     loadFavorites();
-  }, []);
+  }, [loadFavorites]);
 
   // 获取G点余额
   const fetchGPointsBalance = useCallback(async () => {

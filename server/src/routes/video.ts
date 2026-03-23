@@ -1,0 +1,297 @@
+/**
+ * 视频生成路由
+ * 使用 coze-coding-dev-sdk 的 VideoGenerationClient
+ */
+
+import express, { type Request, type Response } from 'express';
+import { VideoGenerationClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+
+const router = express.Router();
+const client = getSupabaseClient();
+
+// 视频生成配置
+const VIDEO_CONFIG = {
+  model: 'doubao-seedance-1-5-pro-251215',
+  defaultDuration: 5,
+  maxDuration: 12,
+  resolutions: ['480p', '720p', '1080p'] as const,
+  ratios: ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', 'adaptive'] as const,
+};
+
+/**
+ * 视频生成接口
+ * POST /api/v1/video/generate
+ * Body: { prompt, duration?, ratio?, resolution?, user_id, model? }
+ */
+router.post('/generate', async (req: Request, res: Response) => {
+  try {
+    const { prompt, duration, ratio, resolution, user_id, model, generate_audio, image_url, image_role } = req.body;
+
+    if (!prompt && !image_url) {
+      return res.status(400).json({ error: 'Prompt or image_url is required' });
+    }
+
+    // 提取请求头
+    const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
+    
+    // 创建视频生成客户端
+    const config = new Config();
+    const videoClient = new VideoGenerationClient(config, customHeaders);
+
+    // 构建内容数组
+    const contentItems: any[] = [];
+
+    // 如果有图片URL，添加到内容中
+    if (image_url) {
+      contentItems.push({
+        type: 'image_url',
+        image_url: { url: image_url },
+        role: image_role || 'first_frame',
+      });
+    }
+
+    // 添加文本提示
+    if (prompt) {
+      contentItems.push({
+        type: 'text',
+        text: prompt,
+      });
+    }
+
+    // 计算视频时长（秒）
+    // 前端传入的是总秒数，但视频生成API支持4-12秒
+    // 需要将前端时长映射到实际生成的视频时长
+    const requestedDuration = duration || VIDEO_CONFIG.defaultDuration;
+    
+    // 由于视频生成API只支持4-12秒，我们需要分段生成
+    // 这里先生成一个预览视频，实际生产环境需要更复杂的长视频生成逻辑
+    const actualDuration = Math.min(Math.max(requestedDuration, 4), VIDEO_CONFIG.maxDuration);
+
+    console.log(`[Video] Generating video for user ${user_id}, duration: ${actualDuration}s`);
+
+    // 调用视频生成API
+    const response = await videoClient.videoGeneration(contentItems, {
+      model: model || VIDEO_CONFIG.model,
+      duration: actualDuration,
+      ratio: (ratio as any) || '16:9',
+      resolution: (resolution as any) || '720p',
+      generateAudio: generate_audio !== false, // 默认生成音频
+      watermark: false,
+    });
+
+    if (response.videoUrl) {
+      // 保存生成记录到数据库
+      if (user_id) {
+        const { error } = await client.from('video_generations').insert([{
+          user_id,
+          prompt: prompt || '',
+          video_url: response.videoUrl,
+          duration: actualDuration,
+          model: model || VIDEO_CONFIG.model,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+        }]);
+        if (error) console.error('[Video] Failed to save record:', error);
+      }
+
+      console.log(`[Video] Video generated successfully: ${response.videoUrl}`);
+
+      return res.json({
+        success: true,
+        data: {
+          video_url: response.videoUrl,
+          duration: actualDuration,
+          model: model || VIDEO_CONFIG.model,
+          task_id: response.response?.id,
+        },
+      });
+    } else {
+      console.error('[Video] Generation failed:', response.response?.error_message);
+      
+      return res.status(500).json({
+        error: response.response?.error_message || 'Video generation failed',
+      });
+    }
+  } catch (error) {
+    console.error('[Video] Generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 长视频生成接口（分段生成）
+ * POST /api/v1/video/generate-long
+ * Body: { prompt, duration, ratio?, resolution?, user_id, model? }
+ * 
+ * 对于超过12秒的视频，分段生成并记录
+ */
+router.post('/generate-long', async (req: Request, res: Response) => {
+  try {
+    const { prompt, duration, ratio, resolution, user_id, model } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    if (!duration || duration < 30) {
+      return res.status(400).json({ error: 'Duration must be at least 30 seconds' });
+    }
+
+    const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
+    const config = new Config();
+    const videoClient = new VideoGenerationClient(config, customHeaders);
+
+    // 计算需要生成的段数（每段最大12秒）
+    const segmentDuration = VIDEO_CONFIG.maxDuration;
+    const segments = Math.ceil(duration / segmentDuration);
+    const actualDurationPerSegment = Math.min(duration / segments, segmentDuration);
+
+    console.log(`[Video] Generating long video for user ${user_id}, total: ${duration}s, segments: ${segments}`);
+
+    // 生成第一段
+    const firstSegment = await videoClient.videoGeneration([
+      { type: 'text', text: prompt }
+    ], {
+      model: model || VIDEO_CONFIG.model,
+      duration: actualDurationPerSegment,
+      ratio: (ratio as any) || '16:9',
+      resolution: (resolution as any) || '720p',
+      returnLastFrame: segments > 1, // 多段时需要返回最后一帧
+    });
+
+    if (!firstSegment.videoUrl) {
+      return res.status(500).json({ error: 'First segment generation failed' });
+    }
+
+    const videoUrls: string[] = [firstSegment.videoUrl];
+    let lastFrameUrl = firstSegment.lastFrameUrl;
+
+    // 生成后续段
+    for (let i = 1; i < segments && lastFrameUrl; i++) {
+      const segmentPrompt = i === segments - 1 
+        ? `${prompt} (conclusion)` 
+        : prompt;
+
+      const contentItems: any[] = [
+        {
+          type: 'image_url',
+          image_url: { url: lastFrameUrl },
+          role: 'first_frame',
+        },
+        { type: 'text', text: segmentPrompt },
+      ];
+
+      const segment = await videoClient.videoGeneration(contentItems, {
+        model: model || VIDEO_CONFIG.model,
+        duration: actualDurationPerSegment,
+        ratio: (ratio as any) || '16:9',
+        resolution: (resolution as any) || '720p',
+        returnLastFrame: i < segments - 1,
+      });
+
+      if (segment.videoUrl) {
+        videoUrls.push(segment.videoUrl);
+        lastFrameUrl = segment.lastFrameUrl;
+      } else {
+        console.warn(`[Video] Segment ${i + 1} generation failed`);
+        break;
+      }
+    }
+
+    // 保存记录
+    if (user_id) {
+      await client.from('video_generations').insert([{
+        user_id,
+        prompt,
+        video_url: videoUrls[0], // 主视频URL
+        video_urls: videoUrls, // 所有段URL
+        duration: duration,
+        segments: videoUrls.length,
+        model: model || VIDEO_CONFIG.model,
+        status: 'completed',
+        created_at: new Date().toISOString(),
+      }]);
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        video_url: videoUrls[0],
+        video_urls: videoUrls,
+        total_duration: videoUrls.length * actualDurationPerSegment,
+        segments: videoUrls.length,
+        model: model || VIDEO_CONFIG.model,
+      },
+    });
+  } catch (error) {
+    console.error('[Video] Long video generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 获取视频生成记录
+ * GET /api/v1/video/history/:userId
+ */
+router.get('/history/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const { data, error, count } = await client
+      .from('video_generations')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range((Number(page) - 1) * Number(limit), Number(page) * Number(limit) - 1);
+
+    if (error) {
+      return res.status(500).json({ error: 'Failed to fetch history' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        videos: data,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / Number(limit)),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[Video] Fetch history error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 获取支持的视频生成模型
+ * GET /api/v1/video/models
+ */
+router.get('/models', (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 'doubao-seedance-1-5-pro-251215',
+        name: 'Seedance 1.5 Pro',
+        provider: 'ByteDance',
+        description: '专业视频生成模型，支持文本生成视频、图片生成视频、音频同步',
+        features: ['text-to-video', 'image-to-video', 'audio-generation', 'first-last-frame'],
+        maxDuration: 12,
+        resolutions: ['480p', '720p', '1080p'],
+        ratios: ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', 'adaptive'],
+      },
+    ],
+  });
+});
+
+export default router;

@@ -128,20 +128,54 @@ export default function ModelsScreen() {
     balance: { available: 0 },
   });
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // 加载收藏列表
+  // 获取用户ID并加载收藏列表
   useEffect(() => {
-    const loadFavorites = async () => {
-      const saved = await AsyncStorage.getItem('modelFavorites');
-      if (saved) {
-        setFavorites(JSON.parse(saved));
+    const init = async () => {
+      const uid = await AsyncStorage.getItem('userId');
+      setUserId(uid);
+      
+      if (!uid) {
+        // 如果没有userId，从本地存储加载
+        const saved = await AsyncStorage.getItem('modelFavorites');
+        if (saved) {
+          setFavorites(JSON.parse(saved));
+        }
+        return;
+      }
+      
+      try {
+        /**
+         * 服务端文件：server/src/routes/user.ts
+         * 接口：GET /api/v1/user/:userId/favorites
+         */
+        const response = await fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${uid}/favorites`
+        );
+        const data = await response.json();
+        if (data.success) {
+          setFavorites(data.data.modelIds);
+          // 同步到本地存储
+          await AsyncStorage.setItem('modelFavorites', JSON.stringify(data.data.modelIds));
+        }
+      } catch (error) {
+        console.error('Load favorites error:', error);
+        // 失败时从本地加载
+        const saved = await AsyncStorage.getItem('modelFavorites');
+        if (saved) {
+          setFavorites(JSON.parse(saved));
+        }
       }
     };
-    loadFavorites();
+    init();
   }, []);
 
-  // 切换收藏
-  const toggleFavorite = useCallback((modelCode: string) => {
+  // 切换收藏（同步到后端）
+  const toggleFavorite = useCallback(async (modelCode: string) => {
+    const newIsFavorite = !favorites.includes(modelCode);
+    
+    // 先更新本地状态
     setFavorites(prev => {
       const newFavorites = prev.includes(modelCode)
         ? prev.filter(code => code !== modelCode)
@@ -149,7 +183,35 @@ export default function ModelsScreen() {
       AsyncStorage.setItem('modelFavorites', JSON.stringify(newFavorites));
       return newFavorites;
     });
-  }, []);
+
+    // 同步到后端
+    if (userId) {
+      try {
+        if (newIsFavorite) {
+          /**
+           * 服务端文件：server/src/routes/user.ts
+           * 接口：POST /api/v1/user/:userId/favorites
+           * Body 参数：modelId: string
+           */
+          await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}/favorites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelId: modelCode }),
+          });
+        } else {
+          /**
+           * 服务端文件：server/src/routes/user.ts
+           * 接口：DELETE /api/v1/user/:userId/favorites/:modelId
+           */
+          await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}/favorites/${modelCode}`, {
+            method: 'DELETE',
+          });
+        }
+      } catch (error) {
+        console.error('Sync favorite error:', error);
+      }
+    }
+  }, [favorites, userId]);
 
   /**
    * 获取模型列表

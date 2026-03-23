@@ -255,9 +255,9 @@ export default function GameScreen() {
       bad: styles.badEnding,
     };
     const endingLabels = {
-      good: '✨ 完美结局',
-      normal: '🌙 普通结局',
-      bad: '💀 悲剧结局',
+      good: '完美结局',
+      normal: '普通结局',
+      bad: '悲剧结局',
     };
 
     return (

@@ -547,7 +547,7 @@ export default function CreateScreen() {
           
           setResult({
             type: 'text',
-            content: `【${data.data.script?.title || '动漫创作'}】\n\n${data.data.script?.synopsis || ''}\n\n角色：\n${data.data.script?.characters?.map((c: any) => `• ${c.name}(${c.role})：${c.personality}`).join('\n') || '生成中...'}\n\n场景：\n${data.data.script?.scenes?.map((s: any) => `• ${s.location}(${s.timeOfDay})`).join('\n') || '生成中...'}\n\n🎬 视频正在生成中，请查看进度面板...`,
+            content: `【${data.data.script?.title || '动漫创作'}】\n\n${data.data.script?.synopsis || ''}\n\n角色：\n${data.data.script?.characters?.map((c: any) => `• ${c.name}(${c.role})：${c.personality}`).join('\n') || '生成中...'}\n\n场景：\n${data.data.script?.scenes?.map((s: any) => `• ${s.location}(${s.timeOfDay})`).join('\n') || '生成中...'}\n\n视频正在生成中，请查看进度面板...`,
             model: 'Kimi (Moonshot)',
             prompt: prompt,
             createdAt: new Date().toISOString(),

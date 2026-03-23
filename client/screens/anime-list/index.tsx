@@ -133,7 +133,7 @@ export default function AnimeListScreen() {
         {/* 标题 */}
         <View style={styles.header}>
           <ThemedText variant="h2" color={theme.textPrimary} style={styles.title}>
-            🎬 我的动漫
+            <FontAwesome6 name="play" size={12} color={theme.buttonPrimaryText} /> 我的动漫
           </ThemedText>
           <ThemedText variant="body" color={theme.textSecondary} style={styles.subtitle}>
             共 {projects.length} 个动漫项目

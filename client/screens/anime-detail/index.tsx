@@ -228,7 +228,7 @@ export default function AnimeDetailScreen() {
         {project.characters && project.characters.length > 0 && (
           <View style={styles.section}>
             <ThemedText variant="h4" color={theme.textPrimary} style={styles.sectionTitle}>
-              👥 角色设定
+              角色设定
             </ThemedText>
             {project.characters.map((char, index) => (
               <ThemedView key={index} level="default" style={styles.characterCard}>
@@ -249,7 +249,7 @@ export default function AnimeDetailScreen() {
         {/* 场景视频 */}
         <View style={styles.section}>
           <ThemedText variant="h4" color={theme.textPrimary} style={styles.sectionTitle}>
-            🎬 场景视频 ({videos.length}/{project.scenes?.length || 0})
+            场景视频 ({videos.length}/{project.scenes?.length || 0})
           </ThemedText>
 
           {videos.length === 0 ? (
@@ -310,7 +310,7 @@ export default function AnimeDetailScreen() {
         {project.episodes && project.episodes.length > 0 && (
           <View style={styles.section}>
             <ThemedText variant="h4" color={theme.textPrimary} style={styles.sectionTitle}>
-              📺 分集剧情
+              分集剧情
             </ThemedText>
             {project.episodes.map((ep, index) => (
               <ThemedView key={index} level="default" style={styles.characterCard}>
@@ -351,7 +351,7 @@ export default function AnimeDetailScreen() {
               setSelectedVideo(null);
             }}
           >
-            <FontAwesome6 name="times" size={24} color="white" />
+            <FontAwesome6 name="xmark" size={24} color="white" />
           </TouchableOpacity>
           <Video
             source={{ uri: selectedVideo.video_url }}

@@ -409,7 +409,7 @@ router.post('/guild/join', async (req: Request, res: Response) => {
     // 更新成员数
     await supabase
       .from('game_guilds')
-      .update({ members_count: guild.members_count + 1 })
+      .update({ members_count: (guild?.members_count || 0) + 1 })
       .eq('guild_id', guildId);
     
     res.json({ success: true, message: '加入成功' });
@@ -646,7 +646,7 @@ router.post('/stage/sweep', async (req: Request, res: Response) => {
     // 获取玩家数据
     const { data: user } = await supabase
       .from('game_users')
-      .select('power, energy, chapter')
+      .select('power, energy, chapter, gold, exp')
       .eq('uid', uid)
       .single();
     

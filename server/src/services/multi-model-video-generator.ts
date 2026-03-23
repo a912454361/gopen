@@ -414,7 +414,11 @@ export class MultiModelVideoGenerator {
         throw new Error('All services failed');
       }
 
-      const [firstService, firstUrl] = results.entries().next().value;
+      const firstEntry = results.entries().next().value;
+      if (!firstEntry) {
+        throw new Error('No result available');
+      }
+      const [firstService, firstUrl] = firstEntry;
       return { videoUrl: firstUrl, service: firstService, allResults: results };
     }
   }

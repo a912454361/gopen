@@ -1316,5 +1316,53 @@ router.post('/:id/resume', async (req: Request, res: Response) => {
   res.json(result);
 });
 
+// 获取文件的签名URL
+router.get('/:id/signed-url', async (req: Request, res: Response) => {
+  const { key } = req.query;
+  
+  if (!key || typeof key !== 'string') {
+    return res.status(400).json({ error: 'Key parameter is required' });
+  }
+
+  const storage = getProductionStorage();
+  const signedUrl = await storage.getSignedUrl(key, 86400); // 24小时有效
+
+  if (!signedUrl) {
+    return res.status(404).json({ error: 'Failed to generate signed URL' });
+  }
+
+  res.json({ success: true, signedUrl });
+});
+
+// 获取剧本内容
+router.get('/:id/script/:episode', async (req: Request, res: Response) => {
+  const productionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const episode = Array.isArray(req.params.episode) ? req.params.episode[0] : req.params.episode;
+  
+  // 使用前缀查找文件（SDK可能添加随机后缀）
+  const prefix = `productions/${productionId}/scripts/episode_${episode}`;
+  
+  const storage = getProductionStorage();
+  
+  try {
+    const result = await storage.readFileByPrefix(prefix);
+    if (!result) {
+      return res.status(404).json({ error: 'Script not found' });
+    }
+    
+    const content = result.content.toString('utf-8');
+    res.json({ 
+      success: true, 
+      content,
+      key: result.key,
+      episode: parseInt(episode),
+      size: result.content.length,
+    });
+  } catch (error: any) {
+    console.error('[OneDayProduction] Read script error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 export { OneDayProductionService };

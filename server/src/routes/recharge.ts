@@ -295,7 +295,58 @@ router.post('/admin/review', async (req: Request, res: Response) => {
           details: `充值审核通过，金额: ¥${(totalAmount / 100).toFixed(2)}（含赠送 ¥${((record.bonus_amount || 0) / 100).toFixed(2)}）`,
         }]);
         
-        // 检查是否首次充值，给邀请人发放奖励
+      } else if (record.recharge_type === 'g_points') {
+        // G点充值：更新用户G点余额
+        // 计算G点：1元 = 100G点
+        const gPoints = Math.floor(record.amount / 100 * 100); // amount单位是厘，需要转换为元再计算
+        
+        const { data: existingBalance } = await client
+          .from('user_balances')
+          .select('g_points')
+          .eq('user_id', record.user_id)
+          .single();
+        
+        const balanceBefore = existingBalance?.g_points || 0;
+        const balanceAfter = balanceBefore + gPoints;
+        
+        if (existingBalance) {
+          await client
+            .from('user_balances')
+            .update({
+              g_points: balanceAfter,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', record.user_id);
+        } else {
+          await client
+            .from('user_balances')
+            .insert([{
+              user_id: record.user_id,
+              g_points: gPoints,
+            }]);
+        }
+        
+        // 记录G点充值
+        await client.from('g_point_records').insert([{
+          user_id: record.user_id,
+          type: 'recharge',
+          amount: gPoints,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          description: `充值${(record.amount / 100).toFixed(2)}元，获得${gPoints}G点`,
+        }]);
+        
+        // 记录日志
+        await client.from('admin_logs').insert([{
+          action: 'approve_g_points_recharge',
+          target: body.orderNo,
+          operator: 'admin',
+          details: `G点充值审核通过，金额: ¥${(record.amount / 100).toFixed(2)}，获得${gPoints}G点`,
+        }]);
+      }
+      
+      // 检查是否首次充值（余额充值和G点充值），给邀请人发放奖励
+      if (record.recharge_type === 'balance' || record.recharge_type === 'g_points') {
         const { data: previousRecharges } = await client
           .from('recharge_records')
           .select('id')
@@ -364,8 +415,8 @@ router.post('/admin/review', async (req: Request, res: Response) => {
             console.log(`[Recharge] First recharge bonus for inviter: ${inviteRecord.inviter_id}, bonus: ${bonusAmount}厘`);
           }
         }
-        
-      } else if (record.recharge_type === 'membership' || record.recharge_type === 'super_member') {
+      }
+      else if (record.recharge_type === 'membership' || record.recharge_type === 'super_member') {
         // 会员充值：激活会员
         const memberLevel = record.recharge_type === 'super_member' ? 'super' : 'member';
         const expireDate = new Date();

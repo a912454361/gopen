@@ -949,33 +949,10 @@ export default function CreateScreen() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                     }}
-                    onPress={async () => {
-                      try {
-                        const response = await fetch(
-                          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/billing/g-points/recharge`,
-                          {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              userId,
-                              amount,
-                            }),
-                          }
-                        );
-                        
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                          setGPointsBalance(data.data.balanceAfter);
-                          setShowRechargeModal(false);
-                          Alert.alert('充值成功', `成功充值${amount}元，获得${data.data.gPointsReceived}G点`);
-                        } else {
-                          Alert.alert('充值失败', data.error || '请稍后重试');
-                        }
-                      } catch (error) {
-                        console.error('Recharge error:', error);
-                        Alert.alert('充值失败', '请稍后重试');
-                      }
+                    onPress={() => {
+                      // 跳转到钱包页面进行正规充值
+                      setShowRechargeModal(false);
+                      router.push('/wallet');
                     }}
                   >
                     <View>

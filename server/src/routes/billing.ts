@@ -468,19 +468,44 @@ router.get('/g-points/:userId', async (req: Request, res: Response) => {
 });
 
 /**
- * G点充值
+ * G点充值（内部接口，仅供管理员充值审核通过后调用）
  * POST /api/v1/billing/g-points/recharge
- * Body: { userId, amount } // amount单位：元
+ * Body: { userId, amount, adminKey } // amount单位：元
  * 规则：1元 = 100G点
+ * 
+ * ⚠️ 此接口需要adminKey验证，禁止前端直接调用！
+ * 充值流程：用户提交充值申请 → 管理员审核 → 审核通过后系统调用此接口
  */
 const gPointRechargeSchema = z.object({
   userId: z.string(),
   amount: z.number().min(1), // 最低1元
+  adminKey: z.string().optional(), // 管理员密钥（可选，用于内部调用验证）
+  rechargeRecordId: z.string().optional(), // 充值记录ID（用于关联）
 });
+
+// 管理员密钥
+const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
 
 router.post('/g-points/recharge', async (req: Request, res: Response) => {
   try {
     const body = gPointRechargeSchema.parse(req.body);
+    
+    // 验证管理员权限（内部调用必须提供adminKey）
+    // 如果没有提供adminKey，拒绝请求
+    if (!body.adminKey) {
+      return res.status(403).json({ 
+        error: 'Forbidden', 
+        message: '充值请前往钱包页面，通过正规支付流程完成' 
+      });
+    }
+    
+    // 验证adminKey
+    if (body.adminKey !== ADMIN_KEY) {
+      return res.status(403).json({ 
+        error: 'Forbidden', 
+        message: '无效的管理员密钥' 
+      });
+    }
     
     // 计算G点：1元 = 100G点
     const gPoints = Math.floor(body.amount * 100);

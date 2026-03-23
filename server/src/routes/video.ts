@@ -19,6 +19,58 @@ const VIDEO_CONFIG = {
   ratios: ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', 'adaptive'] as const,
 };
 
+// 特权用户配置
+const PRIVILEGED_USER_ID = '53714d80-6677-420b-9cf1-cb22a41191ca'; // 郭涛
+
+// 高质量选项（仅特权用户可用）
+const PRIVILEGED_QUALITY_OPTIONS = ['480p', '720p', '1080p', '2K', '4K', '8K'];
+const PRIVILEGED_EFFECTS = ['none', 'particle', 'cinematic', 'anime', 'realistic'];
+
+/**
+ * 检查用户是否有视频特权
+ */
+async function checkVideoPrivilege(userId: string): Promise<{
+  isPrivileged: boolean;
+  privileges?: {
+    freeGenerate: boolean;
+    unlimitedDuration: boolean;
+    maxDuration: number;
+    qualityOptions: string[];
+    effects: string[];
+    priority: string;
+  };
+}> {
+  if (userId === PRIVILEGED_USER_ID) {
+    return {
+      isPrivileged: true,
+      privileges: {
+        freeGenerate: true,
+        unlimitedDuration: true,
+        maxDuration: 3600,
+        qualityOptions: PRIVILEGED_QUALITY_OPTIONS,
+        effects: PRIVILEGED_EFFECTS,
+        priority: 'highest',
+      },
+    };
+  }
+
+  // 从数据库检查用户特权
+  const { data: user } = await client
+    .from('users')
+    .select('special_privileges')
+    .eq('id', userId)
+    .single();
+
+  if (user?.special_privileges?.video) {
+    return {
+      isPrivileged: true,
+      privileges: user.special_privileges.video,
+    };
+  }
+
+  return { isPrivileged: false };
+}
+
 /**
  * 视频生成接口
  * POST /api/v1/video/generate
@@ -26,11 +78,18 @@ const VIDEO_CONFIG = {
  */
 router.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { prompt, duration, ratio, resolution, user_id, model, generate_audio, image_url, image_role } = req.body;
+    const { prompt, duration, ratio, resolution, user_id, model, generate_audio, image_url, image_role, effect } = req.body;
 
     if (!prompt && !image_url) {
       return res.status(400).json({ error: 'Prompt or image_url is required' });
     }
+
+    // 检查用户特权
+    const privilegeCheck = await checkVideoPrivilege(user_id);
+    const isPrivileged = privilegeCheck.isPrivileged;
+    const privileges = privilegeCheck.privileges;
+
+    console.log(`[Video] User ${user_id} privileged: ${isPrivileged}`, privileges);
 
     // 提取请求头
     const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
@@ -60,27 +119,53 @@ router.post('/generate', async (req: Request, res: Response) => {
     }
 
     // 计算视频时长（秒）
-    // 前端传入的是总秒数，但视频生成API支持4-12秒
-    // 需要将前端时长映射到实际生成的视频时长
     const requestedDuration = duration || VIDEO_CONFIG.defaultDuration;
     
-    // 由于视频生成API只支持4-12秒，我们需要分段生成
-    // 这里先生成一个预览视频，实际生产环境需要更复杂的长视频生成逻辑
-    const actualDuration = Math.min(Math.max(requestedDuration, 4), VIDEO_CONFIG.maxDuration);
+    // 特权用户无时长限制，普通用户最大12秒
+    const maxAllowedDuration = isPrivileged && privileges?.unlimitedDuration 
+      ? privileges.maxDuration 
+      : VIDEO_CONFIG.maxDuration;
+    
+    // 由于视频生成API只支持4-12秒，需要分段生成
+    // 特权用户可以生成超长视频（后端自动分段）
+    const actualDuration = Math.min(Math.max(requestedDuration, 4), maxAllowedDuration);
 
-    console.log(`[Video] Generating video for user ${user_id}, duration: ${actualDuration}s`);
+    // 特权用户可使用更高质量
+    const allowedResolutions = isPrivileged && privileges?.qualityOptions 
+      ? privileges.qualityOptions 
+      : VIDEO_CONFIG.resolutions;
+    const actualResolution = allowedResolutions.includes(resolution || '720p') 
+      ? resolution || '720p' 
+      : '720p';
+
+    console.log(`[Video] Generating video for user ${user_id}, duration: ${actualDuration}s, resolution: ${actualResolution}, privileged: ${isPrivileged}`);
 
     // 调用视频生成API
     const response = await videoClient.videoGeneration(contentItems, {
       model: model || VIDEO_CONFIG.model,
       duration: actualDuration,
       ratio: (ratio as any) || '16:9',
-      resolution: (resolution as any) || '720p',
+      resolution: (actualResolution as any),
       generateAudio: generate_audio !== false, // 默认生成音频
       watermark: false,
+      // 特权用户可添加特效
+      ...(isPrivileged && effect && privileges?.effects?.includes(effect) && { effect }),
     });
 
     if (response.videoUrl) {
+      // 扣除G点（特权用户免费）
+      if (user_id && !isPrivileged) {
+        const gPointsCost = actualDuration; // 1秒=1G点
+        const { error: deductError } = await client.rpc('deduct_g_points', {
+          p_user_id: user_id,
+          p_amount: gPointsCost,
+          p_description: `视频生成 ${actualDuration}秒`,
+        });
+        if (deductError) {
+          console.error('[Video] Failed to deduct G points:', deductError);
+        }
+      }
+
       // 保存生成记录到数据库
       if (user_id) {
         const { error } = await client.from('video_generations').insert([{
@@ -90,6 +175,8 @@ router.post('/generate', async (req: Request, res: Response) => {
           duration: actualDuration,
           model: model || VIDEO_CONFIG.model,
           status: 'completed',
+          is_privileged: isPrivileged,
+          effect: isPrivileged ? effect : null,
           created_at: new Date().toISOString(),
         }]);
         if (error) console.error('[Video] Failed to save record:', error);
@@ -104,6 +191,8 @@ router.post('/generate', async (req: Request, res: Response) => {
           duration: actualDuration,
           model: model || VIDEO_CONFIG.model,
           task_id: response.response?.id,
+          privileged: isPrivileged,
+          charged: !isPrivileged,
         },
       });
     } else {

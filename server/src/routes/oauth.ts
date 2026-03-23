@@ -164,16 +164,6 @@ router.post('/callback', async (req: Request, res: Response) => {
           user_id: user.id,
         }]);
       
-      // 初始化用户余额（赠送5元）
-      await client
-        .from('user_balances')
-        .insert([{
-          user_id: user.id,
-          balance: 5,
-          total_recharged: 0,
-          total_consumed: 0,
-        }]);
-      
       // 推广转化追踪
       if (body.referrerCode) {
         try {

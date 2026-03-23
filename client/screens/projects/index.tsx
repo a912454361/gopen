@@ -1524,14 +1524,18 @@ export default function ProjectsScreen() {
 
   // 从API获取项目列表
   const fetchProjects = useCallback(async () => {
+    // 始终先使用示例数据作为基础展示
+    const defaultProjects = [...PROJECT_DATA.active, ...PROJECT_DATA.pending];
+    const defaultStats = {
+      active: PROJECT_DATA.active.length,
+      pending: PROJECT_DATA.pending.length,
+      total: PROJECT_DATA.active.length + PROJECT_DATA.pending.length,
+    };
+
     if (!userId) {
       // 未登录时使用示例数据
-      setProjects([...PROJECT_DATA.active, ...PROJECT_DATA.pending]);
-      setStatsFromApi({
-        active: PROJECT_DATA.active.length,
-        pending: PROJECT_DATA.pending.length,
-        total: PROJECT_DATA.active.length + PROJECT_DATA.pending.length,
-      });
+      setProjects(defaultProjects);
+      setStatsFromApi(defaultStats);
       setIsLoading(false);
       return;
     }
@@ -1547,8 +1551,8 @@ export default function ProjectsScreen() {
       );
       const data = await response.json();
       
-      if (data.success) {
-        // 转换API数据格式
+      if (data.success && data.data.projects.length > 0) {
+        // 有用户项目数据时，合并示例数据和用户数据
         const apiProjects = data.data.projects.map((p: any) => ({
           id: p.id,
           title: p.title,
@@ -1561,18 +1565,24 @@ export default function ProjectsScreen() {
           coverImage: p.cover_image,
         }));
         
-        setProjects(apiProjects);
-        setStatsFromApi(data.data.stats || { total: 0, active: 0, pending: 0 });
+        // 用户项目排在前面，示例数据作为补充
+        setProjects([...apiProjects, ...defaultProjects]);
+        const userStats = data.data.stats || { total: 0, active: 0, pending: 0 };
+        setStatsFromApi({
+          active: userStats.active + defaultStats.active,
+          pending: userStats.pending + defaultStats.pending,
+          total: userStats.total + defaultStats.total,
+        });
+      } else {
+        // API返回空数据时，使用示例数据
+        setProjects(defaultProjects);
+        setStatsFromApi(defaultStats);
       }
     } catch (error) {
       console.error('Fetch projects error:', error);
       // 失败时使用示例数据
-      setProjects([...PROJECT_DATA.active, ...PROJECT_DATA.pending]);
-      setStatsFromApi({
-        active: PROJECT_DATA.active.length,
-        pending: PROJECT_DATA.pending.length,
-        total: PROJECT_DATA.active.length + PROJECT_DATA.pending.length,
-      });
+      setProjects(defaultProjects);
+      setStatsFromApi(defaultStats);
     } finally {
       setIsLoading(false);
     }
@@ -1746,28 +1756,7 @@ export default function ProjectsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {projects.length === 0 ? (
-          // 空状态提示
-          <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIcon, { backgroundColor: `${theme.primary}15` }]}>
-              <FontAwesome6 name="folder-open" size={48} color={theme.primary} />
-            </View>
-            <ThemedText variant="h4" color={theme.textPrimary} style={{ marginTop: Spacing.lg }}>
-              暂无项目
-            </ThemedText>
-            <ThemedText variant="body" color={theme.textMuted} style={{ marginTop: Spacing.sm, textAlign: 'center' }}>
-              {'前往AI创作中心开始创作\n项目将自动保存到这里'}
-            </ThemedText>
-            <TouchableOpacity 
-              style={[styles.createButton, { backgroundColor: theme.primary, marginTop: Spacing.xl }]}
-              onPress={() => router.push('/create')}
-            >
-              <FontAwesome6 name="wand-magic-sparkles" size={16} color="#fff" style={{ marginRight: Spacing.sm }} />
-              <ThemedText variant="label" color="#fff">前往AI创作中心</ThemedText>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          Object.entries(groupedProjects).map(([type, projects]) => (
+        {Object.entries(groupedProjects).map(([type, projects]) => (
           <View key={type} style={styles.categorySection}>
             {/* 分类标题 */}
             <View style={styles.categoryHeader}>
@@ -1806,7 +1795,7 @@ export default function ProjectsScreen() {
               </ScrollView>
             </View>
           </View>
-        )))}
+        ))}
       </ScrollView>
 
       {/* 项目详情Modal */}
@@ -2138,28 +2127,5 @@ const styles = {
   loadingDots: {
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
-  },
-  // 空状态样式
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    paddingVertical: Spacing['3xl'],
-    paddingHorizontal: Spacing.xl,
-  },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: BorderRadius.xl,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  createButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.lg,
   },
 };

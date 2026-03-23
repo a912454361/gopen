@@ -381,7 +381,7 @@ export function ConfigPanel({ adminKey }: ConfigPanelProps) {
             {[
               { label: '应用名称', value: 'G Open' },
               { label: '版本号', value: '1.0.0' },
-              { label: '管理员密钥', value: 'gopen_admin_2024' },
+              { label: '管理员密钥', value: 'GtAdmin2024SecretKey8888' },
               { label: '服务状态', value: '正常运行' },
             ].map((item, i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: theme.backgroundTertiary, borderRadius: BorderRadius.md }}>

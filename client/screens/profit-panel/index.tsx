@@ -61,7 +61,7 @@ export default function ProfitPanelScreen() {
 
   const fetchStats = async () => {
     try {
-      const adminKey = params.key || 'gopen_admin_2024';
+      const adminKey = params.key || 'GtAdmin2024SecretKey8888';
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/profit?key=${adminKey}`
       );

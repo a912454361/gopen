@@ -519,9 +519,35 @@ export default function CreateScreen() {
           // 刷新活动任务列表
           fetchActiveTasks();
           
+          // 如果返回了剧本，自动生成视频
+          if (data.data?.script?.scenes?.length > 0) {
+            // 保存剧本后自动生成视频
+            const projectId = data.data.project_id;
+            if (projectId) {
+              // 异步生成视频
+              fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/anime-video/project`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: userId,
+                  anime_project_id: projectId,
+                  style: 'japanese',
+                  resolution: isPrivilegedUser ? '1080p' : '720p',
+                }),
+              }).then(videoRes => videoRes.json())
+                .then(videoData => {
+                  if (videoData.success) {
+                    console.log('[Anime] Video generation started:', videoData.data.task_id);
+                    fetchActiveTasks();
+                  }
+                })
+                .catch(err => console.error('[Anime] Video generation error:', err));
+            }
+          }
+          
           setResult({
             type: 'text',
-            content: `动漫创作任务已创建！\n任务ID: ${data.data.task_id}\n\n提示词: ${prompt}\n\n剧本生成中，请稍后查看进度面板...`,
+            content: `【${data.data.script?.title || '动漫创作'}】\n\n${data.data.script?.synopsis || ''}\n\n角色：\n${data.data.script?.characters?.map((c: any) => `• ${c.name}(${c.role})：${c.personality}`).join('\n') || '生成中...'}\n\n场景：\n${data.data.script?.scenes?.map((s: any) => `• ${s.location}(${s.timeOfDay})`).join('\n') || '生成中...'}\n\n🎬 视频正在生成中，请查看进度面板...`,
             model: 'Kimi (Moonshot)',
             prompt: prompt,
             createdAt: new Date().toISOString(),
@@ -530,7 +556,7 @@ export default function CreateScreen() {
           throw new Error(data.error || '动漫创作启动失败');
         }
       } else if (activeType === 'game') {
-        // 游戏创作 - 使用Kimi生成游戏场景
+        // 游戏创作 - 使用Kimi生成游戏场景并生成视频
         /**
          * 服务端文件：server/src/routes/anime.ts
          * 接口：POST /api/v1/anime/script

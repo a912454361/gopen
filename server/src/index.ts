@@ -73,6 +73,7 @@ import videoStoryRouter from "./routes/video-story.js";
 import cloudSyncRouter from "./routes/cloud-sync.js";
 import freeAnimeRouter from "./routes/free-anime.js";
 import ueEngineRouter from "./routes/ue-engine.js";
+import oneDayProductionRouter from "./services/one-day-production-service.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -139,6 +140,7 @@ app.use('/api/v1/video/story', videoStoryRouter);
 app.use('/api/v1/cloud-sync', cloudSyncRouter);
 app.use('/api/v1/free-anime', freeAnimeRouter);
 app.use('/api/v1/ue-engine', ueEngineRouter);
+app.use('/api/v1/one-day-production', oneDayProductionRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

@@ -60,6 +60,7 @@ function RootLayoutContent() {
         <Stack.Screen name="anime-list" options={{ title: "动漫列表" }} />
         <Stack.Screen name="guofeng-create" options={{ title: "国风创作" }} />
         <Stack.Screen name="ue-engine" options={{ title: "UE5引擎创作" }} />
+        <Stack.Screen name="one-day-production" options={{ title: "24小时极速制作" }} />
       </Stack>
     </View>
   );

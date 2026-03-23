@@ -433,6 +433,38 @@ export default function GameScreen() {
             </View>
             <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
           </TouchableOpacity>
+
+          {/* 24小时极速制作入口 */}
+          <TouchableOpacity
+            style={{
+              marginTop: 12,
+              padding: 16,
+              borderRadius: 16,
+              backgroundColor: '#F59E0B10',
+              borderWidth: 1,
+              borderColor: '#F59E0B30',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+            onPress={() => router.push('/one-day-production')}
+          >
+            <View style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: '#F59E0B',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <FontAwesome6 name="rocket" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="label" color="#F59E0B">24小时极速制作</ThemedText>
+              <ThemedText variant="tiny" color={theme.textMuted}>一天完成80集动漫 · AI全流程自动化</ThemedText>
+            </View>
+            <FontAwesome6 name="chevron-right" size={16} color={theme.textMuted} />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </Screen>

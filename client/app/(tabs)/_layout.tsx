@@ -105,6 +105,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="game"
+        options={{
+          title: '游戏',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="gamepad" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="qrcode-promo"
         options={{
           title: '收款码',

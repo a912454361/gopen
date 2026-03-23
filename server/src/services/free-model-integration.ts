@@ -1,16 +1,7 @@
 /**
  * 免费模型整合服务
  * 整合所有免费视频生成模型，实现一键急速制作优质动漫
- * 
- * 支持的免费模型：
- * 1. Seedance (豆包) - 平台免费额度
- * 2. 通义万相 - 免费试用
- * 3. 可灵 Kling - 免费额度
- * 4. Runway - 免费试用
- * 5. Pika Labs - 免费额度
- * 6. Stable Video Diffusion - 完全免费
- * 7. AnimateDiff - 完全免费
- * 8. ModelScope - 免费API
+ * 支持多模型轮换，绕过单一API限流
  */
 
 import { VideoGenerationClient, Config } from 'coze-coding-dev-sdk';
@@ -18,52 +9,39 @@ import { getSupabaseClient } from '../storage/database/supabase-client.js';
 
 const client = getSupabaseClient();
 
-// 免费视频生成模型配置
+// 免费视频生成模型配置 - 按速度排序
 export const FREE_VIDEO_MODELS = {
-  // ===== 平台免费额度模型 =====
-  seedance: {
-    name: 'Seedance 1.5 Pro',
-    provider: 'ByteDance',
-    model: 'doubao-seedance-1-5-pro-251215',
-    type: 'platform_free',
-    dailyLimit: 10, // 每日免费次数
-    features: ['高质量', '中文优化', '音频生成'],
-    avgTime: 60000,
-    quality: 95,
-    speed: 80,
-    priority: 1,
+  // ===== 最快速模型（优先使用）=====
+  animatediff: {
+    name: 'AnimateDiff',
+    provider: 'Guoyww',
+    model: 'animatediff',
+    type: 'fully_free',
+    dailyLimit: -1, // 无限制
+    features: ['开源', '动漫专用', '轻量级'],
+    avgTime: 25000,
+    quality: 75,
+    speed: 90,
+    priority: 1, // 最高优先级
     status: 'active',
+    endpoint: 'https://huggingface.co/spaces/guoyww/AnimateDiff',
+    apiType: 'huggingface',
   },
 
-  // ===== 免费试用模型 =====
-  kling: {
-    name: '可灵 Kling',
-    provider: 'Kuaishou',
-    model: 'kling-v1',
-    type: 'free_trial',
-    dailyLimit: 6,
-    features: ['快速', '写实', '动态效果'],
-    avgTime: 45000,
-    quality: 90,
-    speed: 90,
+  stableVideoDiffusion: {
+    name: 'Stable Video Diffusion',
+    provider: 'Stability AI',
+    model: 'stable-video-diffusion',
+    type: 'fully_free',
+    dailyLimit: -1,
+    features: ['开源', '本地部署', '免费'],
+    avgTime: 30000,
+    quality: 80,
+    speed: 85,
     priority: 2,
     status: 'active',
-    apiKey: process.env.KLING_API_KEY,
-  },
-
-  runway: {
-    name: 'Runway Gen-2',
-    provider: 'Runway',
-    model: 'runway-gen2',
-    type: 'free_trial',
-    dailyLimit: 5,
-    features: ['电影级', '创意', '高质量'],
-    avgTime: 90000,
-    quality: 92,
-    speed: 70,
-    priority: 3,
-    status: 'active',
-    apiKey: process.env.RUNWAY_API_KEY,
+    endpoint: 'https://api.stability.ai/v2beta/video/generate',
+    apiType: 'stability',
   },
 
   pika: {
@@ -79,37 +57,7 @@ export const FREE_VIDEO_MODELS = {
     priority: 2,
     status: 'active',
     apiKey: process.env.PIKA_API_KEY,
-  },
-
-  // ===== 完全免费模型 =====
-  stableVideoDiffusion: {
-    name: 'Stable Video Diffusion',
-    provider: 'Stability AI',
-    model: 'stable-video-diffusion',
-    type: 'fully_free',
-    dailyLimit: -1, // 无限制
-    features: ['开源', '本地部署', '免费'],
-    avgTime: 30000,
-    quality: 80,
-    speed: 85,
-    priority: 4,
-    status: 'active',
-    endpoint: 'https://api.stability.ai/v2beta/video/generate',
-  },
-
-  animatediff: {
-    name: 'AnimateDiff',
-    provider: 'Guoyww',
-    model: 'animatediff',
-    type: 'fully_free',
-    dailyLimit: -1,
-    features: ['开源', '动漫专用', '轻量级'],
-    avgTime: 25000,
-    quality: 75,
-    speed: 90,
-    priority: 5,
-    status: 'active',
-    endpoint: 'https://huggingface.co/spaces/guoyww/AnimateDiff',
+    apiType: 'pika',
   },
 
   modelscope: {
@@ -125,21 +73,24 @@ export const FREE_VIDEO_MODELS = {
     priority: 3,
     status: 'active',
     endpoint: 'https://modelscope.cn/api/v1/video/generate',
+    apiType: 'modelscope',
   },
 
-  // ===== 国内免费模型 =====
-  wanxiang: {
-    name: '通义万相',
-    provider: 'Alibaba',
-    model: 'wanxiang-video',
+  // ===== 高质量模型（次优先）=====
+  kling: {
+    name: '可灵 Kling',
+    provider: 'Kuaishou',
+    model: 'kling-v1',
     type: 'free_trial',
-    dailyLimit: 10,
-    features: ['中文优化', '多样风格', '高质量'],
-    avgTime: 50000,
-    quality: 88,
-    speed: 82,
-    priority: 2,
+    dailyLimit: 6,
+    features: ['快速', '写实', '动态效果'],
+    avgTime: 45000,
+    quality: 90,
+    speed: 90,
+    priority: 3,
     status: 'active',
+    apiKey: process.env.KLING_API_KEY,
+    apiType: 'kling',
   },
 
   huantu: {
@@ -154,6 +105,54 @@ export const FREE_VIDEO_MODELS = {
     speed: 88,
     priority: 3,
     status: 'active',
+    apiType: 'huawei',
+  },
+
+  wanxiang: {
+    name: '通义万相',
+    provider: 'Alibaba',
+    model: 'wanxiang-video',
+    type: 'free_trial',
+    dailyLimit: 10,
+    features: ['中文优化', '多样风格', '高质量'],
+    avgTime: 50000,
+    quality: 88,
+    speed: 82,
+    priority: 4,
+    status: 'active',
+    apiType: 'aliyun',
+  },
+
+  // ===== 平台免费额度模型 =====
+  seedance: {
+    name: 'Seedance 1.5 Pro',
+    provider: 'ByteDance',
+    model: 'doubao-seedance-1-5-pro-251215',
+    type: 'platform_free',
+    dailyLimit: 10,
+    features: ['高质量', '中文优化', '音频生成'],
+    avgTime: 60000,
+    quality: 95,
+    speed: 80,
+    priority: 5, // 因限流降低优先级
+    status: 'active',
+    apiType: 'coze',
+  },
+
+  runway: {
+    name: 'Runway Gen-2',
+    provider: 'Runway',
+    model: 'runway-gen2',
+    type: 'free_trial',
+    dailyLimit: 5,
+    features: ['电影级', '创意', '高质量'],
+    avgTime: 90000,
+    quality: 92,
+    speed: 70,
+    priority: 5,
+    status: 'active',
+    apiKey: process.env.RUNWAY_API_KEY,
+    apiType: 'runway',
   },
 } as const;
 

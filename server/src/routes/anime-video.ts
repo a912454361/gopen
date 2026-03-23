@@ -1071,4 +1071,280 @@ async function turboGenerateVideos(params: {
   console.log(`[Turbo] Completed: ${videoUrls.length} videos in ${totalTime}ms`);
 }
 
+/**
+ * 免费模型整合相关导入
+ */
+import {
+  freeModelScheduler,
+  quickAnimeGenerate,
+  batchQuickGenerate,
+  FREE_VIDEO_MODELS,
+} from '../services/free-model-integration.js';
+
+/**
+ * 获取所有免费视频生成模型
+ * GET /api/v1/anime-video/free-models
+ */
+router.get('/free-models', async (req: Request, res: Response) => {
+  const models = Object.entries(FREE_VIDEO_MODELS).map(([key, model]) => ({
+    key,
+    name: model.name,
+    provider: model.provider,
+    type: model.type,
+    dailyLimit: model.dailyLimit === -1 ? '无限制' : model.dailyLimit,
+    features: model.features,
+    quality: model.quality,
+    speed: model.speed,
+    priority: model.priority,
+    status: model.status,
+  }));
+
+  // 获取使用统计
+  const usageStats = freeModelScheduler.getModelUsageStats();
+  const statsArray = Array.from(usageStats.entries()).map(([key, stats]) => ({
+    model: key,
+    dailyUsed: stats.dailyUsed,
+    dailyLimit: stats.dailyLimit === -1 ? '无限制' : stats.dailyLimit,
+    successRate: Math.round(stats.successRate * 100),
+    avgLatency: stats.avgLatency,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      models,
+      usage_stats: statsArray,
+      total_free_models: models.length,
+      message: '已整合9款免费视频生成模型，支持一键急速制作优质动漫',
+    },
+  });
+});
+
+/**
+ * 一键急速动漫生成（免费模型）
+ * POST /api/v1/anime-video/quick-free
+ * Body: { user_id, prompt, style?, duration?, resolution?, mode? }
+ */
+router.post('/quick-free', async (req: Request, res: Response) => {
+  try {
+    const { user_id, prompt, style, duration, resolution, mode } = req.body;
+
+    if (!user_id || !prompt) {
+      return res.status(400).json({ error: 'user_id and prompt are required' });
+    }
+
+    console.log(`[AnimeVideo] Quick free generate for user ${user_id}: ${prompt.substring(0, 50)}...`);
+
+    const result = await quickAnimeGenerate({
+      userId: user_id,
+      prompt,
+      style: style || '国风动漫',
+      duration: duration || 5,
+      resolution: resolution || '1080p',
+      mode: mode || 'balanced',
+    });
+
+    res.json({
+      success: true,
+      data: {
+        video_url: result.videoUrl,
+        model: result.model,
+        model_name: result.modelName,
+        total_time: result.totalTime,
+        cost: 0, // 免费
+        message: `使用免费模型 ${result.modelName} 生成成功`,
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] Quick free generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 多模型竞速生成（免费模型）
+ * POST /api/v1/anime-video/race-free
+ * Body: { user_id, prompt, style?, duration?, resolution?, max_models? }
+ */
+router.post('/race-free', async (req: Request, res: Response) => {
+  try {
+    const { user_id, prompt, style, duration, resolution, max_models } = req.body;
+
+    if (!user_id || !prompt) {
+      return res.status(400).json({ error: 'user_id and prompt are required' });
+    }
+
+    console.log(`[AnimeVideo] Race free generate for user ${user_id}`);
+
+    const result = await freeModelScheduler.raceGenerate({
+      prompt,
+      style: style || '国风动漫',
+      duration: duration || 5,
+      resolution: resolution || '1080p',
+      maxModels: max_models || 3,
+    });
+
+    // 保存生成记录
+    await client.from('generation_tasks').insert([{
+      user_id,
+      task_type: 'anime',
+      prompt,
+      model: FREE_VIDEO_MODELS[result.model].model,
+      parameters: {
+        style,
+        duration: duration || 5,
+        resolution: resolution || '1080p',
+        mode: 'race',
+        winner: result.model,
+      },
+      status: 'completed',
+      progress: 100,
+      result_url: result.videoUrl,
+      completed_at: new Date().toISOString(),
+    }]);
+
+    res.json({
+      success: true,
+      data: {
+        video_url: result.videoUrl,
+        winner_model: result.model,
+        model_name: FREE_VIDEO_MODELS[result.model].name,
+        total_time: result.totalTime,
+        cost: 0,
+        message: `竞速成功，最快模型 ${FREE_VIDEO_MODELS[result.model].name} 用时 ${result.totalTime}ms`,
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] Race free generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 批量急速生成（免费模型）
+ * POST /api/v1/anime-video/batch-free
+ * Body: { user_id, anime_project_id, style?, resolution?, concurrency? }
+ */
+router.post('/batch-free', async (req: Request, res: Response) => {
+  try {
+    const { user_id, anime_project_id, style, resolution, concurrency } = req.body;
+
+    if (!user_id || !anime_project_id) {
+      return res.status(400).json({ error: 'user_id and anime_project_id are required' });
+    }
+
+    // 获取动漫项目
+    const { data: project, error: projectError } = await client
+      .from('anime_projects')
+      .select('*')
+      .eq('id', anime_project_id)
+      .eq('user_id', user_id)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ error: 'Anime project not found' });
+    }
+
+    const scenes = project.scenes || [];
+
+    console.log(`[AnimeVideo] Batch free generate ${scenes.length} scenes for project ${anime_project_id}`);
+
+    // 创建主任务
+    const { data: mainTask } = await client
+      .from('generation_tasks')
+      .insert([{
+        user_id,
+        task_type: 'anime',
+        prompt: `免费模型批量生成: ${project.title}`,
+        model: 'free-models-batch',
+        parameters: {
+          project_id: anime_project_id,
+          scene_count: scenes.length,
+          concurrency: concurrency || 3,
+        },
+        status: 'processing',
+        progress: 0,
+        started_at: new Date().toISOString(),
+      }])
+      .select('id')
+      .single();
+
+    const mainTaskId = mainTask?.id;
+
+    // 后台执行批量生成
+    batchQuickGenerate({
+      userId: user_id,
+      projectId: anime_project_id,
+      scenes,
+      style: style || project.style || '国风动漫',
+      resolution: resolution || '1080p',
+      concurrency: concurrency || 3,
+    }).then(async (result) => {
+      // 更新主任务
+      await client
+        .from('generation_tasks')
+        .update({
+          status: result.failed === 0 ? 'completed' : 'partial',
+          progress: 100,
+          result_data: {
+            success: result.success,
+            failed: result.failed,
+            total_time_ms: result.totalTime,
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', mainTaskId);
+    }).catch(err => {
+      console.error('[AnimeVideo] Batch free generate error:', err);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        task_id: mainTaskId,
+        scene_count: scenes.length,
+        concurrency: concurrency || 3,
+        message: `已开始使用免费模型批量生成 ${scenes.length} 个场景视频`,
+      },
+    });
+  } catch (error) {
+    console.error('[AnimeVideo] Batch free generate error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
+  }
+});
+
+/**
+ * 获取免费模型使用统计
+ * GET /api/v1/anime-video/free-models/stats
+ */
+router.get('/free-models/stats', async (req: Request, res: Response) => {
+  const usageStats = freeModelScheduler.getModelUsageStats();
+  const statsArray = Array.from(usageStats.entries()).map(([key, stats]) => ({
+    model: key,
+    model_name: FREE_VIDEO_MODELS[key].name,
+    dailyUsed: stats.dailyUsed,
+    dailyLimit: stats.dailyLimit === -1 ? '无限制' : stats.dailyLimit,
+    remaining: stats.dailyLimit === -1 ? '无限' : Math.max(0, stats.dailyLimit - stats.dailyUsed),
+    successRate: `${Math.round(stats.successRate * 100)}%`,
+    avgLatency: `${Math.round(stats.avgLatency / 1000)}s`,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      models: statsArray,
+      summary: {
+        totalModels: statsArray.length,
+        availableModels: statsArray.filter(s => s.remaining === '无限' || (typeof s.remaining === 'number' && s.remaining > 0)).length,
+      },
+    },
+  });
+});
+
 export default router;

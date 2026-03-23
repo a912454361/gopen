@@ -21,7 +21,8 @@
     "navigationBarBackgroundColor": "#1a1a2e",
     "navigationBarTitleText": "剑破苍穹",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#0f0f1a"
+    "backgroundColor": "#0f0f1a",
+    "pageOrientation": "landscape"
   },
   "tabBar": {
     "color": "#666666",

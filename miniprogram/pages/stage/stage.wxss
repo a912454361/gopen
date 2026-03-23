@@ -1,25 +1,36 @@
-/* 关卡选择页面样式 */
-.stage-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #1a0f1a 0%, #0f0f1a 100%);
-  padding: 20rpx;
-  padding-bottom: 150rpx;
+/* 横屏关卡选择页面样式 */
+
+.stage-landscape {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: linear-gradient(135deg, #0a0f1a 0%, #1a1a2e 100%);
 }
 
-/* 章节选择 */
-.chapter-header {
+/* 左侧关卡列表 */
+.stage-list-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20rpx;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.area-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 30rpx;
   padding: 20rpx;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16rpx;
   margin-bottom: 20rpx;
 }
 
 .chapter-nav {
-  width: 60rpx;
-  height: 60rpx;
+  width: 50rpx;
+  height: 50rpx;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   display: flex;
@@ -27,8 +38,8 @@
   justify-content: center;
 }
 
-.chapter-nav text {
-  font-size: 36rpx;
+.nav-icon {
+  font-size: 32rpx;
   color: #fff;
 }
 
@@ -37,25 +48,90 @@
 }
 
 .chapter-title {
-  font-size: 36rpx;
+  font-size: 32rpx;
   color: #ffd700;
   font-weight: bold;
   display: block;
 }
 
 .chapter-name {
-  font-size: 26rpx;
+  font-size: 22rpx;
   color: #888;
+}
+
+/* 关卡网格 */
+.stages-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 16rpx;
+  padding: 10rpx;
+}
+
+.stage-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.stage-node.cleared {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.stage-node.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 20rpx rgba(255, 215, 0, 0.3);
+}
+
+.stage-num {
+  font-size: 36rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.stars {
+  margin-top: 8rpx;
+}
+
+.star {
+  font-size: 16rpx;
+  color: #333;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.power-req {
+  font-size: 18rpx;
+  color: #888;
+  margin-top: 6rpx;
+}
+
+/* 右侧信息面板 */
+.info-panel {
+  width: 280rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 /* 玩家状态 */
 .player-status {
   display: flex;
   justify-content: space-around;
-  padding: 20rpx;
+  padding: 16rpx;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 16rpx;
-  margin-bottom: 20rpx;
+  border-radius: 12rpx;
 }
 
 .status-item {
@@ -63,195 +139,116 @@
 }
 
 .status-item .label {
-  font-size: 24rpx;
+  font-size: 20rpx;
   color: #888;
   display: block;
 }
 
 .status-item .value {
-  font-size: 32rpx;
+  font-size: 28rpx;
   color: #ffd700;
   font-weight: bold;
-}
-
-/* 关卡网格 */
-.stages-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16rpx;
-  margin-bottom: 20rpx;
-}
-
-.stage-item {
-  aspect-ratio: 1;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  position: relative;
-  transition: all 0.3s;
-}
-
-.stage-item.cleared {
-  background: rgba(76, 175, 80, 0.1);
-  border-color: rgba(76, 175, 80, 0.3);
-}
-
-.stage-item.selected {
-  border-color: #ffd700;
-  box-shadow: 0 0 20rpx rgba(255, 215, 0, 0.3);
-}
-
-.stage-num {
-  font-size: 40rpx;
-  color: #fff;
-  font-weight: bold;
-}
-
-.stage-stars {
-  margin-top: 6rpx;
-}
-
-.star {
-  font-size: 18rpx;
-  color: #444;
-}
-
-.star.filled {
-  color: #ffd700;
-}
-
-.stage-power {
-  margin-top: 6rpx;
-}
-
-.stage-power text {
-  font-size: 18rpx;
-  color: #888;
-}
-
-.cleared-badge {
-  position: absolute;
-  bottom: 4rpx;
-  font-size: 16rpx;
-  color: #4caf50;
 }
 
 /* 关卡详情 */
 .stage-detail {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(26, 26, 46, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20rpx 20rpx 0 0;
-  padding: 30rpx;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 100;
-}
-
-.detail-header {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20rpx;
+  flex-direction: column;
+  padding: 16rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12rpx;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.detail-header .title {
-  font-size: 32rpx;
+.detail-title {
+  font-size: 28rpx;
   color: #fff;
   font-weight: bold;
-}
-
-.detail-header .close {
-  font-size: 32rpx;
-  color: #888;
-  padding: 10rpx;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 10rpx 0;
-}
-
-.info-row .label {
-  font-size: 26rpx;
-  color: #888;
-}
-
-.info-row .value {
-  font-size: 26rpx;
-  color: #fff;
-}
-
-/* 奖励 */
-.rewards-section {
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.section-title {
-  font-size: 26rpx;
-  color: #888;
-  display: block;
+  text-align: center;
   margin-bottom: 16rpx;
 }
 
-.rewards-list {
+.detail-row {
   display: flex;
-  gap: 20rpx;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row .label {
+  font-size: 22rpx;
+  color: #888;
+}
+
+.detail-row .value {
+  font-size: 22rpx;
+  color: #fff;
+}
+
+/* 奖励预览 */
+.rewards-preview {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rewards-title {
+  font-size: 22rpx;
+  color: #888;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.rewards-items {
+  display: flex;
+  gap: 16rpx;
 }
 
 .reward-item {
   display: flex;
   align-items: center;
+  gap: 6rpx;
   background: rgba(255, 255, 255, 0.03);
-  padding: 12rpx 20rpx;
-  border-radius: 10rpx;
+  padding: 8rpx 12rpx;
+  border-radius: 8rpx;
 }
 
 .reward-item .icon {
-  font-size: 28rpx;
-  margin-right: 10rpx;
+  font-size: 20rpx;
 }
 
 .reward-item .amount {
-  font-size: 24rpx;
+  font-size: 20rpx;
   color: #fff;
 }
 
-/* 战力提示 */
-.power-tip {
+/* 战力碾压提示 */
+.power-crush {
   margin-top: 16rpx;
-  padding: 16rpx;
+  padding: 12rpx;
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
-  border-radius: 10rpx;
+  border-radius: 8rpx;
   text-align: center;
 }
 
-.power-tip text {
-  font-size: 26rpx;
+.power-crush text {
+  font-size: 22rpx;
   color: #ffd700;
 }
 
 /* 操作按钮 */
 .action-btns {
+  margin-top: auto;
   display: flex;
-  gap: 16rpx;
-  margin-top: 20rpx;
+  flex-direction: column;
+  gap: 12rpx;
 }
 
 .btn {
-  flex: 1;
-  padding: 24rpx 0;
-  border-radius: 20rpx;
-  font-size: 30rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
   font-weight: bold;
 }
 
@@ -265,20 +262,26 @@
   color: #000;
 }
 
-/* 批量扫荡按钮 */
-.batch-btn {
-  position: fixed;
-  bottom: 30rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 20rpx 60rpx;
-  background: linear-gradient(135deg, #4caf50, #2e7d32);
-  border-radius: 30rpx;
-  z-index: 50;
+/* 未选中提示 */
+.no-selection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
 }
 
-.batch-btn text {
-  font-size: 28rpx;
-  color: #fff;
-  font-weight: bold;
+.hint {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.batch-btn {
+  padding: 16rpx 30rpx;
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #4caf50;
 }

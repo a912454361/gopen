@@ -1,71 +1,70 @@
-<!--关卡选择页面-->
-<view class="stage-page">
-  <!-- 章节选择 -->
-  <view class="chapter-header">
-    <view class="chapter-nav" data-dir="-1" bindtap="changeChapter">
-      <text>‹</text>
-    </view>
-    <view class="chapter-info">
-      <text class="chapter-title">第{{currentChapter}}章</text>
-      <text class="chapter-name">剑气纵横</text>
-    </view>
-    <view class="chapter-nav" data-dir="1" bindtap="changeChapter">
-      <text>›</text>
-    </view>
-  </view>
-
-  <!-- 玩家状态 -->
-  <view class="player-status">
-    <view class="status-item">
-      <text class="label">战力</text>
-      <text class="value">{{playerPower}}</text>
-    </view>
-    <view class="status-item">
-      <text class="label">体力</text>
-      <text class="value">{{playerEnergy}}/200</text>
-    </view>
-  </view>
-
-  <!-- 关卡列表 -->
-  <view class="stages-grid">
-    <view 
-      wx:for="{{stages}}" 
-      wx:key="id"
-      class="stage-item {{item.cleared ? 'cleared' : ''}} {{selectedStage?.id === item.id ? 'selected' : ''}}"
-      data-stage="{{item}}"
-      bindtap="selectStage"
-    >
-      <view class="stage-num">{{item.stage}}</view>
-      <view class="stage-stars">
-        <text wx:for="{{3}}" wx:key="*this" class="star {{item2 < item.stars ? 'filled' : ''}}" wx:for-item="item2">★</text>
+<!--横屏关卡选择页面-->
+<view class="stage-landscape">
+  
+  <!-- 左侧关卡列表 -->
+  <view class="stage-list-area">
+    <view class="area-header">
+      <view class="chapter-nav" data-dir="-1" bindtap="changeChapter">
+        <text class="nav-icon">‹</text>
       </view>
-      <view class="stage-power">
-        <text>{{item.requiredPower}}</text>
+      <view class="chapter-info">
+        <text class="chapter-title">第{{currentChapter}}章</text>
+        <text class="chapter-name">剑气纵横</text>
       </view>
-      <view wx:if="{{item.cleared}}" class="cleared-badge">已通关</view>
-    </view>
-  </view>
-
-  <!-- 关卡详情 -->
-  <view wx:if="{{selectedStage}}" class="stage-detail">
-    <view class="detail-header">
-      <text class="title">第{{selectedStage.chapter}}章 第{{selectedStage.stage}}关</text>
-      <text class="close" bindtap="closeSelect">✕</text>
+      <view class="chapter-nav" data-dir="1" bindtap="changeChapter">
+        <text class="nav-icon">›</text>
+      </view>
     </view>
     
-    <view class="detail-content">
-      <view class="info-row">
-        <text class="label">推荐战力:</text>
+    <!-- 关卡网格 -->
+    <view class="stages-grid">
+      <view 
+        wx:for="{{stages}}" 
+        wx:key="id"
+        class="stage-node {{item.cleared ? 'cleared' : ''}} {{selectedStage?.id === item.id ? 'selected' : ''}}"
+        data-stage="{{item}}"
+        bindtap="selectStage"
+      >
+        <text class="stage-num">{{item.stage}}</text>
+        <view class="stars">
+          <text wx:for="{{3}}" wx:key="*this" class="star {{item2 < item.stars ? 'filled' : ''}}" wx:for-item="item2">★</text>
+        </view>
+        <text class="power-req">{{item.requiredPower}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 右侧信息面板 -->
+  <view class="info-panel">
+    <!-- 玩家状态 -->
+    <view class="player-status">
+      <view class="status-item">
+        <text class="label">战力</text>
+        <text class="value">{{playerPower}}</text>
+      </view>
+      <view class="status-item">
+        <text class="label">体力</text>
+        <text class="value">{{playerEnergy}}/200</text>
+      </view>
+    </view>
+    
+    <!-- 选中关卡详情 -->
+    <view wx:if="{{selectedStage}}" class="stage-detail">
+      <text class="detail-title">第{{selectedStage.stage}}关</text>
+      
+      <view class="detail-row">
+        <text class="label">推荐战力</text>
         <text class="value">{{selectedStage.requiredPower}}</text>
       </view>
-      <view class="info-row">
-        <text class="label">体力消耗:</text>
+      
+      <view class="detail-row">
+        <text class="label">体力消耗</text>
         <text class="value">6</text>
       </view>
       
-      <view class="rewards-section">
-        <text class="section-title">通关奖励</text>
-        <view class="rewards-list">
+      <view class="rewards-preview">
+        <text class="rewards-title">通关奖励</text>
+        <view class="rewards-items">
           <view class="reward-item">
             <text class="icon">💰</text>
             <text class="amount">x{{selectedStage.rewards.gold}}</text>
@@ -74,35 +73,34 @@
             <text class="icon">⭐</text>
             <text class="amount">x{{selectedStage.rewards.exp}}</text>
           </view>
-          <view class="reward-item">
-            <text class="icon">🎁</text>
-            <text class="amount">{{selectedStage.rewards.drop}}</text>
-          </view>
         </view>
       </view>
       
       <!-- 战力碾压提示 -->
-      <view wx:if="{{!selectedStage.cleared && playerPower >= selectedStage.requiredPower * 3}}" class="power-tip">
-        <text>💪 你的战力可以碾压此关卡</text>
+      <view wx:if="{{!selectedStage.cleared && playerPower >= selectedStage.requiredPower * 3}}" class="power-crush">
+        <text>💪 可碾压通关</text>
+      </view>
+      
+      <!-- 操作按钮 -->
+      <view class="action-btns">
+        <button class="btn battle" bindtap="startBattle">
+          {{selectedStage.cleared ? '再次挑战' : '开始战斗'}}
+        </button>
+        <button 
+          class="btn sweep" 
+          bindtap="sweepStage"
+          wx:if="{{selectedStage.cleared || playerPower >= selectedStage.requiredPower * 3}}"
+        >
+          {{selectedStage.cleared ? '扫荡' : '碾压'}}
+        </button>
       </view>
     </view>
     
-    <view class="action-btns">
-      <button class="btn battle" bindtap="startBattle">
-        {{selectedStage.cleared ? '再次挑战' : '开始战斗'}}
-      </button>
-      <button 
-        class="btn sweep" 
-        bindtap="sweepStage"
-        wx:if="{{selectedStage.cleared || playerPower >= selectedStage.requiredPower * 3}}"
-      >
-        {{selectedStage.cleared ? '扫荡' : '碾压通关'}}
-      </button>
+    <!-- 未选中提示 -->
+    <view wx:else class="no-selection">
+      <text class="hint">选择一个关卡</text>
+      <button class="batch-btn" bindtap="batchSweep">批量扫荡</button>
     </view>
   </view>
-
-  <!-- 批量扫荡按钮 -->
-  <view class="batch-btn" bindtap="batchSweep">
-    <text>批量扫荡</text>
-  </view>
+  
 </view>

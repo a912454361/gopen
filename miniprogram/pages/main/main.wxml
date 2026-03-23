@@ -1,8 +1,8 @@
-<!--游戏主页面 - 3D粒子效果-->
-<view class="container">
+<!--游戏主页面 - 横屏3D粒子效果-->
+<view class="landscape-container">
   
-  <!-- 3D画布 -->
-  <view class="canvas-container">
+  <!-- 左侧游戏画布区域 -->
+  <view class="game-area">
     <canvas 
       type="webgl"
       id="gameCanvas"
@@ -10,47 +10,11 @@
       bindtap="onCanvasTap"
     ></canvas>
     
-    <!-- 顶部UI -->
-    <view class="top-ui">
-      <!-- 用户信息 -->
-      <view class="user-info card-glass">
-        <view class="user-header">
-          <view class="avatar">
-            <text class="vip-badge" wx:if="{{user.vip > 0}}">V{{user.vip}}</text>
-          </view>
-          <view class="user-basic">
-            <text class="nickname">{{user.nickname}}</text>
-            <text class="level">Lv.{{user.level}}</text>
-          </view>
-          <view class="power">
-            <text class="power-value">{{user.power}}</text>
-            <text class="power-label">战力</text>
-          </view>
-        </view>
-      </view>
-      
-      <!-- 货币栏 -->
-      <view class="currency-bar card-glass">
-        <view class="currency-item" bindtap="showRecharge">
-          <text class="currency-icon">💰</text>
-          <text class="currency-value">{{user.gold}}</text>
-        </view>
-        <view class="currency-item" bindtap="showRecharge">
-          <text class="currency-icon">💎</text>
-          <text class="currency-value">{{user.gem}}</text>
-        </view>
-        <view class="currency-item">
-          <text class="currency-icon">⚡</text>
-          <text class="currency-value">{{user.energy}}</text>
-        </view>
-      </view>
-    </view>
-    
-    <!-- 底部UI -->
-    <view class="bottom-ui">
+    <!-- 画布内覆盖UI -->
+    <view class="canvas-overlay">
       <!-- 画质选择 -->
-      <view class="quality-selector">
-        <text class="quality-label">画质:</text>
+      <view class="quality-bar">
+        <text class="quality-label">画质</text>
         <text class="quality-btn {{quality === 'low' ? 'active' : ''}}" 
               data-quality="low" bindtap="setQuality">低</text>
         <text class="quality-btn {{quality === 'medium' ? 'active' : ''}}" 
@@ -61,63 +25,110 @@
               data-quality="ultra" bindtap="setQuality">极致</text>
       </view>
       
-      <!-- 粒子数 -->
-      <text class="particle-count">粒子数: {{particleCount}}</text>
+      <!-- 粒子数显示 -->
+      <view class="particle-display">
+        <text>粒子: {{particleCount}}</text>
+      </view>
     </view>
   </view>
 
-  <!-- 功能按钮 - 第一行 -->
-  <view class="action-buttons">
-    <button class="action-btn primary" bindtap="goToStory">
-      <text class="btn-icon">⚔️</text>
-      <text class="btn-text">开始冒险</text>
-    </button>
-    
-    <button class="action-btn" bindtap="goToStage">
-      <text class="btn-icon">🏰</text>
-      <text class="btn-text">闯关</text>
-    </button>
-    
-    <button class="action-btn" bindtap="goToRanking">
-      <text class="btn-icon">🏆</text>
-      <text class="btn-text">排行榜</text>
-    </button>
-  </view>
+  <!-- 右侧信息面板 -->
+  <view class="info-panel">
+    <!-- 用户信息卡片 -->
+    <view class="user-card">
+      <view class="user-header">
+        <view class="avatar-container">
+          <image class="avatar" src="/images/avatar-default.png" mode="aspectFill" />
+          <view class="vip-badge" wx:if="{{user.vip > 0}}">VIP{{user.vip}}</view>
+        </view>
+        <view class="user-info">
+          <text class="nickname">{{user.nickname}}</text>
+          <view class="level-bar">
+            <text class="level">Lv.{{user.level}}</text>
+            <view class="exp-bar">
+              <view class="exp-fill" style="width: {{user.expPercent || 50}}%"></view>
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 战力显示 -->
+      <view class="power-section">
+        <text class="power-label">战力</text>
+        <text class="power-value">{{user.power}}</text>
+      </view>
+      
+      <!-- 货币栏 -->
+      <view class="currency-section">
+        <view class="currency-item" bindtap="showRecharge">
+          <text class="icon">💰</text>
+          <text class="value">{{user.gold}}</text>
+          <text class="add">+</text>
+        </view>
+        <view class="currency-item" bindtap="showRecharge">
+          <text class="icon">💎</text>
+          <text class="value">{{user.gem}}</text>
+          <text class="add">+</text>
+        </view>
+        <view class="currency-item">
+          <text class="icon">⚡</text>
+          <text class="value">{{user.energy}}</text>
+          <text class="max">/200</text>
+        </view>
+      </view>
+    </view>
 
-  <!-- 功能按钮 - 第二行 -->
-  <view class="action-buttons">
-    <button class="action-btn" bindtap="goToArena">
-      <text class="btn-icon">⚡</text>
-      <text class="btn-text">竞技场</text>
-    </button>
-    
-    <button class="action-btn" bindtap="goToGuild">
-      <text class="btn-icon">🏯</text>
-      <text class="btn-text">战盟</text>
-    </button>
-    
-    <button class="action-btn" bindtap="goToPet">
-      <text class="btn-icon">🐉</text>
-      <text class="btn-text">宠物</text>
-    </button>
-  </view>
+    <!-- 主功能按钮 -->
+    <view class="main-actions">
+      <button class="action-btn large primary" bindtap="goToStory">
+        <text class="btn-icon">⚔️</text>
+        <view class="btn-content">
+          <text class="btn-title">开始冒险</text>
+          <text class="btn-desc">体验主线剧情</text>
+        </view>
+      </button>
+      
+      <button class="action-btn large" bindtap="goToStage">
+        <text class="btn-icon">🏰</text>
+        <view class="btn-content">
+          <text class="btn-title">闯关挑战</text>
+          <text class="btn-desc">战力碾压过关</text>
+        </view>
+      </button>
+    </view>
 
-  <!-- 功能按钮 - 第三行 -->
-  <view class="action-buttons">
-    <button class="action-btn" bindtap="goToFriend">
-      <text class="btn-icon">👥</text>
-      <text class="btn-text">好友</text>
-    </button>
-    
-    <button class="action-btn" bindtap="showRecharge">
-      <text class="btn-icon">💎</text>
-      <text class="btn-text">充值</text>
-    </button>
-    
-    <button class="action-btn" bindtap="showGMPanel">
-      <text class="btn-icon">🔧</text>
-      <text class="btn-text">调试</text>
-    </button>
+    <!-- 功能网格 -->
+    <view class="action-grid">
+      <button class="grid-btn" bindtap="goToRanking">
+        <text class="icon">🏆</text>
+        <text class="label">排行榜</text>
+      </button>
+      <button class="grid-btn" bindtap="goToArena">
+        <text class="icon">⚡</text>
+        <text class="label">竞技场</text>
+      </button>
+      <button class="grid-btn" bindtap="goToGuild">
+        <text class="icon">🏯</text>
+        <text class="label">战盟</text>
+      </button>
+      <button class="grid-btn" bindtap="goToPet">
+        <text class="icon">🐉</text>
+        <text class="label">宠物</text>
+      </button>
+      <button class="grid-btn" bindtap="goToFriend">
+        <text class="icon">👥</text>
+        <text class="label">好友</text>
+      </button>
+      <button class="grid-btn" bindtap="showRecharge">
+        <text class="icon">💎</text>
+        <text class="label">充值</text>
+      </button>
+    </view>
+
+    <!-- 底部调试按钮 -->
+    <view class="debug-bar">
+      <button class="debug-btn" bindtap="showGMPanel">🔧 调试</button>
+    </view>
   </view>
 
   <!-- 充值弹窗 -->
@@ -129,25 +140,21 @@
       </view>
       
       <scroll-view class="recharge-packages" scroll-y>
-        <view class="package-item {{item.recommended ? 'recommended' : ''}} {{item.hot ? 'hot' : ''}} {{item.bestValue ? 'best-value' : ''}}" 
-              wx:for="{{packages}}" 
-              wx:key="id"
-              data-id="{{item.id}}"
-              bindtap="handleRecharge">
-          <view class="package-badge" wx:if="{{item.recommended || item.hot || item.bestValue}}">
-            {{item.bestValue ? '最超值' : item.hot ? '热卖' : '推荐'}}
-          </view>
-          <text class="package-name">{{item.name}}</text>
-          <text class="package-bonus">赠送{{item.bonus}}</text>
-          <view class="package-items">
-            <text class="item-text" wx:for="{{item.items}}" wx:for-item="reward" wx:key="*this">
-              {{reward.type === 'gold' ? '💰' : reward.type === 'gem' ? '💎' : '🎁'}} 
-              {{reward.amount || reward.count}}
-            </text>
-          </view>
-          <view class="package-price">
-            <text class="price-symbol">¥</text>
-            <text class="price-value">{{item.price}}</text>
+        <view class="package-grid">
+          <view class="package-item {{item.recommended ? 'recommended' : ''}} {{item.hot ? 'hot' : ''}} {{item.bestValue ? 'best-value' : ''}}" 
+                wx:for="{{packages}}" 
+                wx:key="id"
+                data-id="{{item.id}}"
+                bindtap="handleRecharge">
+            <view class="package-badge" wx:if="{{item.recommended || item.hot || item.bestValue}}">
+              {{item.bestValue ? '最超值' : item.hot ? '热卖' : '推荐'}}
+            </view>
+            <text class="package-name">{{item.name}}</text>
+            <text class="package-bonus">赠送{{item.bonus}}</text>
+            <view class="package-price">
+              <text class="price-symbol">¥</text>
+              <text class="price-value">{{item.price}}</text>
+            </view>
           </view>
         </view>
       </scroll-view>

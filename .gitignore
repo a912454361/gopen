@@ -34,21 +34,16 @@ coverage/
 tmp/
 temp/
 
-# Large release files (>100MB, cannot push to GitHub)
-electron-app/release/
+# Large files (>100MB, cannot push to GitHub)
+electron-app/release/win-unpacked/
+electron-app/node_modules/
+electron-app/dist/
 electron-app/*.tar.gz
-*.exe
-*.dmg
-*.AppImage
-*.msi
 release-package/electron-app/
-
-# Content extract
-content-extract/
 
 # Source archives
 *.tar.gz
 gopen-source.tar.gz
 
-# Electron app (too large for GitHub)
-electron-app/
+# Content extract
+content-extract/

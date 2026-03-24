@@ -1,6 +1,6 @@
 /**
  * 视频管理面板
- * 功能：视频列表、预览播放、下载、删除
+ * 功能：视频列表、预览播放、下载、删除、生成测试视频
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -14,6 +14,8 @@ import {
   Modal,
   Text,
   Dimensions,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { FontAwesome6 } from '@expo/vector-icons';
@@ -45,6 +47,16 @@ interface VideosPanelProps {
   adminKey: string;
 }
 
+// 视频主题选项
+const VIDEO_THEMES = [
+  { key: 'xianxia', label: '仙侠', color: '#1a0a2e' },
+  { key: 'wuxia', label: '武侠', color: '#0a1a0a' },
+  { key: 'zhanDou', label: '战斗', color: '#2e0a0a' },
+  { key: 'senlin', label: '森林', color: '#0a2e1a' },
+  { key: 'yejing', label: '夜景', color: '#0a0a2e' },
+  { key: 'richu', label: '日出', color: '#3e2a0a' },
+];
+
 export function VideosPanel({ adminKey }: VideosPanelProps) {
   const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -60,6 +72,13 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
   const [duration, setDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<Video>(null);
+  
+  // 生成测试视频状态
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateTitle, setGenerateTitle] = useState('');
+  const [generateDuration, setGenerateDuration] = useState('15');
+  const [generateTheme, setGenerateTheme] = useState('xianxia');
+  const [generating, setGenerating] = useState(false);
 
   // 获取视频列表
   const fetchVideos = useCallback(async () => {
@@ -88,6 +107,51 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
     setRefreshing(true);
     fetchVideos();
   }, [fetchVideos]);
+  
+  // 生成测试视频
+  const handleGenerateVideo = useCallback(async () => {
+    if (!generateTitle.trim()) {
+      Alert.alert('提示', '请输入视频标题');
+      return;
+    }
+    
+    const dur = parseInt(generateDuration, 10);
+    if (isNaN(dur) || dur < 5 || dur > 60) {
+      Alert.alert('提示', '时长请在5-60秒之间');
+      return;
+    }
+    
+    setGenerating(true);
+    try {
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/generate-test?key=${adminKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: generateTitle,
+            duration: dur,
+            theme: generateTheme,
+          }),
+        }
+      );
+      const result = await response.json();
+      
+      if (result.success) {
+        Alert.alert('成功', '测试视频已生成');
+        setShowGenerateModal(false);
+        setGenerateTitle('');
+        await fetchVideos();
+      } else {
+        Alert.alert('失败', result.error || '生成失败');
+      }
+    } catch (error) {
+      console.error('Generate video error:', error);
+      Alert.alert('错误', '网络错误');
+    } finally {
+      setGenerating(false);
+    }
+  }, [adminKey, generateTitle, generateDuration, generateTheme, fetchVideos]);
 
   // 打开视频播放器
   const openPlayer = useCallback((video: VideoInfo) => {
@@ -628,25 +692,45 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
         </ThemedView>
       </View>
 
+      {/* 生成测试视频按钮 */}
+      <TouchableOpacity
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: Spacing.sm,
+          paddingVertical: Spacing.md,
+          paddingHorizontal: Spacing.lg,
+          backgroundColor: theme.primary,
+          borderRadius: BorderRadius.lg,
+        }}
+        onPress={() => setShowGenerateModal(true)}
+      >
+        <FontAwesome6 name="wand-magic-sparkles" size={16} color={theme.buttonPrimaryText} />
+        <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>生成测试视频</ThemedText>
+      </TouchableOpacity>
+
       {/* 视频列表 */}
       <View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
           <ThemedText variant="h3" color={theme.textPrimary}>视频列表</ThemedText>
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: Spacing.sm,
-              paddingVertical: Spacing.sm,
-              paddingHorizontal: Spacing.md,
-              backgroundColor: theme.backgroundTertiary,
-              borderRadius: BorderRadius.md,
-            }}
-            onPress={handleRefresh}
-          >
-            <FontAwesome6 name={refreshing ? 'spinner' : 'rotate'} size={12} color={theme.textPrimary} />
-            <ThemedText variant="small" color={theme.textPrimary}>刷新</ThemedText>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: Spacing.sm,
+                paddingVertical: Spacing.sm,
+                paddingHorizontal: Spacing.md,
+                backgroundColor: theme.backgroundTertiary,
+                borderRadius: BorderRadius.md,
+              }}
+              onPress={handleRefresh}
+            >
+              <FontAwesome6 name={refreshing ? 'spinner' : 'rotate'} size={12} color={theme.textPrimary} />
+              <ThemedText variant="small" color={theme.textPrimary}>刷新</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {videos.length === 0 ? (
@@ -676,6 +760,170 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
           />
         )}
       </View>
+
+      {/* 生成测试视频模态框 */}
+      <Modal
+        visible={showGenerateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGenerateModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: Spacing.lg,
+          }}>
+            <ThemedView
+              level="default"
+              style={{
+                width: '100%',
+                maxWidth: 400,
+                borderRadius: BorderRadius.lg,
+                padding: Spacing.xl,
+              }}
+            >
+              {/* 标题 */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg }}>
+                <ThemedText variant="h4" color={theme.textPrimary}>生成测试视频</ThemedText>
+                <TouchableOpacity onPress={() => setShowGenerateModal(false)}>
+                  <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* 标题输入 */}
+              <View style={{ marginBottom: Spacing.md }}>
+                <ThemedText variant="smallMedium" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
+                  视频标题
+                </ThemedText>
+                <TextInput
+                  style={{
+                    backgroundColor: theme.backgroundTertiary,
+                    borderRadius: BorderRadius.md,
+                    padding: Spacing.md,
+                    color: theme.textPrimary,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                  }}
+                  placeholder="请输入标题"
+                  placeholderTextColor={theme.textMuted}
+                  value={generateTitle}
+                  onChangeText={setGenerateTitle}
+                  maxLength={15}
+                />
+              </View>
+
+              {/* 时长输入 */}
+              <View style={{ marginBottom: Spacing.md }}>
+                <ThemedText variant="smallMedium" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
+                  视频时长（秒，5-60）
+                </ThemedText>
+                <TextInput
+                  style={{
+                    backgroundColor: theme.backgroundTertiary,
+                    borderRadius: BorderRadius.md,
+                    padding: Spacing.md,
+                    color: theme.textPrimary,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                  }}
+                  placeholder="15"
+                  placeholderTextColor={theme.textMuted}
+                  value={generateDuration}
+                  onChangeText={setGenerateDuration}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+
+              {/* 主题选择 */}
+              <View style={{ marginBottom: Spacing.xl }}>
+                <ThemedText variant="smallMedium" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
+                  视频主题
+                </ThemedText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                  {VIDEO_THEMES.map((t) => (
+                    <TouchableOpacity
+                      key={t.key}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.xs,
+                        paddingVertical: Spacing.sm,
+                        paddingHorizontal: Spacing.md,
+                        borderRadius: BorderRadius.md,
+                        backgroundColor: generateTheme === t.key ? theme.primary : theme.backgroundTertiary,
+                        borderWidth: 1,
+                        borderColor: generateTheme === t.key ? theme.primary : theme.border,
+                      }}
+                      onPress={() => setGenerateTheme(t.key)}
+                    >
+                      <View style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        backgroundColor: t.color,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.3)',
+                      }} />
+                      <ThemedText
+                        variant="small"
+                        color={generateTheme === t.key ? theme.buttonPrimaryText : theme.textPrimary}
+                      >
+                        {t.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* 按钮 */}
+              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: Spacing.md,
+                    borderRadius: BorderRadius.md,
+                    backgroundColor: theme.backgroundTertiary,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setShowGenerateModal(false)}
+                >
+                  <ThemedText variant="smallMedium" color={theme.textPrimary}>取消</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: Spacing.md,
+                    borderRadius: BorderRadius.md,
+                    backgroundColor: theme.primary,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: Spacing.sm,
+                  }}
+                  onPress={handleGenerateVideo}
+                  disabled={generating}
+                >
+                  {generating ? (
+                    <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
+                  ) : (
+                    <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.buttonPrimaryText} />
+                  )}
+                  <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>
+                    {generating ? '生成中...' : '生成视频'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </ThemedView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* 视频播放器模态框 */}
       {renderVideoPlayer()}

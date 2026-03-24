@@ -18,8 +18,8 @@ import crypto from 'crypto';
 
 const execAsync = promisify(exec);
 
-// 模拟模式开关 - 设为true时使用本地生成视频
-const SIMULATION_MODE = true;
+// 模拟模式开关 - 设为false时尝试下载真实视频，失败则生成视觉效果视频
+const SIMULATION_MODE = false;
 
 // ============================================================
 // 类型定义
@@ -406,11 +406,18 @@ class VideoCompositionService {
       const outputPath = path.join(scenesDir, `scene_${scene.order}.mp4`);
       
       if (SIMULATION_MODE) {
-        // 模拟模式：使用FFmpeg生成测试视频
-        await this.generateTestVideo(outputPath, scene.description, 10);
+        // 模拟模式：生成视觉效果视频
+        await this.generateVisualVideo(outputPath, scene.description, 30);
       } else {
-        // 真实模式：下载视频
-        await this.downloadFile(scene.videoUrl, outputPath);
+        // 真实模式：尝试下载视频，失败则生成视觉效果视频
+        try {
+          console.log(`[VideoComposition] Downloading scene ${scene.order}: ${scene.videoUrl}`);
+          await this.downloadFile(scene.videoUrl, outputPath);
+          console.log(`[VideoComposition] Downloaded: ${outputPath}`);
+        } catch (error: any) {
+          console.log(`[VideoComposition] Download failed, generating visual video: ${error.message}`);
+          await this.generateVisualVideo(outputPath, scene.description, 30);
+        }
       }
       
       downloaded.push({
@@ -423,14 +430,78 @@ class VideoCompositionService {
   }
 
   /**
+   * 生成视觉效果视频（动漫风格）- 带动态效果
+   */
+  private async generateVisualVideo(outputPath: string, description: string, duration: number): Promise<void> {
+    // 根据场景描述选择颜色主题
+    const colorTheme = this.getColorTheme(description);
+    const safeText = description.replace(/'/g, "").replace(/"/g, "").substring(0, 15);
+    
+    console.log(`[VideoComposition] Generating visual video for: ${safeText}`);
+    
+    // 使用更可靠的方式生成带有动态效果的视频
+    // 步骤1：生成渐变背景帧
+    const framePath = outputPath.replace('.mp4', '_frame.png');
+    const gradientCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg1}:s=1920x1080:d=1,format=yuv420p" -vf "drawtext=text='${safeText}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" -frames:v 1 "${framePath}"`;
+    await execAsync(gradientCmd);
+    
+    // 步骤2：生成带有动态缩放和淡入效果的视频
+    const videoCmd = `ffmpeg -y -loop 1 -i "${framePath}" \
+      -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
+      -vf "scale=1920:1080,zoompan=z='min(zoom+0.0005,1.2)':d=${duration*25}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25,fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
+      -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
+      -c:a aac -b:a 128k \
+      -pix_fmt yuv420p -movflags +faststart \
+      -t ${duration} "${outputPath}"`;
+    
+    await execAsync(videoCmd);
+    
+    // 清理临时帧
+    try {
+      await fs.unlink(framePath);
+    } catch (e) {
+      // 忽略
+    }
+    
+    console.log(`[VideoComposition] Video generated: ${outputPath}`);
+  }
+
+  /**
+   * 根据场景描述获取颜色主题
+   */
+  private getColorTheme(description: string): { bg1: string; bg2: string; text: string } {
+    const desc = description.toLowerCase();
+    
+    // 仙侠/武侠 - 紫蓝色调
+    if (desc.includes('剑') || desc.includes('仙') || desc.includes('侠') || desc.includes('气')) {
+      return { bg1: '0x1a0a2e', bg2: '0x0a1a3e', text: 'white' };
+    }
+    // 战斗 - 红橙色调
+    if (desc.includes('战') || desc.includes('斗') || desc.includes('血') || desc.includes('杀')) {
+      return { bg1: '0x2e0a0a', bg2: '0x3e1a0a', text: '#ffcc00' };
+    }
+    // 森林/自然 - 绿色调
+    if (desc.includes('林') || desc.includes('山') || desc.includes('竹') || desc.includes('溪')) {
+      return { bg1: '0x0a2e1a', bg2: '0x1a3e2a', text: '#aaffaa' };
+    }
+    // 夜景 - 深蓝色调
+    if (desc.includes('夜') || desc.includes('暗') || desc.includes('月') || desc.includes('星')) {
+      return { bg1: '0x0a0a2e', bg2: '0x1a1a4e', text: '#aaccff' };
+    }
+    // 日出/日落 - 金橙色调
+    if (desc.includes('日') || desc.includes('晨') || desc.includes('昏') || desc.includes('阳')) {
+      return { bg1: '0x3e2a0a', bg2: '0x4e3a1a', text: '#ffddaa' };
+    }
+    // 默认 - 神秘紫色调
+    return { bg1: '0x1a1a2e', bg2: '0x2a2a4e', text: 'white' };
+  }
+
+  /**
    * 生成测试视频（模拟模式）
    */
   private async generateTestVideo(outputPath: string, description: string, duration: number): Promise<void> {
-    // 使用FFmpeg生成带文字和静音音频的测试视频
-    const safeText = description.replace(/'/g, "'\"'\"'").substring(0, 30);
-    const cmd = `ffmpeg -y -f lavfi -i color=c=0x1a1a2e:s=1920x1080:d=${duration} -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -vf "drawtext=text='${safeText}':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2" -c:v libx264 -c:a aac -pix_fmt yuv420p -t ${duration} "${outputPath}"`;
-    
-    await execAsync(cmd);
+    // 使用视觉效果版本
+    await this.generateVisualVideo(outputPath, description, duration);
   }
 
   /**
@@ -726,15 +797,16 @@ class VideoCompositionService {
     // 背景音乐处理
     let bgmPath: string;
     
-    if (SIMULATION_MODE) {
-      // 模拟模式：生成静音音轨
-      bgmPath = path.join(workDir, 'bgm.mp3');
-      await this.generateSilentAudio(bgmPath, videoDuration);
-    } else {
-      // 真实模式：下载背景音乐
+    // 始终尝试下载背景音乐，失败则使用静音
+    bgmPath = path.join(workDir, 'bgm.mp3');
+    try {
       const bgmUrl = this.getBGMUrl(config.bgmStyle);
-      bgmPath = path.join(workDir, 'bgm.mp3');
+      console.log(`[VideoComposition] Downloading BGM: ${bgmUrl}`);
       await this.downloadFile(bgmUrl, bgmPath);
+      console.log('[VideoComposition] BGM downloaded successfully');
+    } catch (error: any) {
+      console.log(`[VideoComposition] BGM download failed, using silent audio: ${error.message}`);
+      await this.generateSilentAudio(bgmPath, videoDuration);
     }
 
     // 构建命令

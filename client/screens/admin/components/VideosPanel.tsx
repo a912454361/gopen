@@ -500,28 +500,46 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
             </TouchableOpacity>
           </View>
 
-          {/* 视频播放器 */}
+          {/* 视频播放器 - Web端使用HTML5 video，移动端使用expo-av */}
           <View style={{
             flex: 1,
             justifyContent: 'center',
             alignItems: 'center',
           }}>
-            <Video
-              ref={videoRef}
-              source={{ uri: videoUrl }}
-              style={{
-                width: isFullscreen ? SCREEN_HEIGHT : SCREEN_WIDTH,
-                height: isFullscreen ? SCREEN_WIDTH : SCREEN_WIDTH * 9 / 16,
-              }}
-              resizeMode={isFullscreen ? ResizeMode.STRETCH : ResizeMode.CONTAIN}
-              shouldPlay={isPlaying}
-              isLooping={false}
-              onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-              useNativeControls={false}
-            />
+            {Platform.OS === 'web' ? (
+              // Web端使用HTML5 video标签
+              <video
+                src={videoUrl}
+                style={{
+                  width: '100%',
+                  maxWidth: 1280,
+                  height: 'auto',
+                  maxHeight: '80vh',
+                }}
+                controls
+                autoPlay
+                playsInline
+              />
+            ) : (
+              // 移动端使用expo-av
+              <Video
+                ref={videoRef}
+                source={{ uri: videoUrl }}
+                style={{
+                  width: isFullscreen ? SCREEN_HEIGHT : SCREEN_WIDTH,
+                  height: isFullscreen ? SCREEN_WIDTH : SCREEN_WIDTH * 9 / 16,
+                }}
+                resizeMode={isFullscreen ? ResizeMode.STRETCH : ResizeMode.CONTAIN}
+                shouldPlay={isPlaying}
+                isLooping={false}
+                onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+                useNativeControls={true}
+              />
+            )}
           </View>
 
-          {/* 播放控制栏 */}
+          {/* 播放控制栏 - 仅移动端显示 */}
+          {Platform.OS !== 'web' && (
           <View style={{
             backgroundColor: 'rgba(0,0,0,0.7)',
             paddingTop: Spacing.md,
@@ -608,6 +626,7 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
               </TouchableOpacity>
             </View>
           </View>
+          )}
         </View>
       </Modal>
     );

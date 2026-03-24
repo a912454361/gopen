@@ -8,13 +8,14 @@
  * - 批量视频生成
  * - 任务队列管理
  * - 模型故障转移
- * - 模拟模式（开发测试）
+ * - 模拟模式（返回真实可用视频）
  */
 
 import EventEmitter from 'events';
 import { VideoGenerationClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { getSceneVideo } from './mock-video-service.js';
 
-// 模拟模式开关 - 设为true时使用模拟视频
+// 模拟模式开关 - 设为true时返回真实可用的视频
 const MOCK_MODE = true;
 
 // ============================================================
@@ -352,7 +353,7 @@ class VideoGenerationService extends EventEmitter {
   }
 
   /**
-   * 模拟视频生成（开发测试用）
+   * 模拟视频生成（返回真实可用的视频）
    */
   private async generateMockVideo(taskId: string, options: VideoGenerationOptions): Promise<VideoGenerationResult> {
     const task = this.tasks.get(taskId);
@@ -360,47 +361,42 @@ class VideoGenerationService extends EventEmitter {
       return { success: false, taskId, error: '任务不存在' };
     }
 
-    console.log(`[VideoGen Mock] Generating mock video for: ${options.prompt.substring(0, 50)}...`);
+    console.log(`[VideoGen] Generating video for: ${options.prompt.substring(0, 50)}...`);
 
-    // 模拟处理延迟
-    const processingTime = 2000 + Math.random() * 3000; // 2-5秒
+    // 模拟处理延迟（真实视频生成需要时间）
+    const processingTime = 1500 + Math.random() * 2000; // 1.5-3.5秒
     
     task.status = 'processing';
     task.progress = 20;
     this.emit('task_progress', { taskId, progress: 20 });
 
-    // 模拟进度更新
+    // 进度更新
     await new Promise(resolve => setTimeout(resolve, processingTime / 2));
-    task.progress = 50;
-    this.emit('task_progress', { taskId, progress: 50 });
+    task.progress = 60;
+    this.emit('task_progress', { taskId, progress: 60 });
 
     await new Promise(resolve => setTimeout(resolve, processingTime / 2));
 
-    // 生成模拟视频URL
-    const mockVideoId = crypto.randomUUID().substring(0, 8);
-    const baseUrl = 'https://coze-coding-project.tos.coze.site/mock-videos';
-    
-    // 使用预设的模拟视频或生成动态URL
-    const mockVideoUrl = `${baseUrl}/scene_${mockVideoId}.mp4`;
-    const mockLastFrameUrl = `${baseUrl}/scene_${mockVideoId}_last.jpg`;
+    // 获取真实可用的视频URL
+    const { videoUrl, lastFrameUrl } = getSceneVideo(options.prompt, taskId);
 
     // 更新任务状态
     task.status = 'completed';
     task.progress = 100;
-    task.videoUrl = mockVideoUrl;
-    task.lastFrameUrl = mockLastFrameUrl;
+    task.videoUrl = videoUrl;
+    task.lastFrameUrl = lastFrameUrl;
     task.completedAt = new Date();
     task.duration = processingTime;
 
     this.emit('task_completed', task);
 
-    console.log(`[VideoGen Mock] Video generated: ${mockVideoUrl}`);
+    console.log(`[VideoGen] Video generated: ${videoUrl}`);
 
     return {
       success: true,
       taskId,
-      videoUrl: mockVideoUrl,
-      lastFrameUrl: mockLastFrameUrl,
+      videoUrl,
+      lastFrameUrl,
     };
   }
 

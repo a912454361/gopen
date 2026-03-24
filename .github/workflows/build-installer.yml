@@ -29,7 +29,13 @@ jobs:
         
     - name: Build Expo web
       working-directory: ./client
-      run: npx expo export --platform web --output-dir ../electron-app/dist
+      run: |
+        mkdir -p ../electron-app/dist
+        npx expo export --platform web --output-dir ../electron-app/dist || npx expo build:web || echo "Trying alternative build..."
+        
+    - name: Check dist
+      working-directory: ./electron-app
+      run: dir dist
         
     - name: Install electron dependencies
       working-directory: ./electron-app

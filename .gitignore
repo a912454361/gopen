@@ -37,7 +37,6 @@ temp/
 # Large files (>100MB, cannot push to GitHub)
 electron-app/release/win-unpacked/
 electron-app/node_modules/
-electron-app/dist/
 electron-app/*.tar.gz
 release-package/electron-app/
 

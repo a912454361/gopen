@@ -83,40 +83,113 @@ router.get('/', async (req: Request, res: Response) => {
     const key = req.query.key as string;
     
     // 验证管理员权限
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'GtAdmin2024SecretKey8888';
     console.log('[AdminVideos] Key received:', key, 'Expected:', ADMIN_KEY);
     if (key !== ADMIN_KEY) {
       console.log('[AdminVideos] Permission denied');
       return res.status(403).json({ success: false, error: '无权限' });
     }
     
-    // 确保目录存在
+    const videos: VideoInfo[] = [];
+    
+    // 1. 读取本地视频文件
     try {
       await fs.mkdir(OUTPUT_DIR, { recursive: true });
-    } catch (e) {
-      // 目录已存在
-    }
-    
-    // 读取目录中的所有视频文件
-    console.log('[AdminVideos] Reading directory:', OUTPUT_DIR);
-    const files = await fs.readdir(OUTPUT_DIR);
-    console.log('[AdminVideos] Files found:', files);
-    const videoFiles = files.filter(f => f.endsWith('.mp4'));
-    console.log('[AdminVideos] Video files:', videoFiles);
-    
-    // 获取每个视频的信息
-    const videos: VideoInfo[] = [];
-    for (const file of videoFiles) {
-      const filePath = path.join(OUTPUT_DIR, file);
-      const info = await getVideoInfo(filePath);
-      console.log('[AdminVideos] File info:', file, info ? 'success' : 'null');
-      if (info) {
-        videos.push(info);
+      const files = await fs.readdir(OUTPUT_DIR);
+      const videoFiles = files.filter(f => f.endsWith('.mp4'));
+      
+      for (const file of videoFiles) {
+        const filePath = path.join(OUTPUT_DIR, file);
+        const info = await getVideoInfo(filePath);
+        if (info) {
+          videos.push(info);
+        }
       }
+    } catch (e) {
+      console.log('[AdminVideos] Local dir read error:', e);
     }
     
-    // 按集数排序
-    videos.sort((a, b) => a.episodeNumber - b.episodeNumber);
+    // 2. 添加合并后的完整视频（硬编码列表）
+    const mergedVideos = [
+      {
+        id: 'merged_huanjing',
+        filename: '幻境勇者传_完整版.mp4',
+        title: '《幻境勇者传》完整版',
+        episodeNumber: 1,
+        size: 85290000,
+        duration: 30,
+        resolution: '1920x1080',
+        createdAt: '2026-03-24T14:00:00.000Z',
+        status: 'completed',
+        outputPath: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/anime/merged/%E5%B9%BB%E5%A2%83%E5%8B%87%E8%80%85%E4%BC%A0_%E5%AE%8C%E6%95%B4%E7%89%88.mp4?sign=1776923172-5c622d93e2-0-130469994d307003c4bbe91c3718fdeda678d22083c81f75375a6bdbe47b68f2',
+        scenesCount: 6,
+      },
+      {
+        id: 'merged_xianwu',
+        filename: '仙武传说_完整版.mp4',
+        title: '《仙武传说》完整版',
+        episodeNumber: 1,
+        size: 56060000,
+        duration: 30,
+        resolution: '1920x1080',
+        createdAt: '2026-03-24T14:00:00.000Z',
+        status: 'completed',
+        outputPath: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/anime/merged/%E4%BB%99%E6%AD%A6%E4%BC%A0%E8%AF%B4_%E5%AE%8C%E6%95%B4%E7%89%88.mp4?sign=1776923172-9089b4f1b8-0-3c59efb42d27939697100a8a1b76845fa0889582aef88c679daa96612683878b',
+        scenesCount: 6,
+      },
+      {
+        id: 'merged_jianpo',
+        filename: '剑破苍穹_完整版.mp4',
+        title: '《剑破苍穹》完整版',
+        episodeNumber: 1,
+        size: 66060000,
+        duration: 25,
+        resolution: '1920x1080',
+        createdAt: '2026-03-24T14:00:00.000Z',
+        status: 'completed',
+        outputPath: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/anime/merged/_%E5%89%91%E7%A0%B4%E8%8B%8D%E7%A9%B9___%E5%9B%BD%E9%A3%8E%E7%87%83%E7%88%86%E5%8A%A8%E6%BC%AB_%E5%AE%8C%E6%95%B4%E7%89%88.mp4?sign=1776923172-d201c03b9e-0-93517d74a702abb2791ad7902e23e7167b3f9c3fc2d2b05ad027b82762777474',
+        scenesCount: 5,
+      },
+    ];
+    videos.push(...mergedVideos);
+    
+    // 3. 从数据库读取动漫项目场景视频
+    try {
+      const { getSupabaseClient } = await import('../storage/database/supabase-client.js');
+      const supabase = getSupabaseClient();
+      
+      const { data: projects, error } = await supabase
+        .from('anime_projects')
+        .select('id, title, video_urls, video_status, created_at')
+        .not('video_urls', 'is', null);
+      
+      if (!error && projects) {
+        for (const project of projects) {
+          if (project.video_urls && Array.isArray(project.video_urls)) {
+            project.video_urls.forEach((url: string, index: number) => {
+              videos.push({
+                id: `db_${project.id}_${index}`,
+                filename: url.split('/').pop()?.split('?')[0] || `video_${index}.mp4`,
+                title: `${project.title} - 场景${index + 1}`,
+                episodeNumber: index + 1,
+                size: 0,
+                duration: 5,
+                resolution: '1920x1080',
+                createdAt: project.created_at,
+                status: project.video_status === 'completed' ? 'completed' : 'processing',
+                outputPath: url,
+                scenesCount: 1,
+              });
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[AdminVideos] Database read error:', e);
+    }
+    
+    // 按创建时间排序（最新的在前）
+    videos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     res.json({
       success: true,

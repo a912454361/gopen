@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.expo/
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Large release files (>100MB, cannot push to GitHub)
+electron-app/release/
+electron-app/*.tar.gz
+*.exe
+*.dmg
+*.AppImage
+*.msi
+release-package/electron-app/
+
+# Content extract
+content-extract/
+
+# Source archives
+*.tar.gz
+gopen-source.tar.gz
+
+# Electron app (too large for GitHub)
+electron-app/

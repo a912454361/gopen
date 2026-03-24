@@ -19,6 +19,19 @@ import type { VideoGenerationOptions } from '../services/video-generation-servic
 
 const router = express.Router();
 
+// Helper: 从Request提取headers
+function extractHeaders(req: Request): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (typeof value === 'string') {
+      headers[key] = value;
+    } else if (Array.isArray(value)) {
+      headers[key] = value[0];
+    }
+  }
+  return headers;
+}
+
 // ============================================================
 // POST /api/v1/video/generate - 生成单个视频
 // ============================================================
@@ -47,7 +60,17 @@ router.post('/generate', async (req: Request, res: Response) => {
       });
     }
 
-    const videoService = createVideoServiceFromRequest(req);
+    // 从请求头提取自定义headers
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === 'string') {
+        headers[key] = value;
+      } else if (Array.isArray(value)) {
+        headers[key] = value[0];
+      }
+    }
+    
+    const videoService = createVideoServiceFromRequest({ headers });
 
     const options: VideoGenerationOptions = {
       prompt,
@@ -113,7 +136,7 @@ router.post('/batch', async (req: Request, res: Response) => {
       });
     }
 
-    const videoService = createVideoServiceFromRequest(req);
+    const videoService = createVideoServiceFromRequest({ headers: extractHeaders(req) });
 
     console.log(`[VideoAPI] Batch generating ${items.length} videos, concurrency: ${concurrency}`);
 
@@ -162,7 +185,7 @@ router.post('/image-to-video', async (req: Request, res: Response) => {
       });
     }
 
-    const videoService = createVideoServiceFromRequest(req);
+    const videoService = createVideoServiceFromRequest({ headers: extractHeaders(req) });
 
     console.log('[VideoAPI] Image-to-video:', {
       imageUrl: imageUrl.substring(0, 60),
@@ -234,7 +257,7 @@ router.post('/sequential', async (req: Request, res: Response) => {
       });
     }
 
-    const videoService = createVideoServiceFromRequest(req);
+    const videoService = createVideoServiceFromRequest({ headers: extractHeaders(req) });
 
     console.log(`[VideoAPI] Sequential generation: ${prompts.length} videos`);
 
@@ -270,7 +293,7 @@ router.post('/sequential', async (req: Request, res: Response) => {
 // ============================================================
 
 router.get('/task/:taskId', (req: Request, res: Response) => {
-  const { taskId } = req.params;
+  const taskId = req.params.taskId as string;
   const videoService = getVideoGenerationService();
 
   const task = videoService.getTaskStatus(taskId);
@@ -311,7 +334,7 @@ router.get('/tasks', (req: Request, res: Response) => {
 // ============================================================
 
 router.delete('/task/:taskId', (req: Request, res: Response) => {
-  const { taskId } = req.params;
+  const taskId = req.params.taskId as string;
   const videoService = getVideoGenerationService();
 
   const cancelled = videoService.cancelTask(taskId);
@@ -349,7 +372,7 @@ router.get('/models', (req: Request, res: Response) => {
 // ============================================================
 
 router.get('/stream/:taskId', (req: Request, res: Response) => {
-  const { taskId } = req.params;
+  const taskId = req.params.taskId as string;
   const videoService = getVideoGenerationService();
 
   // 设置 SSE 头

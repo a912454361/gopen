@@ -135,7 +135,7 @@ class VideoGenerationService extends EventEmitter {
       // 调用视频生成
       const startTime = Date.now();
       
-      const response = await this.client.videoGeneration(content, {
+      const response = await this.client.videoGeneration(content as any, {
         model: this.getBestModel().id,
         duration: options.duration || 5,
         ratio: options.ratio || '16:9',
@@ -317,12 +317,12 @@ class VideoGenerationService extends EventEmitter {
   // ============================================================
 
   private buildContent(options: VideoGenerationOptions) {
-    const content: Array<{ type: string; text?: string; image_url?: { url: string }; role?: string }> = [];
+    const content: Array<{ type: 'text' | 'image_url'; text?: string; image_url?: { url: string }; role?: string }> = [];
 
     // 添加首帧图片
     if (options.imageUrl) {
       content.push({
-        type: 'image_url',
+        type: 'image_url' as const,
         image_url: { url: options.imageUrl },
         role: 'first_frame',
       });
@@ -331,7 +331,7 @@ class VideoGenerationService extends EventEmitter {
     // 添加尾帧图片
     if (options.lastFrameUrl) {
       content.push({
-        type: 'image_url',
+        type: 'image_url' as const,
         image_url: { url: options.lastFrameUrl },
         role: 'last_frame',
       });
@@ -339,7 +339,7 @@ class VideoGenerationService extends EventEmitter {
 
     // 添加文本提示
     content.push({
-      type: 'text',
+      type: 'text' as const,
       text: options.prompt,
     });
 

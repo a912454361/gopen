@@ -140,11 +140,12 @@ export default function ModelSyncPanel() {
           code: m.code,
           name: m.name,
           provider: m.provider,
-          status: 'active',
-          cost_input_price: m.costInputPrice,
-          cost_output_price: m.costOutputPrice,
-          sell_input_price: m.sellInputPrice,
-          sell_output_price: m.sellOutputPrice,
+          status: m.status || 'active',
+          // API返回的字段是 inputPrice/outputPrice，前端需要映射
+          cost_input_price: m.inputPrice || 0,
+          cost_output_price: m.outputPrice || 0,
+          sell_input_price: m.inputPrice || 0,
+          sell_output_price: m.outputPrice || 0,
         })));
       }
     } catch (error) {

@@ -3,7 +3,7 @@
  * 功能：视频列表、预览播放、下载、删除、生成测试视频
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -15,9 +15,7 @@ import {
   Text,
   Dimensions,
   TextInput,
-  KeyboardAvoidingView,
 } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -25,6 +23,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import { MobileVideoPlayer } from './MobileVideoPlayer';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -58,7 +57,7 @@ const VIDEO_THEMES = [
 ];
 
 export function VideosPanel({ adminKey }: VideosPanelProps) {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [videos, setVideos] = useState<VideoInfo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,11 +66,12 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
   // 视频播放器状态
   const [playerVisible, setPlayerVisible] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<VideoInfo | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const videoRef = useRef<Video>(null);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  
+  // 删除确认状态
+  const [deletingVideo, setDeletingVideo] = useState<VideoInfo | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   
   // 生成测试视频状态
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -155,105 +155,62 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
 
   // 打开视频播放器
   const openPlayer = useCallback((video: VideoInfo) => {
+    const url = getVideoUrl(video);
     setPlayingVideo(video);
+    setVideoUrl(url);
     setPlayerVisible(true);
-    setIsPlaying(true);
-    setCurrentTime(0);
-    setDuration(0);
   }, []);
 
   // 关闭播放器
-  const closePlayer = useCallback(async () => {
-    if (videoRef.current) {
-      await videoRef.current.stopAsync();
-      await videoRef.current.unloadAsync();
-    }
+  const closePlayer = useCallback(() => {
     setPlayerVisible(false);
     setPlayingVideo(null);
-    setIsPlaying(false);
+    setVideoUrl('');
   }, []);
-
-  // 播放/暂停
-  const togglePlayPause = useCallback(async () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        await videoRef.current.pauseAsync();
-      } else {
-        await videoRef.current.playAsync();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  }, [isPlaying]);
-
-  // 快进/快退
-  const seek = useCallback(async (seconds: number) => {
-    if (videoRef.current) {
-      const newTime = Math.max(0, Math.min(currentTime + seconds, duration));
-      await videoRef.current.setPositionAsync(newTime * 1000);
-      setCurrentTime(newTime);
-    }
-  }, [currentTime, duration]);
-
-  // 播放状态回调
-  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      setCurrentTime(status.positionMillis / 1000);
-      setDuration(status.durationMillis ? status.durationMillis / 1000 : 0);
-      setIsPlaying(status.isPlaying);
-      
-      // 播放结束
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-      }
-    }
-  }, []);
-
-  // 格式化时间
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // 删除视频
   const handleDelete = useCallback(async (video: VideoInfo) => {
-    Alert.alert(
-      '确认删除',
-      `确定要删除 "${video.title} 第${video.episodeNumber}集" 吗？\n\n文件大小: ${formatSize(video.size)}`,
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '删除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(
-                `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${video.id}?key=${adminKey}`,
-                { method: 'DELETE' }
-              );
-              const result = await response.json();
-              if (result.success) {
-                Alert.alert('成功', '视频已删除');
-                fetchVideos();
-              } else {
-                Alert.alert('错误', result.error || '删除失败');
-              }
-            } catch (error) {
-              console.error('Delete video error:', error);
-              Alert.alert('错误', '删除失败');
-            }
-          },
-        },
-      ]
-    );
-  }, [adminKey, fetchVideos]);
+    setDeletingVideo(video);
+  }, []);
+
+  // 确认删除
+  const confirmDelete = useCallback(async () => {
+    if (!deletingVideo) return;
+    
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(
+        `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${deletingVideo.id}?key=${adminKey}`,
+        { method: 'DELETE' }
+      );
+      const result = await response.json();
+      if (result.success) {
+        setDeletingVideo(null);
+        // 立即刷新视频列表
+        await fetchVideos();
+        Alert.alert('成功', '视频已删除');
+      } else {
+        Alert.alert('错误', result.error || '删除失败');
+      }
+    } catch (error) {
+      console.error('Delete video error:', error);
+      Alert.alert('错误', '删除失败');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [adminKey, deletingVideo, fetchVideos]);
+
+  // 取消删除
+  const cancelDelete = useCallback(() => {
+    setDeletingVideo(null);
+  }, []);
 
   // 下载视频
   const handleDownload = useCallback(async (video: VideoInfo) => {
     try {
       // 在Web端直接打开链接
       if (Platform.OS === 'web') {
-        window.open(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${video.id}/download?key=${adminKey}`, '_blank');
+        (window as any).open(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${video.id}/download?key=${adminKey}`, '_blank');
         return;
       }
       
@@ -455,9 +412,6 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
   const renderVideoPlayer = () => {
     if (!playingVideo) return null;
 
-    const videoUrl = getVideoUrl(playingVideo);
-    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
     return (
       <Modal
         visible={playerVisible}
@@ -500,7 +454,7 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
             </TouchableOpacity>
           </View>
 
-          {/* 视频播放器 - Web端使用HTML5 video，移动端使用expo-av */}
+          {/* 视频播放器 - Web端使用HTML5 video，移动端使用expo-video */}
           <View style={{
             flex: 1,
             justifyContent: 'center',
@@ -521,112 +475,127 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
                 playsInline
               />
             ) : (
-              // 移动端使用expo-av
-              <Video
-                ref={videoRef}
-                source={{ uri: videoUrl }}
-                style={{
-                  width: isFullscreen ? SCREEN_HEIGHT : SCREEN_WIDTH,
-                  height: isFullscreen ? SCREEN_WIDTH : SCREEN_WIDTH * 9 / 16,
-                }}
-                resizeMode={isFullscreen ? ResizeMode.STRETCH : ResizeMode.CONTAIN}
-                shouldPlay={isPlaying}
-                isLooping={false}
-                onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-                useNativeControls={true}
+              // 移动端使用expo-video
+              <MobileVideoPlayer
+                videoUrl={videoUrl}
+                isFullscreen={isFullscreen}
+                visible={playerVisible}
               />
             )}
           </View>
+        </View>
+      </Modal>
+    );
+  };
 
-          {/* 播放控制栏 - 仅移动端显示 */}
-          {Platform.OS !== 'web' && (
+  // 渲染删除确认模态框
+  const renderDeleteConfirm = () => {
+    if (!deletingVideo) return null;
+
+    return (
+      <Modal
+        visible={true}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: Spacing.xl,
+        }}>
           <View style={{
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            paddingTop: Spacing.md,
-            paddingHorizontal: Spacing.lg,
-            paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.lg,
+            backgroundColor: theme.backgroundDefault,
+            borderRadius: BorderRadius.xl,
+            padding: Spacing.xl,
+            width: '100%',
+            maxWidth: 400,
           }}>
-            {/* 进度条 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
-              <Text style={{ color: '#fff', fontSize: 12, width: 45 }}>{formatTime(currentTime)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.lg }}>
               <View style={{
-                flex: 1,
-                height: 4,
-                backgroundColor: 'rgba(255,255,255,0.3)',
-                borderRadius: 2,
-                overflow: 'hidden',
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                justifyContent: 'center',
+                alignItems: 'center',
               }}>
-                <View style={{
-                  width: `${progress}%`,
-                  height: '100%',
-                  backgroundColor: theme.primary,
-                  borderRadius: 2,
-                }} />
+                <FontAwesome6 name="trash" size={24} color={theme.error} />
               </View>
-              <Text style={{ color: '#fff', fontSize: 12, width: 45, textAlign: 'right' }}>{formatTime(duration)}</Text>
+              <View style={{ flex: 1 }}>
+                <ThemedText variant="h4" color={theme.textPrimary}>确认删除</ThemedText>
+                <ThemedText variant="small" color={theme.textMuted}>此操作不可恢复</ThemedText>
+              </View>
             </View>
 
-            {/* 控制按钮 */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing['2xl'] }}>
-              {/* 快退10秒 */}
-              <TouchableOpacity onPress={() => seek(-10)} style={{ padding: Spacing.md }}>
-                <FontAwesome6 name="rotate-left" size={24} color="#fff" />
-              </TouchableOpacity>
+            <View style={{ marginBottom: Spacing.xl }}>
+              <ThemedText variant="body" color={theme.textSecondary}>
+                确定要删除以下视频吗？
+              </ThemedText>
+              <View style={{
+                marginTop: Spacing.md,
+                padding: Spacing.md,
+                backgroundColor: theme.backgroundTertiary,
+                borderRadius: BorderRadius.md,
+              }}>
+                <ThemedText variant="bodyMedium" color={theme.textPrimary}>
+                  {deletingVideo.title}
+                </ThemedText>
+                <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs }}>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    EP{String(deletingVideo.episodeNumber).padStart(2, '0')}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {formatSize(deletingVideo.size)}
+                  </ThemedText>
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {formatDuration(deletingVideo.duration)}
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
 
-              {/* 播放/暂停 */}
+            <View style={{ flexDirection: 'row', gap: Spacing.md }}>
               <TouchableOpacity
-                onPress={togglePlayPause}
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: theme.primary,
-                  justifyContent: 'center',
+                  flex: 1,
+                  paddingVertical: Spacing.md,
+                  backgroundColor: theme.backgroundTertiary,
+                  borderRadius: BorderRadius.lg,
                   alignItems: 'center',
                 }}
+                onPress={cancelDelete}
+                disabled={deleteLoading}
               >
-                <FontAwesome6 
-                  name={isPlaying ? "pause" : "play"} 
-                  size={28} 
-                  color={theme.buttonPrimaryText} 
-                  style={{ marginLeft: isPlaying ? 0 : 4 }}
-                />
+                <ThemedText variant="smallMedium" color={theme.textPrimary}>取消</ThemedText>
               </TouchableOpacity>
-
-              {/* 快进10秒 */}
-              <TouchableOpacity onPress={() => seek(10)} style={{ padding: Spacing.md }}>
-                <FontAwesome6 name="rotate-right" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            {/* 快捷操作 */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: Spacing['2xl'], marginTop: Spacing.lg }}>
-              <TouchableOpacity 
-                onPress={() => seek(-30)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: Spacing.md,
+                  backgroundColor: theme.error,
+                  borderRadius: BorderRadius.lg,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: Spacing.sm,
+                }}
+                onPress={confirmDelete}
+                disabled={deleteLoading}
               >
-                <FontAwesome6 name="backward" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>30秒</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                onPress={() => handleDownload(playingVideo)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
-              >
-                <FontAwesome6 name="download" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>下载</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                onPress={() => seek(30)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
-              >
-                <FontAwesome6 name="forward" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>30秒</Text>
+                {deleteLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <FontAwesome6 name="trash" size={14} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>确认删除</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
-          )}
         </View>
       </Modal>
     );
@@ -711,63 +680,70 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
         </ThemedView>
       </View>
 
-      {/* 生成测试视频按钮 */}
-      <TouchableOpacity
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: Spacing.sm,
-          paddingVertical: Spacing.md,
-          paddingHorizontal: Spacing.lg,
-          backgroundColor: theme.primary,
-          borderRadius: BorderRadius.lg,
-        }}
-        onPress={() => setShowGenerateModal(true)}
-      >
-        <FontAwesome6 name="wand-magic-sparkles" size={16} color={theme.buttonPrimaryText} />
-        <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>生成测试视频</ThemedText>
-      </TouchableOpacity>
+      {/* 操作按钮行 */}
+      <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: Spacing.sm,
+            paddingVertical: Spacing.md,
+            paddingHorizontal: Spacing.lg,
+            backgroundColor: theme.primary,
+            borderRadius: BorderRadius.lg,
+          }}
+          onPress={() => setShowGenerateModal(true)}
+        >
+          <FontAwesome6 name="wand-magic-sparkles" size={16} color={theme.buttonPrimaryText} />
+          <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>生成测试视频</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: Spacing.sm,
+            paddingVertical: Spacing.md,
+            paddingHorizontal: Spacing.lg,
+            backgroundColor: theme.backgroundTertiary,
+            borderRadius: BorderRadius.lg,
+            borderWidth: 1,
+            borderColor: theme.border,
+          }}
+          onPress={handleRefresh}
+        >
+          <FontAwesome6 name="rotate" size={16} color={theme.textPrimary} />
+          <ThemedText variant="smallMedium" color={theme.textPrimary}>刷新</ThemedText>
+        </TouchableOpacity>
+      </View>
 
       {/* 视频列表 */}
       <View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
-          <ThemedText variant="h3" color={theme.textPrimary}>视频列表</ThemedText>
-          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: Spacing.sm,
-                paddingVertical: Spacing.sm,
-                paddingHorizontal: Spacing.md,
-                backgroundColor: theme.backgroundTertiary,
-                borderRadius: BorderRadius.md,
-              }}
-              onPress={handleRefresh}
-            >
-              <FontAwesome6 name={refreshing ? 'spinner' : 'rotate'} size={12} color={theme.textPrimary} />
-              <ThemedText variant="small" color={theme.textPrimary}>刷新</ThemedText>
-            </TouchableOpacity>
-          </View>
+          <ThemedText variant="h4" color={theme.textPrimary}>视频列表</ThemedText>
+          <ThemedText variant="caption" color={theme.textMuted}>
+            共 {videos.length} 个视频
+          </ThemedText>
         </View>
 
         {videos.length === 0 ? (
-          <ThemedView
-            level="default"
-            style={{
-              padding: Spacing['2xl'],
-              borderRadius: BorderRadius.lg,
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: theme.border,
-            }}
-          >
-            <FontAwesome6 name="video-slash" size={32} color={theme.textMuted} />
-            <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+          <View style={{ 
+            paddingVertical: Spacing['3xl'], 
+            alignItems: 'center',
+            backgroundColor: theme.backgroundTertiary,
+            borderRadius: BorderRadius.lg,
+          }}>
+            <FontAwesome6 name="video-slash" size={48} color={theme.textMuted} />
+            <ThemedText variant="body" color={theme.textMuted} style={{ marginTop: Spacing.lg }}>
               暂无视频
             </ThemedText>
-          </ThemedView>
+            <ThemedText variant="caption" color={theme.textMuted}>
+              点击上方按钮生成测试视频
+            </ThemedText>
+          </View>
         ) : (
           <FlatList
             data={videos}
@@ -784,170 +760,138 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
       <Modal
         visible={showGenerateModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowGenerateModal(false)}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'flex-end',
+        }}>
           <View style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: Spacing.lg,
+            backgroundColor: theme.backgroundDefault,
+            borderTopLeftRadius: BorderRadius.xl,
+            borderTopRightRadius: BorderRadius.xl,
+            padding: Spacing.xl,
+            maxHeight: '80%',
           }}>
-            <ThemedView
-              level="default"
+            {/* 标题 */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl }}>
+              <ThemedText variant="h4" color={theme.textPrimary}>生成测试视频</ThemedText>
+              <TouchableOpacity onPress={() => setShowGenerateModal(false)}>
+                <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 标题输入 */}
+            <View style={{ marginBottom: Spacing.lg }}>
+              <ThemedText variant="small" color={theme.textSecondary} style={{ marginBottom: Spacing.xs }}>
+                视频标题
+              </ThemedText>
+              <TextInput
+                style={{
+                  backgroundColor: theme.backgroundTertiary,
+                  borderRadius: BorderRadius.md,
+                  padding: Spacing.md,
+                  fontSize: 16,
+                  color: theme.textPrimary,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                }}
+                placeholder="输入视频标题"
+                placeholderTextColor={theme.textMuted}
+                value={generateTitle}
+                onChangeText={setGenerateTitle}
+              />
+            </View>
+
+            {/* 时长输入 */}
+            <View style={{ marginBottom: Spacing.lg }}>
+              <ThemedText variant="small" color={theme.textSecondary} style={{ marginBottom: Spacing.xs }}>
+                时长（秒）
+              </ThemedText>
+              <TextInput
+                style={{
+                  backgroundColor: theme.backgroundTertiary,
+                  borderRadius: BorderRadius.md,
+                  padding: Spacing.md,
+                  fontSize: 16,
+                  color: theme.textPrimary,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                }}
+                placeholder="5-60秒"
+                placeholderTextColor={theme.textMuted}
+                value={generateDuration}
+                onChangeText={setGenerateDuration}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* 主题选择 */}
+            <View style={{ marginBottom: Spacing.xl }}>
+              <ThemedText variant="small" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
+                主题风格
+              </ThemedText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                {VIDEO_THEMES.map((t) => (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={{
+                      paddingVertical: Spacing.sm,
+                      paddingHorizontal: Spacing.md,
+                      borderRadius: BorderRadius.md,
+                      backgroundColor: generateTheme === t.key ? theme.primary : theme.backgroundTertiary,
+                      borderWidth: 1,
+                      borderColor: generateTheme === t.key ? theme.primary : theme.border,
+                    }}
+                    onPress={() => setGenerateTheme(t.key)}
+                  >
+                    <Text style={{ 
+                      color: generateTheme === t.key ? theme.buttonPrimaryText : theme.textPrimary,
+                      fontWeight: '500',
+                    }}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* 生成按钮 */}
+            <TouchableOpacity
               style={{
-                width: '100%',
-                maxWidth: 400,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: Spacing.sm,
+                paddingVertical: Spacing.lg,
+                backgroundColor: theme.primary,
                 borderRadius: BorderRadius.lg,
-                padding: Spacing.xl,
               }}
+              onPress={handleGenerateVideo}
+              disabled={generating}
             >
-              {/* 标题 */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg }}>
-                <ThemedText variant="h4" color={theme.textPrimary}>生成测试视频</ThemedText>
-                <TouchableOpacity onPress={() => setShowGenerateModal(false)}>
-                  <FontAwesome6 name="xmark" size={20} color={theme.textMuted} />
-                </TouchableOpacity>
-              </View>
-
-              {/* 标题输入 */}
-              <View style={{ marginBottom: Spacing.md }}>
-                <ThemedText variant="smallMedium" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
-                  视频标题
-                </ThemedText>
-                <TextInput
-                  style={{
-                    backgroundColor: theme.backgroundTertiary,
-                    borderRadius: BorderRadius.md,
-                    padding: Spacing.md,
-                    color: theme.textPrimary,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                  }}
-                  placeholder="请输入标题"
-                  placeholderTextColor={theme.textMuted}
-                  value={generateTitle}
-                  onChangeText={setGenerateTitle}
-                  maxLength={15}
-                />
-              </View>
-
-              {/* 时长输入 */}
-              <View style={{ marginBottom: Spacing.md }}>
-                <ThemedText variant="smallMedium" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
-                  视频时长（秒，5-60）
-                </ThemedText>
-                <TextInput
-                  style={{
-                    backgroundColor: theme.backgroundTertiary,
-                    borderRadius: BorderRadius.md,
-                    padding: Spacing.md,
-                    color: theme.textPrimary,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                  }}
-                  placeholder="15"
-                  placeholderTextColor={theme.textMuted}
-                  value={generateDuration}
-                  onChangeText={setGenerateDuration}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-              </View>
-
-              {/* 主题选择 */}
-              <View style={{ marginBottom: Spacing.xl }}>
-                <ThemedText variant="smallMedium" color={theme.textSecondary} style={{ marginBottom: Spacing.sm }}>
-                  视频主题
-                </ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
-                  {VIDEO_THEMES.map((t) => (
-                    <TouchableOpacity
-                      key={t.key}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.xs,
-                        paddingVertical: Spacing.sm,
-                        paddingHorizontal: Spacing.md,
-                        borderRadius: BorderRadius.md,
-                        backgroundColor: generateTheme === t.key ? theme.primary : theme.backgroundTertiary,
-                        borderWidth: 1,
-                        borderColor: generateTheme === t.key ? theme.primary : theme.border,
-                      }}
-                      onPress={() => setGenerateTheme(t.key)}
-                    >
-                      <View style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 8,
-                        backgroundColor: t.color,
-                        borderWidth: 1,
-                        borderColor: 'rgba(255,255,255,0.3)',
-                      }} />
-                      <ThemedText
-                        variant="small"
-                        color={generateTheme === t.key ? theme.buttonPrimaryText : theme.textPrimary}
-                      >
-                        {t.label}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* 按钮 */}
-              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    paddingVertical: Spacing.md,
-                    borderRadius: BorderRadius.md,
-                    backgroundColor: theme.backgroundTertiary,
-                    alignItems: 'center',
-                  }}
-                  onPress={() => setShowGenerateModal(false)}
-                >
-                  <ThemedText variant="smallMedium" color={theme.textPrimary}>取消</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    paddingVertical: Spacing.md,
-                    borderRadius: BorderRadius.md,
-                    backgroundColor: theme.primary,
-                    alignItems: 'center',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    gap: Spacing.sm,
-                  }}
-                  onPress={handleGenerateVideo}
-                  disabled={generating}
-                >
-                  {generating ? (
-                    <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
-                  ) : (
-                    <FontAwesome6 name="wand-magic-sparkles" size={14} color={theme.buttonPrimaryText} />
-                  )}
-                  <ThemedText variant="smallMedium" color={theme.buttonPrimaryText}>
-                    {generating ? '生成中...' : '生成视频'}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </ThemedView>
+              {generating ? (
+                <ActivityIndicator size="small" color={theme.buttonPrimaryText} />
+              ) : (
+                <>
+                  <FontAwesome6 name="wand-magic-sparkles" size={16} color={theme.buttonPrimaryText} />
+                  <Text style={{ color: theme.buttonPrimaryText, fontWeight: '600', fontSize: 16 }}>
+                    开始生成
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
-      {/* 视频播放器模态框 */}
+      {/* 视频播放器 */}
       {renderVideoPlayer()}
+      
+      {/* 删除确认 */}
+      {renderDeleteConfirm()}
     </View>
   );
 }
-
-export default VideosPanel;

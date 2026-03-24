@@ -480,14 +480,14 @@ class VideoCompositionService {
         const drawTextCmd = `ffmpeg -y -i "${framePath}" -vf "drawtext=fontfile='${FONT_PATH}':text='${description.substring(0, 20)}':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-100:borderw=3:bordercolor=black" -frames:v 1 "${labeledFramePath}"`;
         await execAsync(drawTextCmd);
         
-        // Step 4: 生成带有动态效果的视频
+        // Step 4: 生成带有动态效果的视频 - 高比特率配置
         const fps = 25;
         const totalFrames = duration * fps;
         const videoCmd = `ffmpeg -y -loop 1 -i "${labeledFramePath}" \
           -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
           -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
-          -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
-          -c:a aac -b:a 128k \
+          -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M \
+          -c:a aac -b:a 192k \
           -pix_fmt yuv420p -movflags +faststart \
           -t ${duration} "${outputPath}"`;
         
@@ -578,14 +578,14 @@ class VideoCompositionService {
     const gradientCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg1}:s=1920x1080:d=1,format=yuv420p" -vf "drawtext=fontfile='${fontPath}':text='${safeText}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" -frames:v 1 "${framePath}"`;
     await execAsync(gradientCmd);
     
-    // 生成视频
+    // 生成视频 - 高比特率配置
     const fps = 25;
     const totalFrames = duration * fps;
     const videoCmd = `ffmpeg -y -loop 1 -i "${framePath}" \
       -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
       -vf "scale=1920:1080,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
-      -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
-      -c:a aac -b:a 128k \
+      -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M \
+      -c:a aac -b:a 192k \
       -pix_fmt yuv420p -movflags +faststart \
       -t ${duration} "${outputPath}"`;
     
@@ -670,8 +670,8 @@ class VideoCompositionService {
       resolution
     );
 
-    // 生成片头视频（带静音音频）
-    const cmd = `ffmpeg -y -loop 1 -i "${introFramePath}" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v libx264 -t ${config.introDuration} -c:a aac -pix_fmt yuv420p -vf "scale=${resolution.width}:${resolution.height}" "${introPath}"`;
+    // 生成片头视频（带静音音频）- 高比特率配置
+    const cmd = `ffmpeg -y -loop 1 -i "${introFramePath}" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M -t ${config.introDuration} -c:a aac -pix_fmt yuv420p -vf "scale=${resolution.width}:${resolution.height}" "${introPath}"`;
     
     await execAsync(cmd);
     
@@ -694,8 +694,8 @@ class VideoCompositionService {
       resolution
     );
 
-    // 生成片尾视频（带静音音频）
-    const cmd = `ffmpeg -y -loop 1 -i "${outroFramePath}" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v libx264 -t ${config.outroDuration} -c:a aac -pix_fmt yuv420p -vf "scale=${resolution.width}:${resolution.height}" "${outroPath}"`;
+    // 生成片尾视频（带静音音频）- 高比特率配置
+    const cmd = `ffmpeg -y -loop 1 -i "${outroFramePath}" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M -t ${config.outroDuration} -c:a aac -pix_fmt yuv420p -vf "scale=${resolution.width}:${resolution.height}" "${outroPath}"`;
     
     await execAsync(cmd);
     
@@ -768,13 +768,13 @@ class VideoCompositionService {
     let filterComplex = `scale=${resolution.width}:${resolution.height}:force_original_aspect_ratio=decrease,pad=${resolution.width}:${resolution.height}:(ow-iw)/2:(oh-ih)/2`;
     
     if (duration < targetDuration) {
-      // 循环播放
+      // 循环播放 - 高比特率配置
       const loops = Math.ceil(targetDuration / duration);
-      const cmd = `ffmpeg -y -stream_loop ${loops} -i "${inputPath}" -c:v libx264 -t ${targetDuration} -vf "${filterComplex}" -pix_fmt yuv420p "${outputPath}"`;
+      const cmd = `ffmpeg -y -stream_loop ${loops} -i "${inputPath}" -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M -t ${targetDuration} -vf "${filterComplex}" -pix_fmt yuv420p "${outputPath}"`;
       await execAsync(cmd);
     } else {
-      // 裁剪
-      const cmd = `ffmpeg -y -i "${inputPath}" -c:v libx264 -t ${targetDuration} -vf "${filterComplex}" -pix_fmt yuv420p "${outputPath}"`;
+      // 裁剪 - 高比特率配置
+      const cmd = `ffmpeg -y -i "${inputPath}" -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M -t ${targetDuration} -vf "${filterComplex}" -pix_fmt yuv420p "${outputPath}"`;
       await execAsync(cmd);
     }
   }

@@ -6,10 +6,11 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { useTheme } from '@/hooks/useTheme';
@@ -69,6 +70,19 @@ export default function AnimeDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<SceneVideo | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  
+  // expo-video 播放器
+  const player = useVideoPlayer(videoUrl, (p) => {
+    p.loop = false;
+  });
+  
+  // 当视频URL变化时自动播放
+  useEffect(() => {
+    if (videoUrl && player) {
+      player.play();
+    }
+  }, [videoUrl, player]);
 
   // 获取项目详情
   const fetchProject = useCallback(async () => {
@@ -146,6 +160,7 @@ export default function AnimeDetailScreen() {
   // 播放视频
   const handlePlayVideo = (video: SceneVideo) => {
     setSelectedVideo(video);
+    setVideoUrl(video.video_url);
     setIsVideoPlaying(true);
   };
 
@@ -347,25 +362,30 @@ export default function AnimeDetailScreen() {
               padding: Spacing.md,
             }}
             onPress={() => {
+              player.pause();
               setIsVideoPlaying(false);
               setSelectedVideo(null);
+              setVideoUrl('');
             }}
           >
             <FontAwesome6 name="xmark" size={24} color="white" />
           </TouchableOpacity>
-          <Video
-            source={{ uri: selectedVideo.video_url }}
-            style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').width * 9 / 16 }}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            useNativeControls
-            onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && status.didJustFinish) {
-                setIsVideoPlaying(false);
-                setSelectedVideo(null);
-              }
-            }}
-          />
+          {Platform.OS === 'web' ? (
+            <video
+              src={selectedVideo.video_url}
+              style={{ width: '100%', height: 'auto', maxHeight: '80vh' }}
+              controls
+              autoPlay
+              playsInline
+            />
+          ) : (
+            <VideoView
+              player={player}
+              style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').width * 9 / 16 }}
+              nativeControls={true}
+              contentFit="contain"
+            />
+          )}
         </View>
       )}
     </Screen>

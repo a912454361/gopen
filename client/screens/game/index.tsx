@@ -16,8 +16,9 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -88,6 +89,20 @@ export default function GameScreen() {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string>('');
+  
+  // expo-video 播放器
+  const player = useVideoPlayer(currentVideoUrl, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+  
+  // 当视频URL变化时自动播放
+  useEffect(() => {
+    if (currentVideoUrl && player) {
+      player.play();
+    }
+  }, [currentVideoUrl, player]);
 
   // 初始化
   useEffect(() => {
@@ -297,21 +312,37 @@ export default function GameScreen() {
 
   // 主游戏界面
   const videoUrl = currentNode.video_url || PRESET_VIDEOS[currentNode.node_id];
+  
+  // 更新视频URL
+  useEffect(() => {
+    if (videoUrl) {
+      setCurrentVideoUrl(videoUrl);
+    }
+  }, [videoUrl]);
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>
       <ScrollView style={styles.container}>
         {/* 视频区域 */}
         <View style={styles.videoContainer}>
-          {videoUrl ? (
-            <Video
-              source={{ uri: videoUrl }}
-              style={styles.video}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-              isLooping
-              isMuted
-            />
+          {currentVideoUrl ? (
+            Platform.OS === 'web' ? (
+              <video
+                src={currentVideoUrl}
+                style={{ width: '100%', height: 'auto' }}
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            ) : (
+              <VideoView
+                player={player}
+                style={styles.video}
+                nativeControls={false}
+                contentFit="contain"
+              />
+            )
           ) : (
             <View style={styles.videoPlaceholder}>
               <FontAwesome6 name="film" size={48} color={theme.textMuted} />

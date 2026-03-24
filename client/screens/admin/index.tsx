@@ -33,7 +33,7 @@ import { PromotionPanel } from './components/PromotionPanel';
 import ModelSyncPanel from './components/ModelSyncPanel';
 import RechargePanel from './components/RechargePanel';
 import FundsPanel from './components/FundsPanel';
-import VideosPanel from './components/VideosPanel';
+import { VideosPanel } from './components/VideosPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';

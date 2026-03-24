@@ -306,7 +306,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 /**
- * @api {post} /api/v1/admin/videos/generate-test 生成测试视频
+ * @api {post} /api/v1/admin/videos/generate-test 生成测试视频（带AI动漫图像）
  * @apiName GenerateTestVideo
  * @apiGroup AdminVideos
  * 
@@ -330,47 +330,111 @@ router.post('/generate-test', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '请提供视频标题' });
     }
     
-    // 根据主题选择颜色
-    const themes: Record<string, { bg: string; text: string }> = {
-      xianxia: { bg: '0x1a0a2e', text: 'white' },      // 仙侠 - 紫蓝
-      wuxia: { bg: '0x0a1a0a', text: '#aaffaa' },      // 武侠 - 深绿
-      zhanDou: { bg: '0x2e0a0a', text: '#ffcc00' },    // 战斗 - 红橙
-      senlin: { bg: '0x0a2e1a', text: '#aaffaa' },     // 森林 - 绿色
-      yejing: { bg: '0x0a0a2e', text: '#aaccff' },     // 夜景 - 深蓝
-      richu: { bg: '0x3e2a0a', text: '#ffddaa' },      // 日出 - 金橙
+    // 主题关键词映射（用于图片搜索）
+    const themeKeywords: Record<string, { keywords: string; unsplashId: string }> = {
+      xianxia: { keywords: 'mountain,mist,fantasy', unsplashId: 'photo-1519681393784-d120267933ba' },
+      wuxia: { keywords: 'bamboo,forest,asian', unsplashId: 'photo-1551524164-687a55dd1126' },
+      zhanDou: { keywords: 'battle,sword,warrior', unsplashId: 'photo-1504196606672-aef5c910d614' },
+      senlin: { keywords: 'forest,trees,nature', unsplashId: 'photo-1448375240586-882707db888b' },
+      yejing: { keywords: 'night,stars,moon', unsplashId: 'photo-1507400492013-162706c8c05e' },
+      richu: { keywords: 'sunrise,mountain,dawn', unsplashId: 'photo-1495616811223-4d98c6e9c869' },
     };
     
-    const colorTheme = themes[theme] || themes.xianxia;
-    const videoId = crypto.randomUUID();
-    const safeTitle = title.substring(0, 15);  // 保留中文，只截断长度
+    // 颜色主题（降级方案用）
+    const colorThemes: Record<string, { bg: string; text: string }> = {
+      xianxia: { bg: '0x1a0a2e', text: 'white' },
+      wuxia: { bg: '0x0a1a0a', text: '#aaffaa' },
+      zhanDou: { bg: '0x2e0a0a', text: '#ffcc00' },
+      senlin: { bg: '0x0a2e1a', text: '#aaffaa' },
+      yejing: { bg: '0x0a0a2e', text: '#aaccff' },
+      richu: { bg: '0x3e2a0a', text: '#ffddaa' },
+    };
     
-    // 创建临时帧
-    const tempFrame = `/tmp/gopen/temp_frame_${videoId}.png`;
+    const videoId = crypto.randomUUID();
+    const safeTitle = title.substring(0, 15);
+    
+    // 创建临时目录
+    const tempDir = '/tmp/gopen/temp';
+    await fs.mkdir(tempDir, { recursive: true });
+    const imageFramePath = path.join(tempDir, `image_frame_${videoId}.png`);
+    const labeledFramePath = path.join(tempDir, `labeled_frame_${videoId}.png`);
     const outputPath = path.join(OUTPUT_DIR, `EP99_${safeTitle}_${videoId}.mp4`);
     
     // 中文字体路径
     const FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc';
     
-    // 使用 exec 动态导入
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
     
-    // Step 1: 生成帧图片（指定中文字体）
-    // 使用fontfile参数指定字体文件路径
-    const frameCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg}:s=1920x1080:d=1,format=yuv420p" \
-      -vf "drawtext=fontfile='${FONT_PATH}':text='${safeTitle}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" \
-      -frames:v 1 -update 1 "${tempFrame}"`;
+    let usedRealImage = false;
+    const axios = (await import('axios')).default;
     
-    console.log('[AdminVideos] Generating frame with font:', FONT_PATH);
-    await execAsync(frameCmd);
+    try {
+      // Step 1: 尝试使用AI生成动漫图像
+      console.log('[AdminVideos] Attempting AI image generation for:', safeTitle);
+      const { ImageGenerationClient, Config } = await import('coze-coding-dev-sdk');
+      const config = new Config();
+      const client = new ImageGenerationClient(config);
+      
+      const animePrompt = `anime style, high quality, detailed, cinematic lighting, vibrant colors, 4k, masterpiece, ${themeKeywords[theme]?.keywords || themeKeywords.xianxia.keywords}, ${safeTitle}`;
+      
+      const response = await client.generate({
+        prompt: animePrompt,
+        size: '2K',
+        watermark: false,
+      });
+      
+      const helper = client.getResponseHelper(response);
+      
+      if (helper.success && helper.imageUrls.length > 0) {
+        const imageUrl = helper.imageUrls[0];
+        console.log('[AdminVideos] AI image generated:', imageUrl);
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        await fs.writeFile(imageFramePath, Buffer.from(imageResponse.data));
+        usedRealImage = true;
+      } else {
+        throw new Error('AI generation returned no images');
+      }
+    } catch (aiError: any) {
+      console.log('[AdminVideos] AI generation failed:', aiError.message);
+      
+      // Step 2: 降级到Unsplash图片
+      try {
+        const themeInfo = themeKeywords[theme] || themeKeywords.xianxia;
+        // 使用Unsplash的高质量图片
+        const unsplashUrl = `https://images.unsplash.com/${themeInfo.unsplashId}?w=1920&h=1080&fit=crop`;
+        console.log('[AdminVideos] Using Unsplash image:', unsplashUrl);
+        
+        const imageResponse = await axios.get(unsplashUrl, { responseType: 'arraybuffer' });
+        await fs.writeFile(imageFramePath, Buffer.from(imageResponse.data));
+        usedRealImage = true;
+        console.log('[AdminVideos] Unsplash image downloaded');
+      } catch (unsplashError: any) {
+        console.log('[AdminVideos] Unsplash failed:', unsplashError.message);
+        
+        // Step 3: 最终降级到纯色背景
+        const colorTheme = colorThemes[theme] || colorThemes.xianxia;
+        const fallbackFrame = path.join(tempDir, `fallback_${videoId}.png`);
+        
+        const frameCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg}:s=1920x1080:d=1,format=yuv420p" \
+          -vf "drawtext=fontfile='${FONT_PATH}':text='${safeTitle}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" \
+          -frames:v 1 -update 1 "${imageFramePath}"`;
+        await execAsync(frameCmd);
+        console.log('[AdminVideos] Using solid color background');
+      }
+    }
     
-    // Step 2: 生成带动态效果的视频
+    // Step 4: 在图像上添加标题文字
+    const drawTextCmd = `ffmpeg -y -i "${imageFramePath}" -vf "drawtext=fontfile='${FONT_PATH}':text='${safeTitle}':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-100:borderw=3:bordercolor=black" -frames:v 1 "${labeledFramePath}"`;
+    await execAsync(drawTextCmd);
+    
+    // Step 5: 生成带动态效果的视频
     const fps = 25;
     const totalFrames = duration * fps;
-    const videoCmd = `ffmpeg -y -loop 1 -i "${tempFrame}" \
+    const videoCmd = `ffmpeg -y -loop 1 -i "${labeledFramePath}" \
       -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-      -vf "scale=1920:1080,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
+      -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
       -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
       -c:a aac -b:a 128k \
       -pix_fmt yuv420p -movflags +faststart \
@@ -378,13 +442,13 @@ router.post('/generate-test', async (req: Request, res: Response) => {
     
     console.log('[AdminVideos] Generating video...');
     await execAsync(videoCmd);
+    console.log('[AdminVideos] Video generated:', outputPath);
     
     // 清理临时文件
     try {
-      await fs.unlink(tempFrame);
-    } catch (e) {
-      // 忽略
-    }
+      await fs.unlink(imageFramePath);
+      await fs.unlink(labeledFramePath);
+    } catch (e) {}
     
     // 获取视频信息
     const stats = await fs.stat(outputPath);
@@ -401,6 +465,7 @@ router.post('/generate-test', async (req: Request, res: Response) => {
         resolution: '1920x1080',
         status: 'completed',
         outputPath,
+        usedRealImage,
       },
     });
   } catch (error: any) {

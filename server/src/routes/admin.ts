@@ -9,11 +9,9 @@ import { getSupabaseClient } from '../storage/database/supabase-client.js';
 const router = Router();
 const client = getSupabaseClient();
 
-// 管理员密钥
-const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
-
-// 验证管理员权限
+// 验证管理员权限 - 在运行时读取ADMIN_KEY，确保dotenv已配置
 const verifyAdmin = (key: string): boolean => {
+  const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
   return key === ADMIN_KEY;
 };
 

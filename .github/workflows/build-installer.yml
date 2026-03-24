@@ -22,29 +22,30 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'npm'
         
-    - name: Install pnpm
-      run: npm install -g pnpm
+    - name: Install Expo CLI
+      run: npm install -g expo-cli
         
     - name: Install frontend dependencies
       working-directory: ./client
-      run: pnpm install
+      run: npm install
         
     - name: Build Expo web
       working-directory: ./client
-      run: pnpm expo export --platform web --output-dir ../electron-app/dist
+      run: npx expo export --platform web --output-dir ../electron-app/dist
         
     - name: Install electron dependencies
       working-directory: ./electron-app
-      run: pnpm install
+      run: npm install
         
     - name: Build NSIS Installer
       working-directory: ./electron-app
-      run: pnpm run build:nsis
+      run: npm run build:nsis
       
     - name: Build Portable
       working-directory: ./electron-app
-      run: pnpm run build:portable
+      run: npm run build:portable
         
     - name: List output files
       working-directory: ./electron-app/release

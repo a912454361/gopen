@@ -8,7 +8,8 @@
     "build": "electron-builder --win --x64",
     "build:nsis": "electron-builder --win nsis --x64",
     "build:portable": "electron-builder --win portable --x64",
-    "build:all": "electron-builder --win nsis portable --x64"
+    "build:all": "electron-builder --win nsis portable --x64",
+    "postinstall": "electron-builder install-app-deps"
   },
   "author": "G Open Team",
   "license": "MIT",
@@ -20,6 +21,7 @@
   "build": {
     "appId": "com.gopen.ai-assistant",
     "productName": "G Open AI助手",
+    "copyright": "Copyright © 2024 G Open Team",
     "directories": {
       "output": "release"
     },
@@ -41,7 +43,10 @@
         }
       ],
       "icon": "assets/icons/win/icon.ico",
-      "sign": null
+      "sign": null,
+      "signingHashAlgorithms": ["sha256"],
+      "certificateFile": null,
+      "certificateSubjectName": null
     },
     "nsis": {
       "oneClick": true,
@@ -58,10 +63,22 @@
       "displayLanguageSelector": false,
       "installerLanguages": ["zh_CN", "en_US"],
       "language": "2052",
-      "artifactName": "${productName} Setup ${version}.exe"
+      "artifactName": "${productName}-Setup-${version}.exe",
+      "include": null,
+      "warningsAsErrors": false
     },
     "portable": {
       "artifactName": "${productName}-${version}-Portable.exe"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "dist/**/*"
+    ],
+    "extraMetadata": {
+      "main": "main.js"
     }
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

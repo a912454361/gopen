@@ -342,22 +342,27 @@ router.post('/generate-test', async (req: Request, res: Response) => {
     
     const colorTheme = themes[theme] || themes.xianxia;
     const videoId = crypto.randomUUID();
-    const safeTitle = title.replace(/['"]/g, '').substring(0, 15);
+    const safeTitle = title.substring(0, 15);  // 保留中文，只截断长度
     
     // 创建临时帧
     const tempFrame = `/tmp/gopen/temp_frame_${videoId}.png`;
     const outputPath = path.join(OUTPUT_DIR, `EP99_${safeTitle}_${videoId}.mp4`);
+    
+    // 中文字体路径
+    const FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc';
     
     // 使用 exec 动态导入
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
     
-    // Step 1: 生成帧图片
+    // Step 1: 生成帧图片（指定中文字体）
+    // 使用fontfile参数指定字体文件路径
     const frameCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg}:s=1920x1080:d=1,format=yuv420p" \
-      -vf "drawtext=text='${safeTitle}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" \
+      -vf "drawtext=fontfile='${FONT_PATH}':text='${safeTitle}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" \
       -frames:v 1 -update 1 "${tempFrame}"`;
     
+    console.log('[AdminVideos] Generating frame with font:', FONT_PATH);
     await execAsync(frameCmd);
     
     // Step 2: 生成带动态效果的视频
@@ -371,6 +376,7 @@ router.post('/generate-test', async (req: Request, res: Response) => {
       -pix_fmt yuv420p -movflags +faststart \
       -t ${duration} "${outputPath}"`;
     
+    console.log('[AdminVideos] Generating video...');
     await execAsync(videoCmd);
     
     // 清理临时文件

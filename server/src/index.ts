@@ -1,7 +1,7 @@
 // ============================================================
 // 环境变量加载 - 必须在最开始执行
 // ============================================================
-// 服务重启触发
+// 触发重启 v2
 import { config as loadEnv } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';

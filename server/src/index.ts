@@ -1,6 +1,7 @@
 // ============================================================
 // 环境变量加载 - 必须在最开始执行
 // ============================================================
+// 服务重启触发
 import { config as loadEnv } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -198,12 +199,12 @@ app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {
     res.end();
   } catch (error) {
     console.error('Chat stream error:', error);
-    res.write(`data: ${JSON.stringify({ error: '处理消息失败' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: 'Internal server error' })}\n\n`);
     res.end();
   }
 });
 
-// Non-streaming chat endpoint (fallback)
+// Chat endpoint (non-streaming)
 app.post('/api/v1/chat', async (req: Request, res: Response) => {
   const { message } = req.body;
 
@@ -219,6 +220,8 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     const systemPrompt = `你是 Claw AI，一个专业的游戏和动漫创作助手。
 你帮助用户设计角色、场景、剧情和游戏机制。
 你要富有创意、详细具体、充满启发性。使用未来感、科技感的语气。
+在讨论技术细节时，要精确且有帮助。
+始终鼓励创意，提供可操作的建议。
 请使用中文回复用户。`;
 
     const messages = [
@@ -226,7 +229,7 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       { role: 'user' as const, content: message }
     ];
 
-    const response = await client.invoke(messages, {
+    const response = await client.chat(messages, {
       model: 'doubao-seed-1-8-251228',
       temperature: 0.8,
     });
@@ -234,84 +237,14 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     res.json({ content: response.content });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: '处理消息失败' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.listen(port, async () => {
+// Start server
+app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);
   
-  // 启动推广任务调度器
+  // Start promo scheduler
   startScheduler();
-  console.log('Promo scheduler started');
-  
-  // 启动模型同步调度器
-  import('./model-sync-scheduler.js').then(({ startModelSyncScheduler }) => {
-    startModelSyncScheduler();
-    console.log('Model sync scheduler started');
-  });
-
-  // 初始化 UE5 远程连接
-  const { getUE5Remote } = await import('./services/ue5-remote-service.js');
-  const ue5 = getUE5Remote();
-  const connected = await ue5.connect();
-  if (connected) {
-    console.log('[UE5Remote] ✅ Connected to UE5 Mock Server');
-  } else {
-    console.log('[UE5Remote] ⚠️ Running in simulation mode');
-  }
-});
-
-// UE5 状态 API
-app.get('/api/v1/ue5/status', async (req: Request, res: Response) => {
-  try {
-    const { getUE5Remote } = await import('./services/ue5-remote-service.js');
-    const ue5 = getUE5Remote();
-    const status = ue5.getStatus();
-    const scripts = ue5.getAvailableScripts();
-    
-    res.json({
-      success: true,
-      data: {
-        ...status,
-        mode: status.connected ? 'real' : 'simulation',
-        availableScripts: scripts.length,
-        scripts: scripts.map(s => s.name),
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-
-// UE5 执行脚本 API
-app.post('/api/v1/ue5/execute', async (req: Request, res: Response) => {
-  try {
-    const { script, params } = req.body;
-    
-    if (!script) {
-      return res.status(400).json({ error: 'Script name is required' });
-    }
-    
-    const { getUE5Remote } = await import('./services/ue5-remote-service.js');
-    const ue5 = getUE5Remote();
-    const result = await ue5.executeScript(script, params || {});
-    
-    res.json({
-      success: result.success,
-      data: {
-        output: result.output,
-        duration: result.duration,
-        error: result.error,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
 });

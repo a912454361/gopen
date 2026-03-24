@@ -58,13 +58,28 @@ router.post('/start', async (req: Request, res: Response) => {
  */
 router.get('/progress', async (req: Request, res: Response) => {
   try {
-    // 从数据库获取项目状态
-    const { data: projects, error } = await (await import('../storage/database/supabase-client.js')).getSupabaseClient()
+    // 从数据库获取项目状态 - 使用模糊匹配
+    const supabase = (await import('../storage/database/supabase-client.js')).getSupabaseClient();
+    
+    // 先尝试精确匹配
+    let { data: projects, error } = await supabase
       .from('anime_projects')
       .select('id, title, total_episodes, status, created_at, episodes')
       .eq('title', '剑破苍穹')
       .order('created_at', { ascending: false })
       .limit(1);
+
+    // 如果精确匹配没有结果，尝试模糊匹配
+    if (!projects || projects.length === 0) {
+      const { data: allProjects } = await supabase
+        .from('anime_projects')
+        .select('id, title, total_episodes, status, created_at, episodes')
+        .ilike('title', '%剑破苍穹%')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      projects = allProjects;
+    }
 
     if (error || !projects || projects.length === 0) {
       return res.json({
@@ -72,6 +87,7 @@ router.get('/progress', async (req: Request, res: Response) => {
         data: {
           status: 'not_started',
           message: '尚未启动制作',
+          hint: '请先调用 POST /api/v1/jianpo-80/start 启动制作',
         },
       });
     }

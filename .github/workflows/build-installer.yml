@@ -3,8 +3,6 @@ name: Build Windows Installer
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'electron-app/**'
   workflow_dispatch:
     inputs:
       version:
@@ -28,9 +26,17 @@ jobs:
     - name: Install pnpm
       run: npm install -g pnpm
         
-    - name: Install dependencies
+    - name: Install frontend dependencies
+      working-directory: ./client
+      run: pnpm install
+        
+    - name: Build Expo web
+      working-directory: ./client
+      run: pnpm expo export --platform web --output-dir ../electron-app/dist
+        
+    - name: Install electron dependencies
       working-directory: ./electron-app
-      run: pnpm install --frozen-lockfile
+      run: pnpm install
         
     - name: Build NSIS Installer
       working-directory: ./electron-app
@@ -55,50 +61,3 @@ jobs:
       with:
         name: G-Open-Portable
         path: electron-app/release/*Portable*.exe
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    
-    steps:
-    - name: Download NSIS Installer
-      uses: actions/download-artifact@v4
-      with:
-        name: G-Open-Setup
-        path: ./artifacts/
-        
-    - name: Download Portable
-      uses: actions/download-artifact@v4
-      with:
-        name: G-Open-Portable
-        path: ./artifacts/
-        
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ github.event.inputs.version }}
-        name: G Open AI助手 v${{ github.event.inputs.version }}
-        body: |
-          ## G Open AI助手 v${{ github.event.inputs.version }}
-          
-          ### 功能特性
-          - 集成 35+ AI 模型
-          - 多模态支持：对话、图像生成、视频生成
-          - 项目管理系统
-          - 云存储同步
-          - 会员体系和支付系统
-          
-          ### 下载说明
-          - **Setup.exe**: 一键安装程序，自动创建快捷方式
-          - **Portable.exe**: 便携版，无需安装，双击即用
-          
-          ### 安全功能
-          - 单实例检测
-          - 上下文隔离和沙盒模式
-          - URL安全验证
-          - 应用完整性校验
-          - CSP安全策略
-        files: ./artifacts/*.exe
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, BorderRadius } from '@/constants/theme';
@@ -254,7 +254,19 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const videoRef = useRef<Video>(null);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string>('');
+  
+  // expo-video 播放器
+  const player = useVideoPlayer(previewVideoUrl, (p) => {
+    p.loop = false;
+  });
+  
+  // 当视频URL变化时自动播放
+  useEffect(() => {
+    if (previewVideoUrl && player) {
+      player.play();
+    }
+  }, [previewVideoUrl, player]);
   
   // 真实推广数据
   const [statsData, setStatsData] = useState<PromotionStatsData | null>(null);
@@ -654,6 +666,9 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
                 }}
                 onPress={() => {
                   setSelectedMaterial(material);
+                  if (material.type === 'video' && 'videoUrl' in material && material.videoUrl) {
+                    setPreviewVideoUrl(material.videoUrl);
+                  }
                   setShowPreview(true);
                 }}
               >
@@ -1072,7 +1087,11 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
               justifyContent: 'center',
               alignItems: 'center',
             }}
-            onPress={() => setShowPreview(false)}
+            onPress={() => {
+              player.pause();
+              setPreviewVideoUrl('');
+              setShowPreview(false);
+            }}
           >
             <FontAwesome6 name="xmark" size={20} color="#fff" />
           </TouchableOpacity>
@@ -1080,16 +1099,25 @@ export function PromotionPanel({ adminKey }: PromotionPanelProps) {
           {selectedMaterial && (
             <View style={{ width: '90%', maxWidth: 800 }}>
               {selectedMaterial.type === 'video' ? (
-                <Video
-                  source={{ uri: selectedMaterial.videoUrl }}
-                  style={{ width: '100%', height: 400 }}
-                  resizeMode={ResizeMode.CONTAIN}
-                  useNativeControls
-                  shouldPlay
-                />
+                Platform.OS === 'web' ? (
+                  <video
+                    src={'videoUrl' in selectedMaterial ? selectedMaterial.videoUrl : ''}
+                    style={{ width: '100%', height: 400 }}
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                ) : (
+                  <VideoView
+                    player={player}
+                    style={{ width: '100%', height: 400 }}
+                    nativeControls={true}
+                    contentFit="contain"
+                  />
+                )
               ) : (
                 <Image
-                  source={{ uri: selectedMaterial.imageUrl }}
+                  source={{ uri: 'imageUrl' in selectedMaterial ? selectedMaterial.imageUrl : '' }}
                   style={{ width: '100%', height: 400, borderRadius: BorderRadius.lg }}
                   resizeMode="contain"
                 />

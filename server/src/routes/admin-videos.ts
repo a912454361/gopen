@@ -429,14 +429,14 @@ router.post('/generate-test', async (req: Request, res: Response) => {
     const drawTextCmd = `ffmpeg -y -i "${imageFramePath}" -vf "drawtext=fontfile='${FONT_PATH}':text='${safeTitle}':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-100:borderw=3:bordercolor=black" -frames:v 1 "${labeledFramePath}"`;
     await execAsync(drawTextCmd);
     
-    // Step 5: 生成带动态效果的视频
+    // Step 5: 生成带动态效果的视频 - 高比特率配置
     const fps = 25;
     const totalFrames = duration * fps;
     const videoCmd = `ffmpeg -y -loop 1 -i "${labeledFramePath}" \
       -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
       -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
-      -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
-      -c:a aac -b:a 128k \
+      -c:v libx264 -preset medium -crf 18 -b:v 8M -maxrate 12M -bufsize 16M \
+      -c:a aac -b:a 192k \
       -pix_fmt yuv420p -movflags +faststart \
       -t ${duration} "${outputPath}"`;
     

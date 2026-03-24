@@ -108,7 +108,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           "photosPermission": "允许 G open 访问您的相册，以便保存收款码图片。",
           "saveToLibraryPermission": "允许 G open 保存图片到相册。"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

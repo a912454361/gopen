@@ -8,10 +8,14 @@
  * - 批量视频生成
  * - 任务队列管理
  * - 模型故障转移
+ * - 模拟模式（开发测试）
  */
 
 import EventEmitter from 'events';
 import { VideoGenerationClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+
+// 模拟模式开关 - 设为true时使用模拟视频
+const MOCK_MODE = true;
 
 // ============================================================
 // 类型定义
@@ -112,6 +116,11 @@ class VideoGenerationService extends EventEmitter {
 
     this.tasks.set(taskId, task);
     this.emit('task_created', task);
+
+    // 模拟模式
+    if (MOCK_MODE) {
+      return this.generateMockVideo(taskId, options);
+    }
 
     try {
       // 更新状态
@@ -340,6 +349,59 @@ class VideoGenerationService extends EventEmitter {
     // 返回优先级最高且启用的模型
     const enabledModels = this.MODELS.filter(m => m.enabled);
     return enabledModels.sort((a, b) => a.priority - b.priority)[0];
+  }
+
+  /**
+   * 模拟视频生成（开发测试用）
+   */
+  private async generateMockVideo(taskId: string, options: VideoGenerationOptions): Promise<VideoGenerationResult> {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return { success: false, taskId, error: '任务不存在' };
+    }
+
+    console.log(`[VideoGen Mock] Generating mock video for: ${options.prompt.substring(0, 50)}...`);
+
+    // 模拟处理延迟
+    const processingTime = 2000 + Math.random() * 3000; // 2-5秒
+    
+    task.status = 'processing';
+    task.progress = 20;
+    this.emit('task_progress', { taskId, progress: 20 });
+
+    // 模拟进度更新
+    await new Promise(resolve => setTimeout(resolve, processingTime / 2));
+    task.progress = 50;
+    this.emit('task_progress', { taskId, progress: 50 });
+
+    await new Promise(resolve => setTimeout(resolve, processingTime / 2));
+
+    // 生成模拟视频URL
+    const mockVideoId = crypto.randomUUID().substring(0, 8);
+    const baseUrl = 'https://coze-coding-project.tos.coze.site/mock-videos';
+    
+    // 使用预设的模拟视频或生成动态URL
+    const mockVideoUrl = `${baseUrl}/scene_${mockVideoId}.mp4`;
+    const mockLastFrameUrl = `${baseUrl}/scene_${mockVideoId}_last.jpg`;
+
+    // 更新任务状态
+    task.status = 'completed';
+    task.progress = 100;
+    task.videoUrl = mockVideoUrl;
+    task.lastFrameUrl = mockLastFrameUrl;
+    task.completedAt = new Date();
+    task.duration = processingTime;
+
+    this.emit('task_completed', task);
+
+    console.log(`[VideoGen Mock] Video generated: ${mockVideoUrl}`);
+
+    return {
+      success: true,
+      taskId,
+      videoUrl: mockVideoUrl,
+      lastFrameUrl: mockLastFrameUrl,
+    };
   }
 
   // ============================================================

@@ -1,9 +1,9 @@
 /**
  * 视频管理面板
- * 功能：视频列表、预览、下载、删除
+ * 功能：视频列表、预览播放、下载、删除
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -11,7 +11,11 @@ import {
   FlatList,
   Alert,
   Platform,
+  Modal,
+  Text,
+  Dimensions,
 } from 'react-native';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { FontAwesome6 } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -21,6 +25,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface VideoInfo {
   id: string;
@@ -46,6 +51,15 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
   const [videos, setVideos] = useState<VideoInfo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoInfo | null>(null);
+  
+  // 视频播放器状态
+  const [playerVisible, setPlayerVisible] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<VideoInfo | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const videoRef = useRef<Video>(null);
 
   // 获取视频列表
   const fetchVideos = useCallback(async () => {
@@ -74,6 +88,68 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
     setRefreshing(true);
     fetchVideos();
   }, [fetchVideos]);
+
+  // 打开视频播放器
+  const openPlayer = useCallback((video: VideoInfo) => {
+    setPlayingVideo(video);
+    setPlayerVisible(true);
+    setIsPlaying(true);
+    setCurrentTime(0);
+    setDuration(0);
+  }, []);
+
+  // 关闭播放器
+  const closePlayer = useCallback(async () => {
+    if (videoRef.current) {
+      await videoRef.current.stopAsync();
+      await videoRef.current.unloadAsync();
+    }
+    setPlayerVisible(false);
+    setPlayingVideo(null);
+    setIsPlaying(false);
+  }, []);
+
+  // 播放/暂停
+  const togglePlayPause = useCallback(async () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        await videoRef.current.pauseAsync();
+      } else {
+        await videoRef.current.playAsync();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  }, [isPlaying]);
+
+  // 快进/快退
+  const seek = useCallback(async (seconds: number) => {
+    if (videoRef.current) {
+      const newTime = Math.max(0, Math.min(currentTime + seconds, duration));
+      await videoRef.current.setPositionAsync(newTime * 1000);
+      setCurrentTime(newTime);
+    }
+  }, [currentTime, duration]);
+
+  // 播放状态回调
+  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
+    if (status.isLoaded) {
+      setCurrentTime(status.positionMillis / 1000);
+      setDuration(status.durationMillis ? status.durationMillis / 1000 : 0);
+      setIsPlaying(status.isPlaying);
+      
+      // 播放结束
+      if (status.didJustFinish) {
+        setIsPlaying(false);
+      }
+    }
+  }, []);
+
+  // 格式化时间
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // 删除视频
   const handleDelete = useCallback(async (video: VideoInfo) => {
@@ -111,13 +187,13 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
   // 下载视频
   const handleDownload = useCallback(async (video: VideoInfo) => {
     try {
-      Alert.alert('下载中', '正在准备下载...');
-      
       // 在Web端直接打开链接
       if (Platform.OS === 'web') {
         window.open(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${video.id}/download?key=${adminKey}`, '_blank');
         return;
       }
+      
+      Alert.alert('下载中', '正在准备下载...');
       
       // 移动端使用Sharing
       const downloadUrl = `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${video.id}/download?key=${adminKey}`;
@@ -147,6 +223,11 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}分${secs}秒`;
+  };
+
+  // 获取视频预览URL
+  const getVideoUrl = (video: VideoInfo): string => {
+    return `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${video.id}/preview?key=${adminKey}`;
   };
 
   // 渲染视频项
@@ -204,22 +285,22 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
             </View>
           </View>
           
-          {/* 状态图标 */}
-          <View style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: item.status === 'completed' ? 'rgba(16, 185, 129, 0.1)' : 
-              item.status === 'processing' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <FontAwesome6 
-              name={item.status === 'completed' ? 'check' : item.status === 'processing' ? 'spinner' : 'xmark'} 
-              size={14} 
-              color={item.status === 'completed' ? theme.success : item.status === 'processing' ? '#F59E0B' : theme.error} 
-            />
-          </View>
+          {/* 播放按钮预览图 */}
+          {item.status === 'completed' && (
+            <TouchableOpacity
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: BorderRadius.lg,
+                backgroundColor: theme.primary,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => openPlayer(item)}
+            >
+              <FontAwesome6 name="play" size={18} color={theme.buttonPrimaryText} />
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -257,10 +338,10 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
                     backgroundColor: theme.primary,
                     borderRadius: BorderRadius.lg,
                   }}
-                  onPress={() => handleDownload(item)}
+                  onPress={() => openPlayer(item)}
                 >
-                  <FontAwesome6 name="download" size={14} color={theme.buttonPrimaryText} />
-                  <ThemedText variant="small" color={theme.buttonPrimaryText}>下载</ThemedText>
+                  <FontAwesome6 name="play" size={14} color={theme.buttonPrimaryText} />
+                  <ThemedText variant="small" color={theme.buttonPrimaryText}>播放预览</ThemedText>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -276,14 +357,10 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
                     borderWidth: 1,
                     borderColor: theme.border,
                   }}
-                  onPress={() => {
-                    if (Platform.OS === 'web') {
-                      window.open(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/videos/${item.id}/preview?key=${adminKey}`, '_blank');
-                    }
-                  }}
+                  onPress={() => handleDownload(item)}
                 >
-                  <FontAwesome6 name="play" size={14} color={theme.textPrimary} />
-                  <ThemedText variant="small" color={theme.textPrimary}>预览</ThemedText>
+                  <FontAwesome6 name="download" size={14} color={theme.textPrimary} />
+                  <ThemedText variant="small" color={theme.textPrimary}>下载</ThemedText>
                 </TouchableOpacity>
               </>
             )}
@@ -309,6 +386,168 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
       )}
     </ThemedView>
   );
+
+  // 渲染视频播放器模态框
+  const renderVideoPlayer = () => {
+    if (!playingVideo) return null;
+
+    const videoUrl = getVideoUrl(playingVideo);
+    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+    return (
+      <Modal
+        visible={playerVisible}
+        animationType="slide"
+        onRequestClose={closePlayer}
+        supportedOrientations={['portrait', 'landscape']}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: '#000',
+        }}>
+          {/* 顶部控制栏 */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingTop: Platform.OS === 'ios' ? 50 : 20,
+            paddingHorizontal: Spacing.lg,
+            paddingBottom: Spacing.md,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+          }}>
+            <TouchableOpacity onPress={closePlayer} style={{ padding: Spacing.sm }}>
+              <FontAwesome6 name="arrow-left" size={20} color="#fff" />
+            </TouchableOpacity>
+            
+            <View style={{ flex: 1, marginHorizontal: Spacing.md }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }} numberOfLines={1}>
+                EP{String(playingVideo.episodeNumber).padStart(2, '0')} - {playingVideo.title}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
+                {playingVideo.resolution} · {formatSize(playingVideo.size)}
+              </Text>
+            </View>
+
+            <TouchableOpacity 
+              onPress={() => setIsFullscreen(!isFullscreen)}
+              style={{ padding: Spacing.sm }}
+            >
+              <FontAwesome6 name={isFullscreen ? "compress" : "expand"} size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* 视频播放器 */}
+          <View style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+            <Video
+              ref={videoRef}
+              source={{ uri: videoUrl }}
+              style={{
+                width: isFullscreen ? SCREEN_HEIGHT : SCREEN_WIDTH,
+                height: isFullscreen ? SCREEN_WIDTH : SCREEN_WIDTH * 9 / 16,
+              }}
+              resizeMode={isFullscreen ? ResizeMode.STRETCH : ResizeMode.CONTAIN}
+              shouldPlay={isPlaying}
+              isLooping={false}
+              onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+              useNativeControls={false}
+            />
+          </View>
+
+          {/* 播放控制栏 */}
+          <View style={{
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            paddingTop: Spacing.md,
+            paddingHorizontal: Spacing.lg,
+            paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.lg,
+          }}>
+            {/* 进度条 */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+              <Text style={{ color: '#fff', fontSize: 12, width: 45 }}>{formatTime(currentTime)}</Text>
+              <View style={{
+                flex: 1,
+                height: 4,
+                backgroundColor: 'rgba(255,255,255,0.3)',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}>
+                <View style={{
+                  width: `${progress}%`,
+                  height: '100%',
+                  backgroundColor: theme.primary,
+                  borderRadius: 2,
+                }} />
+              </View>
+              <Text style={{ color: '#fff', fontSize: 12, width: 45, textAlign: 'right' }}>{formatTime(duration)}</Text>
+            </View>
+
+            {/* 控制按钮 */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing['2xl'] }}>
+              {/* 快退10秒 */}
+              <TouchableOpacity onPress={() => seek(-10)} style={{ padding: Spacing.md }}>
+                <FontAwesome6 name="rotate-left" size={24} color="#fff" />
+              </TouchableOpacity>
+
+              {/* 播放/暂停 */}
+              <TouchableOpacity
+                onPress={togglePlayPause}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: theme.primary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <FontAwesome6 
+                  name={isPlaying ? "pause" : "play"} 
+                  size={28} 
+                  color={theme.buttonPrimaryText} 
+                  style={{ marginLeft: isPlaying ? 0 : 4 }}
+                />
+              </TouchableOpacity>
+
+              {/* 快进10秒 */}
+              <TouchableOpacity onPress={() => seek(10)} style={{ padding: Spacing.md }}>
+                <FontAwesome6 name="rotate-right" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {/* 快捷操作 */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: Spacing['2xl'], marginTop: Spacing.lg }}>
+              <TouchableOpacity 
+                onPress={() => seek(-30)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+              >
+                <FontAwesome6 name="backward" size={14} color="rgba(255,255,255,0.7)" />
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>30秒</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => handleDownload(playingVideo)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+              >
+                <FontAwesome6 name="download" size={14} color="rgba(255,255,255,0.7)" />
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>下载</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => seek(30)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+              >
+                <FontAwesome6 name="forward" size={14} color="rgba(255,255,255,0.7)" />
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>30秒</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   // 加载中
   if (loading) {
@@ -437,6 +676,9 @@ export function VideosPanel({ adminKey }: VideosPanelProps) {
           />
         )}
       </View>
+
+      {/* 视频播放器模态框 */}
+      {renderVideoPlayer()}
     </View>
   );
 }

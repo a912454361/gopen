@@ -195,9 +195,9 @@ router.get('/:id/download', async (req: Request, res: Response) => {
     
     const filePath = path.join(OUTPUT_DIR, videoFile);
     
-    // 设置响应头
+    // 设置响应头 - 使用URL编码处理中文文件名
     res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Disposition', `attachment; filename="${videoFile}"`);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(videoFile)}`);
     
     // 发送文件
     const fileBuffer = await fs.readFile(filePath);

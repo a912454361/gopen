@@ -104,6 +104,16 @@ export default function GameScreen() {
     }
   }, [currentVideoUrl, player]);
 
+  // 当currentNode变化时更新视频URL
+  useEffect(() => {
+    if (currentNode) {
+      const url = currentNode.video_url || PRESET_VIDEOS[currentNode.node_id];
+      if (url) {
+        setCurrentVideoUrl(url);
+      }
+    }
+  }, [currentNode]);
+
   // 初始化
   useEffect(() => {
     initGame();
@@ -311,14 +321,7 @@ export default function GameScreen() {
   }
 
   // 主游戏界面
-  const videoUrl = currentNode.video_url || PRESET_VIDEOS[currentNode.node_id];
-  
-  // 更新视频URL
-  useEffect(() => {
-    if (videoUrl) {
-      setCurrentVideoUrl(videoUrl);
-    }
-  }, [videoUrl]);
+  const videoUrl = currentNode?.video_url || (currentNode ? PRESET_VIDEOS[currentNode.node_id] : '');
 
   return (
     <Screen backgroundColor={theme.backgroundRoot} statusBarStyle={isDark ? 'light' : 'dark'}>

@@ -27,6 +27,9 @@ import { getProductionQueue } from './production-queue-service.js';
 import { getUE5Remote } from './ue5-remote-service.js';
 import { getResilienceService } from './model-resilience-service.js';
 import EventEmitter from 'events';
+import fs from 'fs/promises';
+import path from 'path';
+import crypto from 'crypto';
 
 // ============================================================
 // 类型定义
@@ -1008,86 +1011,112 @@ class OneDayProductionService extends EventEmitter {
       console.error(`[OneDayProduction] Scene image error:`, error.message);
     }
 
-    // 生成场景视频（如果有图像）
-    if (scene.imageUrl) {
-      this.updateModelStatus(productionId, videoModelId, 'working', `E${episode.number}S${scene.id} 视频`);
+    // 如果AI图像生成失败，使用Unsplash图片作为降级方案
+    if (!scene.imageUrl) {
+      console.log(`[OneDayProduction] Using Unsplash fallback for scene ${scene.id}`);
+      // 根据场景描述选择合适的Unsplash图片
+      const unsplashImages = [
+        'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&h=1080&fit=crop', // 雪山
+        'https://images.unsplash.com/photo-1551524164-687a55dd1126?w=1920&h=1080&fit=crop', // 竹林
+        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop', // 山峰
+        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&h=1080&fit=crop', // 山景
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1920&h=1080&fit=crop', // 森林
+        'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&h=1080&fit=crop', // 树林
+      ];
+      // 使用字符串hash来选择图片
+      const hash = scene.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      scene.imageUrl = unsplashImages[hash % unsplashImages.length];
+    }
 
-      console.log(`[OneDayProduction] Generating video for scene ${scene.id}`, {
-        imageUrl: scene.imageUrl.substring(0, 80) + '...',
-        description: scene.description.substring(0, 50),
-        duration: scene.duration,
-      });
+    // 生成场景视频（使用FFmpeg本地生成，不依赖AI视频API）
+    this.updateModelStatus(productionId, videoModelId, 'working', `E${episode.number}S${scene.id} 视频`);
 
-      try {
-        const content = [
-          {
-            type: 'image_url' as const,
-            image_url: { url: scene.imageUrl },
-            role: 'first_frame' as const,
-          },
-          {
-            type: 'text' as const,
-            text: `${scene.description}，流畅的镜头运动，仙侠风格`,
-          },
-        ];
+    console.log(`[OneDayProduction] Generating video for scene ${scene.id}`, {
+      imageUrl: scene.imageUrl.substring(0, 80) + '...',
+      description: scene.description.substring(0, 50),
+      duration: scene.duration,
+    });
 
-        // 使用增强的视频生成逻辑
-        let videoResponse;
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (retryCount < maxRetries) {
-          try {
-            videoResponse = await this.videoClient.videoGeneration(content, {
-              model: 'doubao-seedance-1-5-pro-251215',
-              duration: Math.min(5, scene.duration),
-              ratio: '16:9',
-              resolution: '720p',
-              generateAudio: false,
-              watermark: false,
-            });
-            
-            if (videoResponse.videoUrl) {
-              break; // 成功则跳出循环
-            }
-          } catch (videoError: any) {
-            retryCount++;
-            console.log(`[OneDayProduction] Video attempt ${retryCount} failed:`, videoError.message);
-            
-            if (videoError.message?.includes('403') || videoError.message?.includes('Forbidden')) {
-              // 403错误，API配额或权限问题，直接跳过
-              console.log('[OneDayProduction] API quota/permission issue, using placeholder');
-              break;
-            }
-            
-            if (retryCount < maxRetries) {
-              // 等待后重试
-              await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
-            }
-          }
-        }
-
-        if (videoResponse?.videoUrl) {
-          scene.videoUrl = videoResponse.videoUrl;
-          this.incrementModelTasks(productionId, videoModelId, true);
-        } else {
-          // 使用图片作为视频占位符
-          scene.videoUrl = scene.imageUrl;
-          console.log(`[OneDayProduction] Using image as video placeholder for scene ${scene.id}`);
-        }
-        
-        this.updateModelStatus(productionId, videoModelId, 'idle');
-      } catch (error: any) {
-        this.incrementModelTasks(productionId, videoModelId, false);
-        console.error(`[OneDayProduction] Scene video error:`, error.message);
-        
-        // 视频生成失败时，使用图片作为视频占位符
-        scene.videoUrl = scene.imageUrl;
-        console.log(`[OneDayProduction] Using image as video placeholder for scene ${scene.id}`);
+    try {
+      // 使用FFmpeg生成本地视频
+      const videoPath = await this.generateLocalVideo(
+        productionId,
+        episode.number,
+        scene.id,  // 保持字符串类型
+        scene.imageUrl,
+        scene.description,
+        scene.duration
+      );
+      
+      if (videoPath) {
+        scene.videoUrl = videoPath;
+        this.incrementModelTasks(productionId, videoModelId, true);
       }
+      
+      this.updateModelStatus(productionId, videoModelId, 'idle');
+    } catch (error: any) {
+      this.incrementModelTasks(productionId, videoModelId, false);
+      console.error(`[OneDayProduction] Scene video error:`, error.message);
+      
+      // 视频生成失败时，使用图片作为视频占位符
+      scene.videoUrl = scene.imageUrl;
     }
 
     scene.status = 'completed';
+  }
+
+  // 使用FFmpeg生成本地视频
+  private async generateLocalVideo(
+    productionId: string,
+    episodeNumber: number,
+    sceneId: string,
+    imageUrl: string,
+    description: string,
+    duration: number
+  ): Promise<string | null> {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    const axios = (await import('axios')).default;
+    
+    const videoId = crypto.randomUUID();
+    const tempDir = `/tmp/gopen/production/${productionId}`;
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    const imagePath = path.join(tempDir, `scene_${sceneId}_image.jpg`);
+    const videoPath = path.join(tempDir, `EP${episodeNumber}_S${sceneId}_${videoId}.mp4`);
+    
+    const FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc';
+    
+    try {
+      // 下载图片
+      const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 15000 });
+      await fs.writeFile(imagePath, Buffer.from(imageResponse.data));
+      
+      // 使用FFmpeg生成视频
+      const fps = 25;
+      const totalFrames = duration * fps;
+      const safeDesc = description.substring(0, 30).replace(/'/g, "'\"'\"'");
+      
+      const cmd = `ffmpeg -y -loop 1 -i "${imagePath}" \
+        -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
+        -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(zoom+0.0002,1.1)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=0.5,fade=t=out:st=${duration-0.5}:d=0.5,drawtext=fontfile='${FONT_PATH}':text='${safeDesc}':fontsize=36:fontcolor=white:x=(w-text_w)/2:y=h-80:borderw=2:bordercolor=black" \
+        -c:v libx264 -preset medium -crf 20 -b:v 4M -maxrate 6M -bufsize 8M \
+        -c:a aac -b:a 128k \
+        -pix_fmt yuv420p -movflags +faststart \
+        -t ${duration} "${videoPath}"`;
+      
+      await execAsync(cmd);
+      
+      // 清理临时图片
+      try { await fs.unlink(imagePath); } catch (e) {}
+      
+      console.log(`[OneDayProduction] Local video generated: ${videoPath}`);
+      return videoPath;
+    } catch (error: any) {
+      console.error(`[OneDayProduction] Local video generation error:`, error.message);
+      return null;
+    }
   }
 
   // ============================================================

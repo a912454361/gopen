@@ -13,11 +13,19 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-        lfs: false
+    - name: Download repository
+      shell: powershell
+      run: |
+        $headers = @{
+          "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"
+          "Accept" = "application/vnd.github.v3.raw"
+        }
+        $url = "https://api.github.com/repos/${{ github.repository }}/tarball/${{ github.sha }}"
+        Invoke-WebRequest -Uri $url -Headers $headers -OutFile "repo.tar.gz"
+        tar -xzf repo.tar.gz
+        mv a912454361-gopen* gopen
+        cd gopen
+        echo "Repository downloaded and extracted"
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -25,29 +33,29 @@ jobs:
         node-version: '20'
         
     - name: Install electron dependencies
-      working-directory: ./electron-app
+      working-directory: ./gopen/electron-app
       run: npm install
         
     - name: Build NSIS Installer
-      working-directory: ./electron-app
+      working-directory: ./gopen/electron-app
       run: npm run build:nsis
       
     - name: Build Portable
-      working-directory: ./electron-app
+      working-directory: ./gopen/electron-app
       run: npm run build:portable
         
     - name: List output files
-      working-directory: ./electron-app/release
+      working-directory: ./gopen/electron-app/release
       run: dir
         
     - name: Upload NSIS Installer
       uses: actions/upload-artifact@v4
       with:
         name: G-Open-Setup
-        path: electron-app/release/*Setup*.exe
+        path: gopen/electron-app/release/*Setup*.exe
         
     - name: Upload Portable
       uses: actions/upload-artifact@v4
       with:
         name: G-Open-Portable
-        path: electron-app/release/*Portable*.exe
+        path: gopen/electron-app/release/*Portable*.exe

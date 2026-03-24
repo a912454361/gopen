@@ -23,20 +23,6 @@ jobs:
       with:
         node-version: '20'
         
-    - name: Install frontend dependencies
-      working-directory: ./client
-      run: npm install --legacy-peer-deps
-        
-    - name: Build Expo web
-      working-directory: ./client
-      run: |
-        mkdir -p ../electron-app/dist
-        npx expo export --platform web --output-dir ../electron-app/dist || npx expo build:web || echo "Trying alternative build..."
-        
-    - name: Check dist
-      working-directory: ./electron-app
-      run: dir dist
-        
     - name: Install electron dependencies
       working-directory: ./electron-app
       run: npm install

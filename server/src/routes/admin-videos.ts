@@ -305,4 +305,102 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @api {post} /api/v1/admin/videos/generate-test 生成测试视频
+ * @apiName GenerateTestVideo
+ * @apiGroup AdminVideos
+ * 
+ * @apiBody {string} title 视频标题
+ * @apiBody {number} [duration=10] 视频时长（秒）
+ * @apiBody {string} [theme=xianxia] 主题风格
+ */
+router.post('/generate-test', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    
+    // 验证管理员权限
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    if (key !== ADMIN_KEY) {
+      return res.status(403).json({ success: false, error: '无权限' });
+    }
+    
+    const { title, duration = 10, theme = 'xianxia' } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ success: false, error: '请提供视频标题' });
+    }
+    
+    // 根据主题选择颜色
+    const themes: Record<string, { bg: string; text: string }> = {
+      xianxia: { bg: '0x1a0a2e', text: 'white' },      // 仙侠 - 紫蓝
+      wuxia: { bg: '0x0a1a0a', text: '#aaffaa' },      // 武侠 - 深绿
+      zhanDou: { bg: '0x2e0a0a', text: '#ffcc00' },    // 战斗 - 红橙
+      senlin: { bg: '0x0a2e1a', text: '#aaffaa' },     // 森林 - 绿色
+      yejing: { bg: '0x0a0a2e', text: '#aaccff' },     // 夜景 - 深蓝
+      richu: { bg: '0x3e2a0a', text: '#ffddaa' },      // 日出 - 金橙
+    };
+    
+    const colorTheme = themes[theme] || themes.xianxia;
+    const videoId = crypto.randomUUID();
+    const safeTitle = title.replace(/['"]/g, '').substring(0, 15);
+    
+    // 创建临时帧
+    const tempFrame = `/tmp/gopen/temp_frame_${videoId}.png`;
+    const outputPath = path.join(OUTPUT_DIR, `EP99_${safeTitle}_${videoId}.mp4`);
+    
+    // 使用 exec 动态导入
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    
+    // Step 1: 生成帧图片
+    const frameCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg}:s=1920x1080:d=1,format=yuv420p" \
+      -vf "drawtext=text='${safeTitle}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" \
+      -frames:v 1 -update 1 "${tempFrame}"`;
+    
+    await execAsync(frameCmd);
+    
+    // Step 2: 生成带动态效果的视频
+    const fps = 25;
+    const totalFrames = duration * fps;
+    const videoCmd = `ffmpeg -y -loop 1 -i "${tempFrame}" \
+      -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
+      -vf "scale=1920:1080,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
+      -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
+      -c:a aac -b:a 128k \
+      -pix_fmt yuv420p -movflags +faststart \
+      -t ${duration} "${outputPath}"`;
+    
+    await execAsync(videoCmd);
+    
+    // 清理临时文件
+    try {
+      await fs.unlink(tempFrame);
+    } catch (e) {
+      // 忽略
+    }
+    
+    // 获取视频信息
+    const stats = await fs.stat(outputPath);
+    
+    res.json({
+      success: true,
+      data: {
+        id: videoId,
+        filename: path.basename(outputPath),
+        title: safeTitle,
+        episodeNumber: 99,
+        size: stats.size,
+        duration,
+        resolution: '1920x1080',
+        status: 'completed',
+        outputPath,
+      },
+    });
+  } catch (error: any) {
+    console.error('[AdminVideos] Generate test video error:', error);
+    res.status(500).json({ success: false, error: error.message || '生成失败' });
+  }
+});
+
 export default router;

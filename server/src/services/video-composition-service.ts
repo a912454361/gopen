@@ -435,14 +435,17 @@ class VideoCompositionService {
   private async generateVisualVideo(outputPath: string, description: string, duration: number): Promise<void> {
     // 根据场景描述选择颜色主题
     const colorTheme = this.getColorTheme(description);
-    const safeText = description.replace(/'/g, "").replace(/"/g, "").substring(0, 15);
+    const safeText = description.substring(0, 12);  // 保留中文，只截断长度
     
     console.log(`[VideoComposition] Generating visual video for: ${safeText}`);
     
+    // 中文字体路径
+    const FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc';
+    
     // 使用更可靠的方式生成带有动态效果的视频
-    // 步骤1：生成渐变背景帧
+    // 步骤1：生成渐变背景帧（指定中文字体）
     const framePath = outputPath.replace('.mp4', '_frame.png');
-    const gradientCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg1}:s=1920x1080:d=1,format=yuv420p" -vf "drawtext=text='${safeText}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" -frames:v 1 "${framePath}"`;
+    const gradientCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg1}:s=1920x1080:d=1,format=yuv420p" -vf "drawtext=fontfile='${FONT_PATH}':text='${safeText}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" -frames:v 1 "${framePath}"`;
     await execAsync(gradientCmd);
     
     // 步骤2：生成带有动态缩放和淡入效果的视频

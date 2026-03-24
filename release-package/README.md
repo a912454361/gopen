@@ -16,6 +16,7 @@
 | `06-推广方案/` | 社交媒体文案、KOL话术 | 市场推广 |
 | `07-服务器部署/` | 部署脚本、运维指南 | 后端运维 |
 | `08-UE5工具集/` | 16个Python脚本 | 动漫制作 |
+| `09-Windows安装程序构建/` | Electron构建包、一键构建脚本 | 桌面应用分发 |
 
 ---
 
@@ -97,6 +98,17 @@ cat 02-软著申请操作指南.md
 | `UE5_one_day_production.py` | 24小时完成80集动漫 |
 | `UE5_api_server.py` | 内置REST API服务器 |
 | ... (共16个脚本) | 云渲染、分布式渲染、着色器等 |
+
+### 09-Windows安装程序构建/
+| 文件 | 说明 |
+|------|------|
+| `electron-app-build.tar.gz` | 完整Electron构建包（~12MB） |
+| `README.md` | 构建说明文档 |
+
+**使用方法**：
+1. 下载并解压到 Windows 电脑
+2. 双击 `build-installer.bat`
+3. 自动生成 `G Open AI助手 Setup 1.0.0.exe` 一键安装程序
 
 ---
 

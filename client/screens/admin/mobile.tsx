@@ -28,11 +28,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { PromoManager } from './components/PromoManager';
 import ModelSyncPanel from './components/ModelSyncPanel';
 import RechargePanel from './components/RechargePanel';
+import { VideosPanel } from './components/VideosPanel';
+import FundsPanel from './components/FundsPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'orders' | 'users' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs' | 'more';
+type TabType = 'dashboard' | 'profit' | 'funds' | 'orders' | 'users' | 'videos' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs' | 'more';
 
 interface AdminStats {
   totalUsers: number;
@@ -159,14 +161,16 @@ export default function AdminMobileScreen() {
     { key: 'dashboard', label: '概览', icon: 'chart-pie' },
     { key: 'recharge', label: '充值', icon: 'credit-card' },
     { key: 'users', label: '用户', icon: 'users' },
-    { key: 'promotion', label: '推广', icon: 'bullhorn' },
+    { key: 'videos', label: '视频', icon: 'video' },
     { key: 'more', label: '更多', icon: 'bars' },
   ];
 
   // 更多功能菜单
   const moreTabs: { key: TabType; label: string; icon: string }[] = [
     { key: 'profit', label: '利润统计', icon: 'coins' },
+    { key: 'funds', label: '资金管理', icon: 'wallet' },
     { key: 'orders', label: '订单管理', icon: 'clipboard-list' },
+    { key: 'promotion', label: '推广中心', icon: 'bullhorn' },
     { key: 'model-sync', label: '模型同步', icon: 'rotate' },
     { key: 'config', label: '系统配置', icon: 'gear' },
     { key: 'logs', label: '操作日志', icon: 'clock-rotate-left' },
@@ -242,9 +246,11 @@ export default function AdminMobileScreen() {
       >
         {activeTab === 'dashboard' && <DashboardTab adminKey={adminKey} onNavigate={setActiveTab} />}
         {activeTab === 'profit' && <ProfitTab adminKey={adminKey} />}
+        {activeTab === 'funds' && <FundsPanel adminKey={adminKey} />}
         {activeTab === 'orders' && <OrdersTab adminKey={adminKey} />}
         {activeTab === 'recharge' && <RechargePanel adminKey={adminKey} />}
         {activeTab === 'users' && <UsersTab adminKey={adminKey} />}
+        {activeTab === 'videos' && <VideosPanel adminKey={adminKey} />}
         {activeTab === 'promotion' && <PromoManager adminKey={adminKey} />}
         {activeTab === 'model-sync' && <ModelSyncPanel />}
         {activeTab === 'config' && <ConfigTab adminKey={adminKey} />}

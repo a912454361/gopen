@@ -41,9 +41,9 @@ electron-app/dist/
 electron-app/*.tar.gz
 release-package/electron-app/
 
-# Source archives
-*.tar.gz
+# Source archives (allow small build packages)
 gopen-source.tar.gz
+release-package.tar.gz
 
 # Content extract
 content-extract/

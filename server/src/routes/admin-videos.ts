@@ -79,10 +79,14 @@ async function getVideoInfo(filePath: string): Promise<VideoInfo | null> {
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
+    console.log('[AdminVideos] GET /api/v1/admin/videos called');
     const key = req.query.key as string;
     
     // 验证管理员权限
-    if (key !== process.env.ADMIN_KEY && key !== 'admin123') {
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    console.log('[AdminVideos] Key received:', key, 'Expected:', ADMIN_KEY);
+    if (key !== ADMIN_KEY) {
+      console.log('[AdminVideos] Permission denied');
       return res.status(403).json({ success: false, error: '无权限' });
     }
     
@@ -94,14 +98,18 @@ router.get('/', async (req: Request, res: Response) => {
     }
     
     // 读取目录中的所有视频文件
+    console.log('[AdminVideos] Reading directory:', OUTPUT_DIR);
     const files = await fs.readdir(OUTPUT_DIR);
+    console.log('[AdminVideos] Files found:', files);
     const videoFiles = files.filter(f => f.endsWith('.mp4'));
+    console.log('[AdminVideos] Video files:', videoFiles);
     
     // 获取每个视频的信息
     const videos: VideoInfo[] = [];
     for (const file of videoFiles) {
       const filePath = path.join(OUTPUT_DIR, file);
       const info = await getVideoInfo(filePath);
+      console.log('[AdminVideos] File info:', file, info ? 'success' : 'null');
       if (info) {
         videos.push(info);
       }
@@ -134,7 +142,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     const key = req.query.key as string;
     
     // 验证管理员权限
-    if (key !== process.env.ADMIN_KEY && key !== 'admin123') {
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    if (key !== ADMIN_KEY) {
       return res.status(403).json({ success: false, error: '无权限' });
     }
     
@@ -171,7 +180,8 @@ router.get('/:id/download', async (req: Request, res: Response) => {
     const key = req.query.key as string;
     
     // 验证管理员权限
-    if (key !== process.env.ADMIN_KEY && key !== 'admin123') {
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    if (key !== ADMIN_KEY) {
       return res.status(403).json({ success: false, error: '无权限' });
     }
     
@@ -209,7 +219,8 @@ router.get('/:id/preview', async (req: Request, res: Response) => {
     const key = req.query.key as string;
     
     // 验证管理员权限
-    if (key !== process.env.ADMIN_KEY && key !== 'admin123') {
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    if (key !== ADMIN_KEY) {
       return res.status(403).json({ success: false, error: '无权限' });
     }
     
@@ -269,7 +280,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const key = req.query.key as string;
     
     // 验证管理员权限
-    if (key !== process.env.ADMIN_KEY && key !== 'admin123') {
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+    if (key !== ADMIN_KEY) {
       return res.status(403).json({ success: false, error: '无权限' });
     }
     

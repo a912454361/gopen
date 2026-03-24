@@ -1,9 +1,10 @@
 /**
  * 服务端文件：server/src/services/video-composition-service.ts
- * 视频合成服务 - FFmpeg + 云服务
+ * 视频合成服务 - FFmpeg + AI图像生成 + 云服务
  * 
  * 功能：
  * - 一集视频完整合成（片头 + 正片 + 片尾）
+ * - AI生成动漫风格场景图像
  * - 转场效果（淡入淡出）
  * - 字幕生成（SRT格式）
  * - 背景音乐合成
@@ -15,11 +16,24 @@ import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import axios from 'axios';
+import { ImageGenerationClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 
 const execAsync = promisify(exec);
 
 // 模拟模式开关 - 设为false时尝试下载真实视频，失败则生成视觉效果视频
 const SIMULATION_MODE = false;
+
+// AI图像生成客户端
+let imageClient: ImageGenerationClient | null = null;
+
+function getImageClient(): ImageGenerationClient {
+  if (!imageClient) {
+    const config = new Config();
+    imageClient = new ImageGenerationClient(config);
+  }
+  return imageClient;
+}
 
 // ============================================================
 // 类型定义
@@ -430,28 +444,146 @@ class VideoCompositionService {
   }
 
   /**
-   * 生成视觉效果视频（动漫风格）- 带动态效果
+   * 生成视觉效果视频（动漫风格）- 使用AI生成图像
    */
   private async generateVisualVideo(outputPath: string, description: string, duration: number): Promise<void> {
-    // 根据场景描述选择颜色主题
-    const colorTheme = this.getColorTheme(description);
-    const safeText = description.substring(0, 12);  // 保留中文，只截断长度
-    
-    console.log(`[VideoComposition] Generating visual video for: ${safeText}`);
+    console.log(`[VideoComposition] Generating anime video for: ${description}`);
     
     // 中文字体路径
     const FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc';
     
-    // 使用更可靠的方式生成带有动态效果的视频
-    // 步骤1：生成渐变背景帧（指定中文字体）
+    try {
+      // Step 1: 使用AI生成动漫风格图像
+      const animePrompt = this.buildAnimePrompt(description);
+      console.log(`[VideoComposition] AI prompt: ${animePrompt}`);
+      
+      const client = getImageClient();
+      const response = await client.generate({
+        prompt: animePrompt,
+        size: '2K',  // 2560x1440
+        watermark: false,
+      });
+      
+      const helper = client.getResponseHelper(response);
+      
+      if (helper.success && helper.imageUrls.length > 0) {
+        // Step 2: 下载AI生成的图像
+        const imageUrl = helper.imageUrls[0];
+        console.log(`[VideoComposition] AI image generated: ${imageUrl}`);
+        
+        const framePath = outputPath.replace('.mp4', '_ai_frame.png');
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        await fs.writeFile(framePath, imageResponse.data);
+        
+        // Step 3: 在图像上添加场景描述文字
+        const labeledFramePath = outputPath.replace('.mp4', '_labeled.png');
+        const drawTextCmd = `ffmpeg -y -i "${framePath}" -vf "drawtext=fontfile='${FONT_PATH}':text='${description.substring(0, 20)}':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-100:borderw=3:bordercolor=black" -frames:v 1 "${labeledFramePath}"`;
+        await execAsync(drawTextCmd);
+        
+        // Step 4: 生成带有动态效果的视频
+        const fps = 25;
+        const totalFrames = duration * fps;
+        const videoCmd = `ffmpeg -y -loop 1 -i "${labeledFramePath}" \
+          -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
+          -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
+          -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
+          -c:a aac -b:a 128k \
+          -pix_fmt yuv420p -movflags +faststart \
+          -t ${duration} "${outputPath}"`;
+        
+        await execAsync(videoCmd);
+        
+        // 清理临时文件
+        try {
+          await fs.unlink(framePath);
+          await fs.unlink(labeledFramePath);
+        } catch (e) {
+          // 忽略
+        }
+        
+        console.log(`[VideoComposition] Anime video generated with AI image: ${outputPath}`);
+      } else {
+        // AI生成失败，降级到纯色背景
+        console.log(`[VideoComposition] AI image generation failed, using fallback`);
+        await this.generateFallbackVideo(outputPath, description, duration, FONT_PATH);
+      }
+    } catch (error: any) {
+      console.error(`[VideoComposition] AI generation error: ${error.message}`);
+      // 降级到纯色背景
+      await this.generateFallbackVideo(outputPath, description, duration, FONT_PATH);
+    }
+  }
+
+  /**
+   * 构建动漫风格的AI提示词
+   */
+  private buildAnimePrompt(description: string): string {
+    // 根据场景描述构建更详细的动漫风格提示词
+    const baseStyle = "anime style, high quality, detailed, cinematic lighting, vibrant colors, 4k, masterpiece";
+    
+    // 场景类型关键词映射
+    const sceneKeywords: Record<string, string> = {
+      '剑': 'sword, martial arts, fantasy warrior, ancient china',
+      '仙': 'xianxia, immortal cultivation, mystical energy, floating islands',
+      '侠': 'wuxia, martial artist, heroic pose, traditional chinese architecture',
+      '气': 'qi energy, glowing aura, spiritual power, ethereal atmosphere',
+      '战': 'epic battle, dynamic action, intense combat, dramatic lighting',
+      '斗': 'fighting scene, martial arts combat, powerful stance',
+      '血': 'dramatic scene, intense atmosphere, red accents',
+      '杀': 'action scene, sword fight, dynamic composition',
+      '林': 'bamboo forest, misty mountains, ancient trees, peaceful nature',
+      '山': 'majestic mountains, peaks in clouds, grand landscape',
+      '竹': 'bamboo grove, peaceful atmosphere, chinese garden',
+      '溪': 'flowing stream, crystal clear water, serene nature',
+      '夜': 'night scene, moonlight, stars, mysterious atmosphere',
+      '暗': 'dark atmosphere, shadows, dramatic lighting',
+      '月': 'full moon, moonlit scene, ethereal glow',
+      '星': 'starry night, cosmic sky, magical atmosphere',
+      '日': 'sunrise, golden hour, warm lighting',
+      '晨': 'morning light, dawn, fresh atmosphere',
+      '昏': 'sunset, dusk, warm orange sky',
+      '阳': 'bright sunlight, sunny day, warm atmosphere',
+      '城': 'ancient chinese city, traditional architecture, bustling streets',
+      '宫': 'imperial palace, grand architecture, royal setting',
+      '殿': 'temple hall, golden decorations, sacred atmosphere',
+      '阁': 'pavilion, traditional building, elegant structure',
+    };
+    
+    let sceneDesc = '';
+    for (const [key, value] of Object.entries(sceneKeywords)) {
+      if (description.includes(key)) {
+        sceneDesc += value + ', ';
+      }
+    }
+    
+    // 如果没有匹配的关键词，使用通用描述
+    if (!sceneDesc) {
+      sceneDesc = 'fantasy landscape, magical atmosphere, chinese mythology, ';
+    }
+    
+    return `${baseStyle}, ${sceneDesc}${description}, anime art, digital painting`;
+  }
+
+  /**
+   * 降级方案：生成纯色背景视频
+   */
+  private async generateFallbackVideo(outputPath: string, description: string, duration: number, fontPath: string): Promise<void> {
+    const colorTheme = this.getColorTheme(description);
+    const safeText = description.substring(0, 12);
+    
+    console.log(`[VideoComposition] Generating fallback video for: ${safeText}`);
+    
+    // 生成渐变背景帧
     const framePath = outputPath.replace('.mp4', '_frame.png');
-    const gradientCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg1}:s=1920x1080:d=1,format=yuv420p" -vf "drawtext=fontfile='${FONT_PATH}':text='${safeText}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" -frames:v 1 "${framePath}"`;
+    const gradientCmd = `ffmpeg -y -f lavfi -i "color=c=${colorTheme.bg1}:s=1920x1080:d=1,format=yuv420p" -vf "drawtext=fontfile='${fontPath}':text='${safeText}':fontsize=72:fontcolor=${colorTheme.text}:x=(w-text_w)/2:y=(h-text_h)/2:borderw=5:bordercolor=black" -frames:v 1 "${framePath}"`;
     await execAsync(gradientCmd);
     
-    // 步骤2：生成带有动态缩放和淡入效果的视频
+    // 生成视频
+    const fps = 25;
+    const totalFrames = duration * fps;
     const videoCmd = `ffmpeg -y -loop 1 -i "${framePath}" \
       -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" \
-      -vf "scale=1920:1080,zoompan=z='min(zoom+0.0005,1.2)':d=${duration*25}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25,fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
+      -vf "scale=1920:1080,zoompan=z='min(zoom+0.0003,1.15)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${fps},fade=t=in:st=0:d=1,fade=t=out:st=${duration-1}:d=1" \
       -c:v libx264 -preset medium -crf 18 -b:v 4M -maxrate 6M -bufsize 8M \
       -c:a aac -b:a 128k \
       -pix_fmt yuv420p -movflags +faststart \
@@ -466,7 +598,7 @@ class VideoCompositionService {
       // 忽略
     }
     
-    console.log(`[VideoComposition] Video generated: ${outputPath}`);
+    console.log(`[VideoComposition] Fallback video generated: ${outputPath}`);
   }
 
   /**

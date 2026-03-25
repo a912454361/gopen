@@ -1,5 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { execSync } from 'child_process';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 
 let envLoaded = false;
 
@@ -116,3 +118,36 @@ function getSupabaseClient(token?: string): SupabaseClient {
 }
 
 export { loadEnv, getSupabaseCredentials, getSupabaseClient };
+
+// ==================== Drizzle ORM 客户端 ====================
+
+let dbInstance: ReturnType<typeof drizzle> | null = null;
+
+/**
+ * 获取 Drizzle ORM 客户端
+ */
+function getDb() {
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  loadEnv();
+
+  const databaseUrl = process.env.DATABASE_URL || process.env.COZE_SUPABASE_DB_URL;
+
+  if (!databaseUrl) {
+    console.warn('[Drizzle] DATABASE_URL not configured');
+    return null as any;
+  }
+
+  const client = postgres(databaseUrl, {
+    ssl: 'require',
+    max: 10,
+  });
+
+  dbInstance = drizzle(client);
+  return dbInstance;
+}
+
+// 导出 db 实例
+export const db = getDb();

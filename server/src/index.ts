@@ -85,6 +85,8 @@ import jianpo80Router from "./routes/jianpo-80.js";
 import vendorRouter from "./routes/vendor.js";
 import adminVendorRouter from "./routes/admin-vendor.js";
 import ossRouter from "./routes/oss.js";
+import vendorStorageRouter from "./routes/vendor-storage.js";
+import storageConfigRouter from "./routes/storage-config.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -174,6 +176,8 @@ app.use('/api/v1/jianpo-80', jianpo80Router);
 app.use('/api/v1/vendor', vendorRouter);
 app.use('/api/v1/admin/vendor', adminVendorRouter);
 app.use('/api/v1/oss', ossRouter);
+app.use('/api/v1/vendor-storage', vendorStorageRouter);
+app.use('/api/v1/storage-config', storageConfigRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

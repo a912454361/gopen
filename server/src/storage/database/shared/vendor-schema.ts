@@ -252,6 +252,104 @@ export const adminLogs = pgTable(
   ]
 );
 
+// ==================== 厂商存储配置表 ====================
+
+// 厂商存储配置表（厂商自己的存储服务配置）
+export const vendorStorageConfigs = pgTable(
+  "vendor_storage_configs",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    vendorId: varchar("vendor_id", { length: 36 }).notNull().unique(), // 厂商ID（一个厂商一个配置）
+    
+    // 存储类型
+    storageType: varchar("storage_type", { length: 30 }).notNull(), // aliyun_oss, tencent_cos, aws_s3, minio
+    
+    // 存储凭证（加密存储）
+    accessKeyIdEncrypted: text("access_key_id_encrypted").notNull(), // 加密的 Access Key ID
+    accessKeyIdIv: text("access_key_id_iv").notNull(), // 加密 IV
+    accessKeySecretEncrypted: text("access_key_secret_encrypted").notNull(), // 加密的 Access Key Secret
+    accessKeySecretIv: text("access_key_secret_iv").notNull(), // 加密 IV
+    
+    // 存储配置
+    region: varchar("region", { length: 64 }).notNull(), // 地域，如 oss-cn-beijing
+    bucket: varchar("bucket", { length: 128 }).notNull(), // Bucket 名称
+    endpoint: varchar("endpoint", { length: 256 }), // 自定义 endpoint
+    
+    // 高级配置
+    customDomain: varchar("custom_domain", { length: 256 }), // 自定义域名（CDN）
+    pathPrefix: varchar("path_prefix", { length: 128 }), // 路径前缀，如 vendor123/
+    maxFileSize: integer("max_file_size").default(104857600), // 最大文件大小（字节），默认 100MB
+    allowedTypes: jsonb("allowed_types"), // 允许的文件类型，如 ["image/*", "video/*", ".zip"]
+    
+    // 状态
+    isDefault: boolean("is_default").default(true), // 是否默认配置
+    status: varchar("status", { length: 20 }).default("active"), // active, inactive
+    
+    // 统计
+    totalFiles: integer("total_files").default(0), // 总文件数
+    totalSize: integer("total_size").default(0), // 总大小（字节）
+    
+    // 验证信息
+    lastVerified: timestamp("last_verified", { withTimezone: true }), // 最后验证时间
+    verifyStatus: varchar("verify_status", { length: 20 }).default("pending"), // pending, success, failed
+    verifyMessage: text("verify_message"), // 验证消息
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("vendor_storage_configs_vendor_id_idx").on(table.vendorId),
+    index("vendor_storage_configs_storage_type_idx").on(table.storageType),
+    index("vendor_storage_configs_status_idx").on(table.status),
+  ]
+);
+
+// 厂商存储文件记录表（用于追踪厂商上传的文件）
+export const vendorStorageFiles = pgTable(
+  "vendor_storage_files",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    vendorId: varchar("vendor_id", { length: 36 }).notNull(),
+    configId: varchar("config_id", { length: 36 }).notNull(), // 存储配置 ID
+    
+    // 文件信息
+    filename: varchar("filename", { length: 512 }).notNull(), // OSS 文件名（含路径）
+    originalName: varchar("original_name", { length: 256 }), // 原始文件名
+    fileSize: integer("file_size").notNull(), // 文件大小（字节）
+    mimeType: varchar("mime_type", { length: 128 }), // MIME 类型
+    
+    // 访问信息
+    url: text("url"), // 文件 URL
+    signedUrl: text("signed_url"), // 签名 URL（临时）
+    signedUrlExpires: timestamp("signed_url_expires", { withTimezone: true }), // 签名 URL 过期时间
+    
+    // 关联信息
+    serviceId: varchar("service_id", { length: 36 }), // 关联的服务 ID
+    modelId: varchar("model_id", { length: 128 }), // 关联的模型 ID
+    category: varchar("category", { length: 64 }), // 文件分类：model, dataset, output, other
+    
+    // 元数据
+    metadata: jsonb("metadata"), // 自定义元数据
+    
+    // 状态
+    status: varchar("status", { length: 20 }).default("active"), // active, deleted, archived
+    
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("vendor_storage_files_vendor_id_idx").on(table.vendorId),
+    index("vendor_storage_files_config_id_idx").on(table.configId),
+    index("vendor_storage_files_filename_idx").on(table.filename),
+    index("vendor_storage_files_category_idx").on(table.category),
+    index("vendor_storage_files_created_at_idx").on(table.createdAt),
+  ]
+);
+
 // ==================== 类型导出 ====================
 
 export type UserRole = typeof userRoles.$inferSelect;
@@ -271,3 +369,9 @@ export type InsertVendorSettlement = typeof vendorSettlements.$inferInsert;
 
 export type AdminLog = typeof adminLogs.$inferSelect;
 export type InsertAdminLog = typeof adminLogs.$inferInsert;
+
+export type VendorStorageConfig = typeof vendorStorageConfigs.$inferSelect;
+export type InsertVendorStorageConfig = typeof vendorStorageConfigs.$inferInsert;
+
+export type VendorStorageFile = typeof vendorStorageFiles.$inferSelect;
+export type InsertVendorStorageFile = typeof vendorStorageFiles.$inferInsert;

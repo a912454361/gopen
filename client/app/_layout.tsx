@@ -64,6 +64,8 @@ function RootLayoutContent() {
         <Stack.Screen name="guofeng-create" options={{ title: "国风创作" }} />
         <Stack.Screen name="ue-engine" options={{ title: "UE5引擎创作" }} />
         <Stack.Screen name="one-day-production" options={{ title: "24小时极速制作" }} />
+        <Stack.Screen name="vendor-register" options={{ title: "厂商入驻" }} />
+        <Stack.Screen name="vendor-dashboard" options={{ title: "厂商后台" }} />
       </Stack>
     </View>
   );

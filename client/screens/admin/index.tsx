@@ -34,11 +34,12 @@ import ModelSyncPanel from './components/ModelSyncPanel';
 import RechargePanel from './components/RechargePanel';
 import FundsPanel from './components/FundsPanel';
 import { VideosPanel } from './components/VideosPanel';
+import { VendorPanel } from './components/VendorPanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'funds' | 'orders' | 'users' | 'videos' | 'promotion' | 'recharge' | 'model-sync' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'funds' | 'orders' | 'users' | 'videos' | 'promotion' | 'vendors' | 'recharge' | 'model-sync' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -204,6 +205,7 @@ export default function AdminDashboardScreen() {
     { key: 'users', label: '用户管理', icon: 'users' },
     { key: 'videos', label: '视频管理', icon: 'video' },
     { key: 'promotion', label: '推广中心', icon: 'bullhorn' },
+    { key: 'vendors', label: '厂商管理', icon: 'building' },
     { key: 'model-sync', label: '模型同步', icon: 'rotate' },
     { key: 'config', label: '系统配置', icon: 'gear' },
     { key: 'logs', label: '操作日志', icon: 'clock-rotate-left' },
@@ -376,6 +378,7 @@ export default function AdminDashboardScreen() {
             {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}
             {activeTab === 'videos' && <VideosPanel adminKey={adminKey} />}
             {activeTab === 'promotion' && <PromotionPanel adminKey={adminKey} />}
+            {activeTab === 'vendors' && <VendorPanel adminKey={adminKey} />}
             {activeTab === 'model-sync' && <ModelSyncPanel />}
             {activeTab === 'config' && <ConfigPanel adminKey={adminKey} />}
             {activeTab === 'logs' && <LogsPanel adminKey={adminKey} />}

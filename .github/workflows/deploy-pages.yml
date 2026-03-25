@@ -36,6 +36,8 @@ jobs:
           pnpm install
 
       - name: 🔨 Build Web
+        env:
+          EXPO_PUBLIC_BACKEND_BASE_URL: https://gopen-api.onrender.com
         run: |
           cd client
           npx expo export --platform web --output-dir ../dist

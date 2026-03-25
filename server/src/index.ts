@@ -84,6 +84,7 @@ import modelResilienceRouter from "./services/model-resilience-service.js";
 import jianpo80Router from "./routes/jianpo-80.js";
 import vendorRouter from "./routes/vendor.js";
 import adminVendorRouter from "./routes/admin-vendor.js";
+import ossRouter from "./routes/oss.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -172,6 +173,7 @@ app.use('/api/v1/model-resilience', modelResilienceRouter);
 app.use('/api/v1/jianpo-80', jianpo80Router);
 app.use('/api/v1/vendor', vendorRouter);
 app.use('/api/v1/admin/vendor', adminVendorRouter);
+app.use('/api/v1/oss', ossRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

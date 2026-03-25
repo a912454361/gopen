@@ -23,3 +23,9 @@ android/app/*.keystore
 # Encrypted configs
 .env.encrypted
 .env.production.encrypted
+
+# Environment variables (never commit)
+.env
+.env.local
+.env.*.local
+!.env.example

@@ -21,6 +21,9 @@ function RootLayoutContent() {
         <Stack.Screen name="storage" options={{ title: "云端存储" }} />
         <Stack.Screen name="payment" options={{ title: "支付中心" }} />
         <Stack.Screen name="login" options={{ title: "账号登录" }} />
+        <Stack.Screen name="auth-login" options={{ title: "登录" }} />
+        <Stack.Screen name="register" options={{ title: "注册" }} />
+        <Stack.Screen name="forgot-password" options={{ title: "找回密码" }} />
         <Stack.Screen name="bill" options={{ title: "账单明细" }} />
         <Stack.Screen name="cloud-storage" options={{ title: "云存储设置" }} />
         <Stack.Screen name="wallet" options={{ title: "钱包" }} />

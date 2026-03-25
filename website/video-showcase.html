@@ -3,47 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="G open 智能创作助手 - AI驱动的游戏与动漫内容创作平台">
-    <title>G open 智能创作助手 - 作品展示</title>
+    <meta name="description" content="G open 智能创作助手 - AI驱动的游戏与动漫内容创作平台，8K粒子特效视频展示">
+    <title>G open - 8K粒子特效作品展示</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
             --primary: #00F0FF;
-            --primary-dark: #00C4CC;
             --secondary: #BF00FF;
             --accent: #FF006E;
             --bg-dark: #000000;
-            --bg-card: rgba(10, 10, 20, 0.9);
+            --bg-card: rgba(10, 10, 20, 0.95);
             --text-primary: #FFFFFF;
             --text-secondary: #8888AA;
-        }
-        
-        html {
-            scroll-behavior: smooth;
         }
         
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background: var(--bg-dark);
             color: var(--text-primary);
-            line-height: 1.6;
             overflow-x: hidden;
         }
         
         /* 导航 */
-        .navbar {
+        nav {
             position: fixed;
             top: 0;
-            left: 0;
-            right: 0;
-            padding: 1.5rem 3rem;
+            width: 100%;
+            padding: 1.2rem 3rem;
             background: rgba(0, 0, 0, 0.95);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(0, 240, 255, 0.2);
@@ -55,109 +44,93 @@
         
         .logo {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: 2px;
+            text-decoration: none;
         }
         
         .nav-links {
             display: flex;
-            gap: 3rem;
+            gap: 2rem;
             list-style: none;
         }
         
         .nav-links a {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
             text-decoration: none;
             transition: color 0.3s;
         }
         
-        .nav-links a:hover {
-            color: var(--primary);
-        }
+        .nav-links a:hover { color: var(--primary); }
         
         /* Hero */
         .hero {
-            min-height: 100vh;
+            min-height: 70vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8rem 2rem;
-            background: radial-gradient(ellipse at center, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+            padding: 8rem 2rem 4rem;
+            background: radial-gradient(ellipse at center, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
         }
         
-        .hero-content {
-            text-align: center;
-            max-width: 800px;
-        }
+        .hero-content { text-align: center; }
         
         .hero h1 {
             font-family: 'Orbitron', sans-serif;
             font-size: 4rem;
             font-weight: 900;
-            margin-bottom: 1.5rem;
             background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: 4px;
+            margin-bottom: 1rem;
         }
         
         .hero p {
             font-size: 1.2rem;
             color: var(--text-secondary);
-            margin-bottom: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
-        /* 作品展示区 */
-        .showcase-section {
-            padding: 6rem 2rem;
-        }
-        
-        .section-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-        
-        .section-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        /* 主视频展示 */
-        .main-video {
+        /* 主视频 */
+        .main-showcase {
             max-width: 1400px;
-            margin: 0 auto 4rem;
-            position: relative;
-            border-radius: 16px;
-            overflow: hidden;
-            background: var(--bg-card);
-            border: 2px solid rgba(0, 240, 255, 0.3);
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
         }
         
         .main-video-container {
             position: relative;
-            width: 100%;
-            padding-top: 56.25%; /* 16:9 比例 */
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+            background: var(--bg-card);
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 240, 255, 0.2);
         }
         
-        .main-video-container iframe {
+        .main-video-container:hover {
+            box-shadow: 0 30px 80px rgba(0, 240, 255, 0.3);
+        }
+        
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(191, 0, 255, 0.1) 100%);
+        }
+        
+        .video-wrapper video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border: none;
+            object-fit: cover;
         }
         
         .video-info {
@@ -168,34 +141,53 @@
         
         .video-title {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            margin-bottom: 0.8rem;
         }
         
         .video-desc {
             color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.6;
         }
         
         .video-tags {
             display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            gap: 0.8rem;
+            margin-top: 1.2rem;
+            flex-wrap: wrap;
         }
         
         .tag {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.75rem;
-            padding: 0.4rem 1rem;
+            padding: 0.5rem 1.2rem;
             background: rgba(0, 240, 255, 0.1);
             border: 1px solid var(--primary);
             border-radius: 20px;
             color: var(--primary);
+            letter-spacing: 1px;
         }
         
         /* 视频网格 */
+        .section-header {
+            text-align: center;
+            padding: 4rem 2rem 2rem;
+        }
+        
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
         .video-grid {
             max-width: 1400px;
             margin: 0 auto;
+            padding: 0 2rem 6rem;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 2rem;
@@ -207,7 +199,6 @@
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.4s;
-            cursor: pointer;
         }
         
         .video-card:hover {
@@ -216,20 +207,20 @@
             border-color: var(--primary);
         }
         
-        .video-thumbnail {
+        .video-card-wrapper {
             position: relative;
             width: 100%;
             padding-top: 56.25%;
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(191, 0, 255, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.05) 0%, rgba(191, 0, 255, 0.05) 100%);
         }
         
-        .video-thumbnail iframe {
+        .video-card-wrapper video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border: none;
+            object-fit: cover;
         }
         
         .video-card-info {
@@ -238,16 +229,34 @@
         
         .video-card-title {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1rem;
+            font-size: 1.1rem;
             margin-bottom: 0.5rem;
         }
         
         .video-card-desc {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-secondary);
+            line-height: 1.5;
         }
         
-        /* 特效展示 */
+        .video-card-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .tag-small {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            padding: 0.3rem 0.8rem;
+            background: rgba(191, 0, 255, 0.1);
+            border: 1px solid var(--secondary);
+            border-radius: 15px;
+            color: var(--secondary);
+        }
+        
+        /* 特效库 */
         .effects-section {
             padding: 6rem 2rem;
             background: radial-gradient(ellipse at center, rgba(191, 0, 255, 0.1) 0%, transparent 70%);
@@ -270,9 +279,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
             transition: all 0.4s;
-            cursor: pointer;
             position: relative;
             overflow: hidden;
         }
@@ -289,9 +296,7 @@
             transition: opacity 0.4s;
         }
         
-        .effect-card:hover::before {
-            opacity: 1;
-        }
+        .effect-card:hover::before { opacity: 1; }
         
         .effect-card:hover {
             transform: scale(1.05);
@@ -315,192 +320,104 @@
         }
         
         .effect-type {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--secondary);
             margin-top: 0.5rem;
             position: relative;
             z-index: 1;
+            letter-spacing: 2px;
         }
         
         /* 页脚 */
-        .footer {
-            padding: 4rem 2rem;
-            background: rgba(0, 0, 0, 0.8);
+        footer {
+            padding: 3rem 2rem;
+            background: rgba(0, 0, 0, 0.9);
             border-top: 1px solid rgba(0, 240, 255, 0.2);
             text-align: center;
         }
         
-        .footer p {
+        footer p {
             color: var(--text-secondary);
             font-size: 0.9rem;
         }
         
         /* 响应式 */
         @media (max-width: 1024px) {
-            .video-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .effects-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .video-grid { grid-template-columns: repeat(2, 1fr); }
+            .effects-grid { grid-template-columns: repeat(2, 1fr); }
         }
         
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-            
-            .video-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .effects-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .hero h1 { font-size: 2.5rem; }
+            .nav-links { display: none; }
+            .video-grid { grid-template-columns: 1fr; }
+            .effects-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar">
-        <div class="logo">G OPEN</div>
+    <nav>
+        <a href="https://woshiguotao.cn" class="logo">G OPEN</a>
         <ul class="nav-links">
-            <li><a href="#videos">视频展示</a></li>
-            <li><a href="#effects">粒子特效</a></li>
+            <li><a href="#main-video">主视频</a></li>
+            <li><a href="#effects-library">特效库</a></li>
+            <li><a href="https://woshiguotao.cn">返回首页</a></li>
         </ul>
     </nav>
 
     <!-- Hero -->
     <section class="hero">
         <div class="hero-content">
-            <h1>作品展示</h1>
-            <p>8K超高清粒子特效视频作品，展示AI创作的无限可能</p>
+            <h1>8K 粒子特效</h1>
+            <p>AI生成的高质量粒子特效视频，展示《剑破苍穹》80集动漫项目的核心视觉技术</p>
         </div>
     </section>
 
-    <!-- 视频展示区 -->
-    <section class="showcase-section" id="videos">
-        <div class="section-header">
-            <h2 class="section-title">精选作品</h2>
-        </div>
-        
-        <!-- 主视频 -->
-        <div class="main-video">
-            <div class="main-video-container">
-                <!-- 使用Bilibili视频嵌入（国内可访问） -->
-                <iframe 
-                    src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                    scrolling="no" 
-                    allowfullscreen="true"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-                </iframe>
+    <!-- 主视频展示 -->
+    <section class="main-showcase" id="main-video">
+        <div class="main-video-container">
+            <div class="video-wrapper">
+                <video 
+                    id="main-video-player"
+                    controls 
+                    autoplay 
+                    muted 
+                    loop
+                    playsinline
+                    poster="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1920&h=1080&fit=crop">
+                    <!-- 视频源将由JavaScript动态加载 -->
+                    <source src="" type="video/mp4">
+                    您的浏览器不支持视频播放
+                </video>
             </div>
             <div class="video-info">
-                <h3 class="video-title">《剑破苍穹》8K粒子特效预告片</h3>
-                <p class="video-desc">80集国风动漫项目预告，展示8K粒子特效与AI生成的完美融合</p>
+                <h2 class="video-title">《剑破苍穹》8K粒子特效预告片</h2>
+                <p class="video-desc">
+                    80集国风动漫项目预告，展示8K粒子特效与AI生成的完美融合。
+                    采用Niagara粒子系统，实现苍穹剑气、冰心诀、暗影吞噬等8种核心特效，
+                    粒子数量最高达300万+，分辨率达到8K超高清标准。
+                </p>
                 <div class="video-tags">
                     <span class="tag">8K ULTRA HD</span>
                     <span class="tag">PARTICLE EFFECTS</span>
                     <span class="tag">AI GENERATED</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 视频网格 -->
-        <div class="video-grid">
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <iframe 
-                        src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                        scrolling="no" 
-                        allowfullscreen="true">
-                    </iframe>
-                </div>
-                <div class="video-card-info">
-                    <h3 class="video-card-title">苍穹剑气粒子特效</h3>
-                    <p class="video-card-desc">Niagara 8K粒子系统，剑气横扫特效</p>
-                </div>
-            </div>
-            
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <iframe 
-                        src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                        scrolling="no" 
-                        allowfullscreen="true">
-                    </iframe>
-                </div>
-                <div class="video-card-info">
-                    <h3 class="video-card-title">冰心诀粒子特效</h3>
-                    <p class="video-card-desc">UE5冰霜粒子渲染，寒冰护体效果</p>
-                </div>
-            </div>
-            
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <iframe 
-                        src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                        scrolling="no" 
-                        allowfullscreen="true">
-                    </iframe>
-                </div>
-                <div class="video-card-info">
-                    <h3 class="video-card-title">暗影吞噬粒子特效</h3>
-                    <p class="video-card-desc">暗黑系粒子效果，吞噬一切光明</p>
-                </div>
-            </div>
-            
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <iframe 
-                        src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                        scrolling="no" 
-                        allowfullscreen="true">
-                    </iframe>
-                </div>
-                <div class="video-card-info">
-                    <h3 class="video-card-title">烈焰焚天粒子特效</h3>
-                    <p class="video-card-desc">火焰粒子动力学，焚尽八荒</p>
-                </div>
-            </div>
-            
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <iframe 
-                        src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                        scrolling="no" 
-                        allowfullscreen="true">
-                    </iframe>
-                </div>
-                <div class="video-card-info">
-                    <h3 class="video-card-title">雷霆万钧粒子特效</h3>
-                    <p class="video-card-desc">雷电粒子效果，天劫降临</p>
-                </div>
-            </div>
-            
-            <div class="video-card">
-                <div class="video-thumbnail">
-                    <iframe 
-                        src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
-                        scrolling="no" 
-                        allowfullscreen="true">
-                    </iframe>
-                </div>
-                <div class="video-card-info">
-                    <h3 class="video-card-title">万剑归宗粒子特效</h3>
-                    <p class="video-card-desc">剑雨特效，万千剑气齐发</p>
+                    <span class="tag">NIAGARA SYSTEM</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 8K粒子特效展示 -->
-    <section class="effects-section" id="effects">
+    <!-- 视频网格 -->
+    <div class="section-header">
+        <h2 class="section-title">粒子特效视频库</h2>
+    </div>
+    
+    <div class="video-grid" id="video-grid">
+        <!-- 视频卡片将由JavaScript动态生成 -->
+    </div>
+
+    <!-- 特效库 -->
+    <section class="effects-section" id="effects-library">
         <div class="section-header">
             <h2 class="section-title">8K粒子特效库</h2>
         </div>
@@ -550,8 +467,122 @@
     </section>
 
     <!-- 页脚 -->
-    <footer class="footer">
+    <footer>
         <p>© 2024 G open 智能创作助手. All rights reserved. | woshiguotao.cn</p>
     </footer>
+
+    <script>
+        // 视频配置
+        const videoConfig = {
+            // 主视频URL（AI生成）
+            mainVideo: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/video/video_generate_cgt-20260325193411-wz6pt.mp4?sign=1805974508-5ca6652236-0-a954dfbd95fdb4350d9ee2434c552ed86e6002740d6838577cb1e960ecacd2d8',
+            
+            // 各个特效视频URL（AI生成）
+            effects: {
+                sword_qi: {
+                    url: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/video/video_generate_cgt-20260325193411-wz6pt.mp4?sign=1805974508-5ca6652236-0-a954dfbd95fdb4350d9ee2434c552ed86e6002740d6838577cb1e960ecacd2d8',
+                    title: '苍穹剑气粒子特效',
+                    desc: 'Niagara 8K粒子系统，100万+粒子，剑气横扫特效',
+                    tags: ['NIAGARA', '100万+ 粒子', '8K']
+                },
+                ice_heart: {
+                    url: 'https://example.com/ice_heart.mp4',
+                    title: '冰心诀粒子特效',
+                    desc: 'UE5冰霜粒子渲染，50万+粒子，寒冰护体效果',
+                    tags: ['UE5', '50万+ 粒子', '8K']
+                },
+                shadow: {
+                    url: 'https://example.com/shadow.mp4',
+                    title: '暗影吞噬粒子特效',
+                    desc: '暗黑系粒子效果，80万+粒子，吞噬一切光明',
+                    tags: ['SHADOW', '80万+ 粒子', 'DARK']
+                },
+                flame: {
+                    url: 'https://example.com/flame.mp4',
+                    title: '烈焰焚天粒子特效',
+                    desc: '火焰粒子动力学，120万+粒子，焚尽八荒',
+                    tags: ['FIRE', '120万+ 粒子', '8K']
+                },
+                thunder: {
+                    url: 'https://example.com/thunder.mp4',
+                    title: '雷霆万钧粒子特效',
+                    desc: '雷电粒子效果，150万+粒子，天劫降临',
+                    tags: ['THUNDER', '150万+ 粒子', '8K']
+                },
+                wind: {
+                    url: 'https://example.com/wind.mp4',
+                    title: '风云变幻粒子特效',
+                    desc: '环境粒子效果，60万+粒子，天地变色',
+                    tags: ['WIND', '60万+ 粒子', '8K']
+                },
+                starfall: {
+                    url: 'https://example.com/starfall.mp4',
+                    title: '星辰陨落粒子特效',
+                    desc: '宇宙粒子特效，200万+粒子，星河坠落',
+                    tags: ['COSMIC', '200万+ 粒子', '8K']
+                },
+                sword_rain: {
+                    url: 'https://example.com/sword_rain.mp4',
+                    title: '万剑归宗粒子特效',
+                    desc: '剑雨特效，300万+粒子，万千剑气齐发',
+                    tags: ['SWORD RAIN', '300万+ 粒子', '8K']
+                }
+            }
+        };
+        
+        // 初始化视频网格
+        function initVideoGrid() {
+            const grid = document.getElementById('video-grid');
+            
+            Object.entries(videoConfig.effects).forEach(([key, effect]) => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                card.innerHTML = `
+                    <div class="video-card-wrapper">
+                        <video 
+                            controls 
+                            loop 
+                            playsinline
+                            poster="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=800&h=450&fit=crop"
+                            preload="metadata">
+                            <source src="${effect.url}" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-card-info">
+                        <h3 class="video-card-title">${effect.title}</h3>
+                        <p class="video-card-desc">${effect.desc}</p>
+                        <div class="video-card-tags">
+                            ${effect.tags.map(tag => `<span class="tag-small">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        // 初始化主视频
+        function initMainVideo() {
+            const mainPlayer = document.getElementById('main-video-player');
+            if (mainPlayer && videoConfig.mainVideo) {
+                mainPlayer.querySelector('source').src = videoConfig.mainVideo;
+                mainPlayer.load();
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initVideoGrid();
+            initMainVideo();
+            
+            console.log('Video showcase initialized');
+            console.log('To update with real videos, modify videoConfig in the script section');
+        });
+        
+        // 提示：如何更新为真实视频
+        // 1. 调用 POST /api/v1/video-effects/generate-all 生成所有视频
+        // 2. 获取返回的 videoUrl
+        // 3. 更新上面的 videoConfig 对象
+        // 4. 视频将自动加载和播放
+    </script>
 </body>
 </html>

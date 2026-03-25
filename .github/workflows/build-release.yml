@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g., 1.0.4)'
+        description: 'Version to build (e.g., 1.0.6)'
         required: true
-        default: '1.0.4'
+        default: '1.0.6'
       platforms:
         description: 'Platforms to build (android,ios,web)'
         required: true
@@ -34,9 +34,9 @@ jobs:
           node-version: '20'
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: 📦 Setup EAS
         uses: expo/expo-github-action@v8
@@ -82,9 +82,9 @@ jobs:
           node-version: '20'
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: 📦 Setup EAS
         uses: expo/expo-github-action@v8
@@ -130,9 +130,9 @@ jobs:
           node-version: '20'
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
 
       - name: 📦 Install dependencies
         run: |
@@ -174,20 +174,35 @@ jobs:
         run: npm install -g electron-builder
 
       - name: 🔨 Build Windows Installer
+        shell: bash
         run: |
           # 创建 Electron 应用
           mkdir -p electron
           cp -r dist/web electron/
           
           # 创建 package.json
-          echo '{
+          cat > electron/package.json << 'PKGJSON'
+          {
             "name": "gopen-desktop",
             "version": "${{ github.event.inputs.version || github.ref_name }}",
-            "main": "main.js"
-          }' > electron/package.json
+            "main": "main.js",
+            "build": {
+              "appId": "cn.woshiguotao.gopen",
+              "productName": "G open",
+              "directories": {
+                "output": "dist"
+              },
+              "win": {
+                "target": "nsis",
+                "icon": "icon.ico"
+              }
+            }
+          }
+          PKGJSON
           
           # 创建 main.js
-          echo 'const { app, BrowserWindow } = require("electron");
+          cat > electron/main.js << 'MAINJS'
+          const { app, BrowserWindow } = require("electron");
           const path = require("path");
           
           function createWindow() {
@@ -206,11 +221,12 @@ jobs:
           
           app.on("window-all-closed", () => {
             if (process.platform !== "darwin") app.quit();
-          });' > electron/main.js
+          });
+          MAINJS
           
           # 构建
           cd electron
-          electron-builder --win --x64 --ia64
+          electron-builder --win --x64
 
       - name: 📤 Upload artifact
         uses: actions/upload-artifact@v4
@@ -248,14 +264,28 @@ jobs:
           cp -r dist/web electron/
           
           # 创建 package.json
-          echo '{
+          cat > electron/package.json << 'PKGJSON'
+          {
             "name": "gopen-desktop",
             "version": "${{ github.event.inputs.version || github.ref_name }}",
-            "main": "main.js"
-          }' > electron/package.json
+            "main": "main.js",
+            "build": {
+              "appId": "cn.woshuguotao.gopen",
+              "productName": "G open",
+              "directories": {
+                "output": "dist"
+              },
+              "mac": {
+                "target": "dmg",
+                "category": "public.app-category.productivity"
+              }
+            }
+          }
+          PKGJSON
           
           # 创建 main.js
-          echo 'const { app, BrowserWindow } = require("electron");
+          cat > electron/main.js << 'MAINJS'
+          const { app, BrowserWindow } = require("electron");
           const path = require("path");
           
           function createWindow() {
@@ -274,7 +304,8 @@ jobs:
           
           app.on("window-all-closed", () => {
             if (process.platform !== "darwin") app.quit();
-          });' > electron/main.js
+          });
+          MAINJS
           
           # 构建
           cd electron

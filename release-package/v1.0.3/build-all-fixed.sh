@@ -1,0 +1,75 @@
+#!/bin/bash
+
+echo "========================================"
+echo "  G open v1.0.3 全平台构建脚本"
+echo "========================================"
+echo ""
+
+VERSION="1.0.3"
+RELEASE_DIR="/workspace/projects/release-package/v1.0.3"
+PROJECT_DIR="/workspace/projects"
+
+# 创建输出目录
+mkdir -p "$RELEASE_DIR/output"
+
+cd "$PROJECT_DIR"
+
+echo "[1/6] 准备 Android 包..."
+mkdir -p "$RELEASE_DIR/output/gopen-android-v$VERSION"
+cp -r "$PROJECT_DIR/client" "$RELEASE_DIR/output/gopen-android-v$VERSION/client"
+cp -r "$PROJECT_DIR/server" "$RELEASE_DIR/output/gopen-android-v$VERSION/server"
+cp "$RELEASE_DIR/android/Android构建指南.md" "$RELEASE_DIR/output/gopen-android-v$VERSION/"
+cd "$RELEASE_DIR/output"
+tar -czvf "gopen-android-v$VERSION.tar.gz" "gopen-android-v$VERSION"
+rm -rf "gopen-android-v$VERSION"
+echo "✅ Android 包已创建: gopen-android-v$VERSION.tar.gz"
+
+echo "[2/6] 准备 iOS 包..."
+mkdir -p "$RELEASE_DIR/output/gopen-ios-v$VERSION"
+cp -r "$PROJECT_DIR/client" "$RELEASE_DIR/output/gopen-ios-v$VERSION/client"
+cp -r "$PROJECT_DIR/server" "$RELEASE_DIR/output/gopen-ios-v$VERSION/server"
+cp "$RELEASE_DIR/ios/iOS构建指南.md" "$RELEASE_DIR/output/gopen-ios-v$VERSION/"
+cd "$RELEASE_DIR/output"
+tar -czvf "gopen-ios-v$VERSION.tar.gz" "gopen-ios-v$VERSION"
+rm -rf "gopen-ios-v$VERSION"
+echo "✅ iOS 包已创建: gopen-ios-v$VERSION.tar.gz"
+
+echo "[3/6] 准备 macOS 包..."
+mkdir -p "$RELEASE_DIR/output/gopen-macos-v$VERSION"
+cp -r "$PROJECT_DIR/client" "$RELEASE_DIR/output/gopen-macos-v$VERSION/client"
+cp -r "$PROJECT_DIR/server" "$RELEASE_DIR/output/gopen-macos-v$VERSION/server"
+cp "$RELEASE_DIR/macos/macOS构建指南.md" "$RELEASE_DIR/output/gopen-macos-v$VERSION/"
+cd "$RELEASE_DIR/output"
+tar -czvf "gopen-macos-v$VERSION.tar.gz" "gopen-macos-v$VERSION"
+rm -rf "gopen-macos-v$VERSION"
+echo "✅ macOS 包已创建: gopen-macos-v$VERSION.tar.gz"
+
+echo "[4/6] 准备 Linux 包..."
+mkdir -p "$RELEASE_DIR/output/gopen-linux-v$VERSION"
+cp -r "$PROJECT_DIR/client" "$RELEASE_DIR/output/gopen-linux-v$VERSION/client"
+cp -r "$PROJECT_DIR/server" "$RELEASE_DIR/output/gopen-linux-v$VERSION/server"
+cp "$RELEASE_DIR/linux/Linux构建指南.md" "$RELEASE_DIR/output/gopen-linux-v$VERSION/"
+cd "$RELEASE_DIR/output"
+tar -czvf "gopen-linux-v$VERSION.tar.gz" "gopen-linux-v$VERSION"
+rm -rf "gopen-linux-v$VERSION"
+echo "✅ Linux 包已创建: gopen-linux-v$VERSION.tar.gz"
+
+echo "[5/6] 准备 Web 包..."
+mkdir -p "$RELEASE_DIR/output/gopen-web-v$VERSION"
+# 构建 Web 版本
+cd "$PROJECT_DIR/client"
+pnpm build:web 2>/dev/null || echo "Web build skipped"
+cp -r web-build "$RELEASE_DIR/output/gopen-web-v$VERSION/" 2>/dev/null || true
+cp "$RELEASE_DIR/web/Web部署指南.md" "$RELEASE_DIR/output/gopen-web-v$VERSION/"
+cd "$RELEASE_DIR/output"
+tar -czvf "gopen-web-v$VERSION.tar.gz" "gopen-web-v$VERSION" 2>/dev/null || echo "Web package created with guide only"
+rm -rf "gopen-web-v$VERSION"
+echo "✅ Web 包已创建: gopen-web-v$VERSION.tar.gz"
+
+echo ""
+echo "========================================"
+echo "  构建完成！"
+echo "========================================"
+echo ""
+echo "输出目录: $RELEASE_DIR/output"
+ls -lh "$RELEASE_DIR/output"

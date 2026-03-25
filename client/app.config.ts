@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     "name": appName,
     "slug": "gopen",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "gopen",
@@ -17,6 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gopen.app",
+      "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [

@@ -1,11 +1,11 @@
+# Netlify 部署配置 - 免费前端托管备选方案
+
 [build]
-  command = "pnpm install && npx expo export --platform web"
+  command = "npx expo export --platform web --output-dir dist"
   publish = "dist"
-  base = "."
 
 [build.environment]
   NODE_VERSION = "20"
-  PNPM_VERSION = "9"
 
 [[redirects]]
   from = "/*"
@@ -15,17 +15,11 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[headers]]
-  for = "/_expo/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/assets/*"
+  for = "/_expo/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"

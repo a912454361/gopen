@@ -1,476 +1,200 @@
-# G open 智能创作助手 - 部署指南
+# G open 智能创作助手 - 免费部署指南
 
-本文档提供完整的部署流程，覆盖 Web、Android 和 iOS 三大平台。
+## 部署架构
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Vercel        │     │   Render/Railway│     │   Supabase      │
+│   (前端 Web)     │────▶│   (后端 API)    │────▶│   (数据库)      │
+│   免费托管       │     │   免费托管       │     │   免费额度       │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │
+        ▼                       ▼
+  用户访问 Web            API 请求处理
+```
+
+## 部署成本：$0/月
+
+| 服务 | 平台 | 费用 |
+|------|------|------|
+| 前端 Web | Vercel | 免费 |
+| 后端 API | Render | 免费 |
+| 数据库 | Supabase | 免费 |
+| 对象存储 | 阿里云 OSS | 按量付费（小额） |
 
 ---
 
-## 目录
+## 第一步：部署后端到 Render
 
-1. [前置条件](#前置条件)
-2. [Web 部署](#web-部署)
-3. [Android 部署](#android-部署)
-4. [iOS 部署](#ios-部署)
-5. [后端服务部署](#后端服务部署)
-6. [环境变量配置](#环境变量配置)
-7. [常见问题](#常见问题)
+### 1.1 注册 Render
+访问 https://render.com 注册账号（可用 GitHub 登录）
 
----
+### 1.2 创建 Web Service
+1. 点击 **New** → **Web Service**
+2. 连接 GitHub 仓库 `a912454361/gopen`
+3. 配置如下：
 
-## 前置条件
+| 配置项 | 值 |
+|--------|-----|
+| Name | gopen-api |
+| Runtime | Node |
+| Build Command | `cd server && pnpm install && pnpm run build` |
+| Start Command | `cd server && node dist/index.js` |
+| Region | Singapore |
 
-### 必需账号
-- [Expo 账号](https://expo.dev/signup)（免费）
-- [Google Play 开发者账号](https://play.google.com/console/signup)（$25 一次性费用，用于 Android 上架）
-- [Apple 开发者账号](https://developer.apple.com/programs/)（$99/年，用于 iOS 上架）
-
-### 必需工具
-- Node.js 18+ LTS
-- pnpm（包管理器）
-- EAS CLI（Expo Application Services）
+### 1.3 设置环境变量
+在 **Environment** 标签添加：
 
 ```bash
-# 安装 EAS CLI
-npm install -g eas-cli
-
-# 登录 Expo 账号
-eas login
-```
-
----
-
-## Web 部署
-
-### 方案一：静态托管（推荐）
-
-#### 1. 构建 Web 版本
-```bash
-cd client
-npx expo export --platform web
-```
-
-构建产物位于 `client/dist/` 目录。
-
-#### 2. 部署选项
-
-**选项 A：Vercel（推荐）**
-```bash
-# 安装 Vercel CLI
-npm install -g vercel
-
-# 部署
-cd client
-vercel --prod
-
-# 或通过 GitHub 仓库自动部署
-```
-
-**选项 B：Netlify**
-```bash
-# 安装 Netlify CLI
-npm install -g netlify-cli
-
-# 部署
-cd client
-netlify deploy --prod --dir=dist
-```
-
-**选项 C：GitHub Pages**
-```bash
-# 在项目根目录创建 GitHub Actions 工作流
-# .github/workflows/deploy-web.yml
-```
-
-**选项 D：自有服务器**
-```bash
-# 将 dist 目录上传到服务器
-scp -r dist/* user@server:/var/www/gopen/
-```
-
-### 方案二：服务端渲染（SSR）
-
-如需 SEO 优化，可使用 Expo 的 SSR 模式：
-```bash
-cd client
-npx expo export --platform web --output-dir server
-```
-
----
-
-## Android 部署
-
-### 快速分发（APK）
-
-适用于测试、内部分发或第三方应用市场。
-
-#### 1. 构建 APK
-```bash
-cd client
-
-# 使用 EAS 构建 APK
-eas build --platform android --profile apk
-
-# 或使用预览配置（开发测试）
-eas build --platform android --profile preview
-```
-
-#### 2. 下载 APK
-构建完成后，在 Expo 控制台下载 APK 文件：
-- 控制台地址：https://expo.dev/accounts/[your-account]/projects/[project-name]/builds
-
-#### 3. 分发方式
-- 直接分享 APK 下载链接
-- 上传到第三方应用市场（如：酷安、豌豆荚）
-- 使用 Firebase App Distribution 进行内部分发
-
-### Google Play 上架（AAB）
-
-适用于 Google Play 官方上架。
-
-#### 1. 配置应用信息
-确保 `app.config.ts` 中包含完整信息：
-```typescript
-android: {
-  package: "com.gopen.app",
-  versionCode: 1,
-  permissions: [...],
-  googleServicesFile: "./google-services.json" // Firebase 配置（可选）
-}
-```
-
-#### 2. 构建 AAB
-```bash
-cd client
-
-# 构建用于 Google Play 的 AAB
-eas build --platform android --profile aab
-```
-
-#### 3. 提交到 Google Play
-```bash
-# 自动提交（需配置 Google Service Account）
-eas submit --platform android --profile production
-
-# 或手动上传到 Google Play Console
-```
-
-#### 4. Google Play Console 配置
-1. 登录 [Google Play Console](https://play.google.com/console)
-2. 创建新应用
-3. 填写商店信息：
-   - 应用名称：G open 智能创作助手
-   - 简短描述：AI 驱动的游戏动漫创作助手
-   - 完整描述：（参考应用介绍）
-   - 应用图标：512x512 PNG
-   - 截图：至少 2 张（手机、平板）
-   - 分类：工具 / 效率
-   - 内容分级：填写问卷获取分级
-4. 上传 AAB 文件
-5. 设置定价（免费/付费）
-6. 提交审核
-
----
-
-## iOS 部署
-
-### TestFlight 分发（测试）
-
-#### 1. 构建 iOS 应用
-```bash
-cd client
-
-# 构建用于 TestFlight 的 IPA
-eas build --platform ios --profile preview
-```
-
-#### 2. 提交到 TestFlight
-```bash
-# 自动提交
-eas submit --platform ios --profile production
-
-# 或通过 App Store Connect 手动上传
-```
-
-#### 3. TestFlight 配置
-1. 登录 [App Store Connect](https://appstoreconnect.apple.com)
-2. 创建新应用
-3. 上传构建版本
-4. 添加内部/外部测试员
-5. 分发测试版本
-
-### App Store 上架
-
-#### 1. 配置应用信息
-确保 `app.config.ts` 中包含完整信息：
-```typescript
-ios: {
-  bundleIdentifier: "com.gopen.app",
-  buildNumber: "1",
-  supportsTablet: true,
-  infoPlist: {
-    NSCameraUsageDescription: "G open 需要访问相机以拍摄照片和视频",
-    NSPhotoLibraryUsageDescription: "G open 需要访问相册以上传和保存图片",
-    NSMicrophoneUsageDescription: "G open 需要访问麦克风以录制视频声音"
-  }
-}
-```
-
-#### 2. 构建 IPA
-```bash
-cd client
-
-# 构建 App Store 版本
-eas build --platform ios --profile ipa
-```
-
-#### 3. 提交审核
-```bash
-# 自动提交
-eas submit --platform ios --profile production
-```
-
-#### 4. App Store Connect 配置
-1. 登录 [App Store Connect](https://appstoreconnect.apple.com)
-2. 填写应用信息：
-   - 名称：G open 智能创作助手
-   - 副标题：AI 创作，无限可能
-   - 描述：（参考应用介绍）
-   - 关键词：AI,创作,游戏,动漫,写作,图像
-   - 技术支持 URL
-   - 隐私政策 URL
-3. 上传截图（必需尺寸）：
-   - 6.7" iPhone（1290x2796）
-   - 6.5" iPhone（1284x2778）
-   - 5.5" iPhone（1242x2208）
-   - 12.9" iPad（2048x2732）
-4. 选择构建版本
-5. 提交审核
-
----
-
-## 后端服务部署
-
-### 方案一：云服务器部署
-
-#### 1. 准备服务器
-- 推荐配置：2核 CPU / 4GB 内存 / 50GB 存储
-- 操作系统：Ubuntu 22.04 LTS
-
-#### 2. 安装依赖
-```bash
-# 更新系统
-sudo apt update && sudo apt upgrade -y
-
-# 安装 Node.js 18
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# 安装 pnpm
-npm install -g pnpm
-
-# 安装 PM2（进程管理）
-npm install -g pm2
-```
-
-#### 3. 部署代码
-```bash
-# 克隆代码
-git clone [repository-url] /var/www/gopen
-cd /var/www/gopen/server
-
-# 安装依赖
-pnpm install
-
-# 构建生产版本
-pnpm run build
-
-# 配置环境变量
-cp .env.example .env
-nano .env
-```
-
-#### 4. 启动服务
-```bash
-# 使用 PM2 启动
-pm2 start npm --name "gopen-api" -- run start:prod
-
-# 设置开机自启
-pm2 startup
-pm2 save
-```
-
-#### 5. 配置 Nginx 反向代理
-```nginx
-server {
-    listen 80;
-    server_name api.gopen.com;
-
-    location / {
-        proxy_pass http://localhost:9091;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-### 方案二：Docker 部署
-
-#### 1. 创建 Dockerfile
-```dockerfile
-# server/Dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
-
-COPY . .
-RUN pnpm run build
-
-EXPOSE 9091
-
-CMD ["pnpm", "run", "start:prod"]
-```
-
-#### 2. 构建并运行
-```bash
-docker build -t gopen-api .
-docker run -d -p 9091:9091 --env-file .env gopen-api
-```
-
-### 方案三：云平台部署
-
-#### Vercel / Railway / Render
-适合快速部署，支持自动 CI/CD：
-```bash
-# 连接 GitHub 仓库
-# 配置构建命令：pnpm run build
-# 配置启动命令：pnpm run start:prod
-# 添加环境变量
-```
-
----
-
-## 环境变量配置
-
-### 后端环境变量（.env）
-
-```bash
-# 服务配置
+# 必填
 NODE_ENV=production
-PORT=9091
+SUPABASE_URL=你的supabase地址
+SUPABASE_ANON_KEY=你的supabase_key
+DATABASE_URL=你的数据库连接字符串
 
-# 数据库
-DATABASE_URL=postgresql://...
+# OSS 配置（如需文件存储）
+OSS_ACCESS_KEY_ID=你的oss_key
+OSS_ACCESS_KEY_SECRET=你的oss_secret
+OSS_BUCKET_PRIMARY=你的bucket名
 
-# 对象存储
-S3_ACCESS_KEY_ID=...
-S3_SECRET_ACCESS_KEY=...
-S3_BUCKET_NAME=...
-S3_REGION=auto
-S3_ENDPOINT=...
-
-# AI 服务
-COZE_API_KEY=...
-
-# 支付
-WECHAT_PAY_APP_ID=...
-ALIPAY_APP_ID=...
-
-# OAuth
-GOOGLE_CLIENT_ID=...
-APPLE_CLIENT_ID=...
+# 安全配置（可自动生成）
+JWT_SECRET=随机32位字符串
+STORAGE_ENCRYPTION_KEY=随机32位字符串
 ```
 
-### 前端环境变量
+### 1.4 部署
+点击 **Create Web Service**，等待构建完成。
 
+部署成功后，API 地址为：`https://gopen-api.onrender.com`
+
+---
+
+## 第二步：部署前端到 Vercel
+
+### 2.1 注册 Vercel
+访问 https://vercel.com 注册账号（用 GitHub 登录）
+
+### 2.2 导入项目
+1. 点击 **New Project**
+2. 导入 GitHub 仓库 `a912454361/gopen`
+3. 配置如下：
+
+| 配置项 | 值 |
+|--------|-----|
+| Framework Preset | Other |
+| Root Directory | client |
+| Build Command | `npx expo export --platform web --output-dir dist` |
+| Output Directory | dist |
+
+### 2.3 设置环境变量
+添加环境变量：
+```
+EXPO_PUBLIC_BACKEND_BASE_URL=https://gopen-api.onrender.com
+```
+
+### 2.4 部署
+点击 **Deploy**，等待构建完成。
+
+部署成功后，Web 地址为：`https://gopen.vercel.app`
+
+---
+
+## 第三步：配置 CORS
+
+在后端 Render 的环境变量中添加：
+```
+CORS_ORIGIN=https://gopen.vercel.app
+```
+
+重启后端服务使配置生效。
+
+---
+
+## 备选方案：Railway 部署后端
+
+如果 Render 无法使用，可以用 Railway：
+
+### 1. 注册 Railway
+访问 https://railway.app 注册账号
+
+### 2. 部署
+1. 点击 **New Project** → **Deploy from GitHub repo**
+2. 选择 `a912454361/gopen`
+3. 设置 Root Directory 为 `server`
+4. 添加环境变量（同 Render）
+
+---
+
+## 免费额度限制
+
+### Render 免费计划
+- 750 小时/月运行时间
+- 512MB 内存
+- 服务会在 15 分钟无请求后休眠
+- 首次请求可能需要 30 秒唤醒
+
+### Vercel 免费计划
+- 100GB 带宽/月
+- 无限次部署
+- 自动 HTTPS
+
+### Supabase 免费计划
+- 500MB 数据库
+- 1GB 文件存储
+- 50GB 带宽/月
+
+---
+
+## 部署验证
+
+### 1. 测试后端 API
 ```bash
-# 自动注入
-EXPO_PUBLIC_BACKEND_BASE_URL=https://api.gopen.com
+curl https://gopen-api.onrender.com/api/v1/health
+# 应返回: {"status":"ok"}
 ```
+
+### 2. 访问前端
+```
+https://gopen.vercel.app
+```
+
+---
+
+## 自定义域名（可选）
+
+### Vercel 添加域名
+1. 项目设置 → Domains
+2. 添加你的域名
+3. 按提示配置 DNS
+
+### Render 添加域名
+1. 项目设置 → Custom Domains
+2. 添加你的域名
+3. 配置 DNS CNAME 指向 `gopen-api.onrender.com`
 
 ---
 
 ## 常见问题
 
-### Q1: EAS 构建失败怎么办？
+### Q: 后端启动失败？
+检查环境变量是否完整，特别是 `SUPABASE_URL` 和 `DATABASE_URL`
 
-查看构建日志：
-```bash
-eas build:view [BUILD_ID]
-```
+### Q: 前端无法连接后端？
+1. 检查 `EXPO_PUBLIC_BACKEND_BASE_URL` 是否正确
+2. 检查后端 `CORS_ORIGIN` 是否包含前端域名
+3. 后端可能处于休眠状态，首次请求需要等待
 
-常见原因：
-- 环境变量未配置
-- 依赖版本冲突
-- 原生模块配置错误
-
-### Q2: iOS 构建需要 Mac 吗？
-
-不需要。EAS 在云端 Mac 服务器上构建，无需本地 Mac。
-
-### Q3: 如何更新应用版本？
-
-```bash
-# 更新版本号
-# app.config.ts: version: "1.0.1"
-
-# 构建新版本
-eas build --platform all --profile production
-
-# 提交更新
-eas submit --platform all --profile production
-```
-
-### Q4: 如何实现热更新？
-
-Expo 支持通过 Update API 实现热更新：
-```bash
-# 发布更新
-eas update --branch production --message "修复bug"
-```
-
-### Q5: 应用签名如何管理？
-
-EAS 自动管理签名，首次构建会自动生成：
-- Android: Keystore
-- iOS: Certificates & Provisioning Profiles
+### Q: 构建超时？
+免费计划构建时间有限制，可以：
+1. 简化依赖
+2. 使用预构建镜像
+3. 升级付费计划
 
 ---
 
-## 部署清单
+## 下一步
 
-### Web 部署
-- [ ] 执行 Web 构建
-- [ ] 配置域名和 SSL
-- [ ] 部署到托管平台
-- [ ] 验证访问正常
-
-### Android 部署
-- [ ] 配置应用签名
-- [ ] 构建 APK（测试）/ AAB（上架）
-- [ ] 准备商店素材
-- [ ] 提交到 Google Play
-
-### iOS 部署
-- [ ] 配置 Apple 开发者账号
-- [ ] 配置 Bundle ID 和签名
-- [ ] 构建 IPA
-- [ ] 准备商店素材
-- [ ] 提交到 App Store
-
-### 后端部署
-- [ ] 配置服务器环境
-- [ ] 部署后端服务
-- [ ] 配置数据库
-- [ ] 配置域名和 SSL
-- [ ] 验证 API 可访问
-
----
-
-## 联系支持
-
-如有问题，请联系开发团队或在 GitHub 提交 Issue。
+部署完成后，你可以：
+1. 配置自定义域名
+2. 设置支付宝/微信支付
+3. 发布 APP 到应用商店

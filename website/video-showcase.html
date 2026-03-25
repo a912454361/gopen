@@ -4,29 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="G open 智能创作助手 - AI驱动的游戏与动漫内容创作平台">
-    <meta name="keywords" content="AI创作,动漫制作,8K粒子特效,游戏开发">
-    <title>G open 智能创作助手 - 官网</title>
+    <title>G open 智能创作助手 - 作品展示</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         
         :root {
             --primary: #00F0FF;
+            --primary-dark: #00C4CC;
             --secondary: #BF00FF;
+            --accent: #FF006E;
             --bg-dark: #000000;
             --bg-card: rgba(10, 10, 20, 0.9);
             --text-primary: #FFFFFF;
             --text-secondary: #8888AA;
         }
         
-        html { scroll-behavior: smooth; }
+        html {
+            scroll-behavior: smooth;
+        }
         
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background: var(--bg-dark);
             color: var(--text-primary);
             line-height: 1.6;
+            overflow-x: hidden;
         }
         
         /* 导航 */
@@ -35,8 +43,9 @@
             top: 0;
             left: 0;
             right: 0;
-            padding: 1.2rem 3rem;
+            padding: 1.5rem 3rem;
             background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(0, 240, 255, 0.2);
             z-index: 1000;
             display: flex;
@@ -46,119 +55,66 @@
         
         .logo {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.6rem;
+            font-size: 1.8rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
         }
         
         .nav-links {
             display: flex;
-            gap: 2rem;
+            gap: 3rem;
             list-style: none;
         }
         
         .nav-links a {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-secondary);
             text-decoration: none;
             transition: color 0.3s;
         }
         
-        .nav-links a:hover { color: var(--primary); }
+        .nav-links a:hover {
+            color: var(--primary);
+        }
         
         /* Hero */
         .hero {
-            min-height: 80vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8rem 2rem 4rem;
+            padding: 8rem 2rem;
             background: radial-gradient(ellipse at center, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
         }
         
-        .hero-content { text-align: center; max-width: 800px; }
+        .hero-content {
+            text-align: center;
+            max-width: 800px;
+        }
         
         .hero h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 3.5rem;
+            font-size: 4rem;
             font-weight: 900;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            letter-spacing: 4px;
         }
         
         .hero p {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: var(--text-secondary);
             margin-bottom: 2rem;
         }
         
-        .btn {
-            display: inline-block;
-            font-family: 'Orbitron', sans-serif;
-            padding: 1rem 2.5rem;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            text-decoration: none;
-            transition: all 0.3s;
-            letter-spacing: 1px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, #00C4CC 100%);
-            color: #000;
-        }
-        
-        .btn-primary:hover {
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        /* 统计 */
-        .stats {
-            padding: 3rem 2rem;
-            background: rgba(10, 10, 20, 0.5);
-        }
-        
-        .stats-grid {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-        }
-        
-        .stat-card {
-            text-align: center;
-            padding: 1.5rem;
-            background: var(--bg-card);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            border-radius: 8px;
-        }
-        
-        .stat-number {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .stat-label {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-            letter-spacing: 2px;
-        }
-        
-        /* 视频展示区 */
-        .showcase {
+        /* 作品展示区 */
+        .showcase-section {
             padding: 6rem 2rem;
         }
         
@@ -171,33 +127,31 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 2.5rem;
             font-weight: 800;
+            margin-bottom: 1rem;
             background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         
-        .section-subtitle {
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-        }
-        
-        /* 主视频 */
+        /* 主视频展示 */
         .main-video {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto 4rem;
-            background: var(--bg-card);
-            border: 2px solid rgba(0, 240, 255, 0.3);
+            position: relative;
             border-radius: 16px;
             overflow: hidden;
+            background: var(--bg-card);
+            border: 2px solid rgba(0, 240, 255, 0.3);
         }
         
-        .video-wrapper {
+        .main-video-container {
             position: relative;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 */
+            padding-top: 56.25%; /* 16:9 比例 */
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
         }
         
-        .video-wrapper iframe {
+        .main-video-container iframe {
             position: absolute;
             top: 0;
             left: 0;
@@ -207,32 +161,30 @@
         }
         
         .video-info {
-            padding: 1.5rem 2rem;
+            padding: 2rem;
             background: rgba(0, 0, 0, 0.8);
             border-top: 1px solid rgba(0, 240, 255, 0.2);
         }
         
         .video-title {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             margin-bottom: 0.5rem;
         }
         
         .video-desc {
             color: var(--text-secondary);
-            font-size: 0.9rem;
         }
         
         .video-tags {
             display: flex;
             gap: 0.5rem;
             margin-top: 1rem;
-            flex-wrap: wrap;
         }
         
         .tag {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             padding: 0.4rem 1rem;
             background: rgba(0, 240, 255, 0.1);
             border: 1px solid var(--primary);
@@ -242,11 +194,11 @@
         
         /* 视频网格 */
         .video-grid {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
+            gap: 2rem;
         }
         
         .video-card {
@@ -254,22 +206,24 @@
             border: 1px solid rgba(0, 240, 255, 0.2);
             border-radius: 12px;
             overflow: hidden;
-            transition: all 0.3s;
+            transition: all 0.4s;
+            cursor: pointer;
         }
         
         .video-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 240, 255, 0.2);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 240, 255, 0.3);
             border-color: var(--primary);
         }
         
-        .video-card-wrapper {
+        .video-thumbnail {
             position: relative;
             width: 100%;
             padding-top: 56.25%;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(191, 0, 255, 0.1) 100%);
         }
         
-        .video-card-wrapper iframe {
+        .video-thumbnail iframe {
             position: absolute;
             top: 0;
             left: 0;
@@ -279,28 +233,28 @@
         }
         
         .video-card-info {
-            padding: 1rem 1.2rem;
+            padding: 1.5rem;
         }
         
         .video-card-title {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.95rem;
-            margin-bottom: 0.3rem;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
         }
         
         .video-card-desc {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
         }
         
         /* 特效展示 */
-        .effects {
+        .effects-section {
             padding: 6rem 2rem;
             background: radial-gradient(ellipse at center, rgba(191, 0, 255, 0.1) 0%, transparent 70%);
         }
         
         .effects-grid {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -316,199 +270,129 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s;
+            padding: 2rem;
+            transition: all 0.4s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .effect-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(191, 0, 255, 0.3) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        
+        .effect-card:hover::before {
+            opacity: 1;
         }
         
         .effect-card:hover {
             transform: scale(1.05);
             border-color: var(--secondary);
-            box-shadow: 0 0 30px rgba(191, 0, 255, 0.3);
+            box-shadow: 0 0 40px rgba(191, 0, 255, 0.4);
         }
         
-        .effect-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+        .effect-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
         
         .effect-name {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
         }
         
         .effect-type {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: var(--secondary);
-            margin-top: 0.3rem;
-        }
-        
-        /* SDK */
-        .sdk {
-            padding: 6rem 2rem;
-        }
-        
-        .sdk-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-            align-items: center;
-        }
-        
-        .sdk-info h2 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .sdk-info p {
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-        }
-        
-        .sdk-features {
-            list-style: none;
-            margin-bottom: 1.5rem;
-        }
-        
-        .sdk-features li {
-            padding: 0.6rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary);
-        }
-        
-        .sdk-features li::before {
-            content: '✓ ';
-            color: var(--primary);
-            font-weight: bold;
-        }
-        
-        /* 下载 */
-        .download {
-            padding: 6rem 2rem;
-            background: rgba(10, 10, 20, 0.5);
-        }
-        
-        .download-grid {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-        }
-        
-        .download-card {
-            background: var(--bg-card);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            border-radius: 12px;
-            padding: 2rem 1.5rem;
-            text-align: center;
-            transition: all 0.3s;
-        }
-        
-        .download-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
-        }
-        
-        .download-icon { font-size: 3rem; margin-bottom: 1rem; }
-        
-        .download-card h3 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .download-card p {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
+            margin-top: 0.5rem;
+            position: relative;
+            z-index: 1;
         }
         
         /* 页脚 */
         .footer {
-            padding: 3rem 2rem;
-            background: rgba(0, 0, 0, 0.9);
+            padding: 4rem 2rem;
+            background: rgba(0, 0, 0, 0.8);
             border-top: 1px solid rgba(0, 240, 255, 0.2);
             text-align: center;
         }
         
         .footer p {
             color: var(--text-secondary);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
         
         /* 响应式 */
         @media (max-width: 1024px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .video-grid { grid-template-columns: repeat(2, 1fr); }
-            .effects-grid { grid-template-columns: repeat(2, 1fr); }
-            .download-grid { grid-template-columns: repeat(2, 1fr); }
-            .sdk-container { grid-template-columns: 1fr; }
+            .video-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .effects-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
         
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2.5rem; }
-            .nav-links { display: none; }
-            .video-grid { grid-template-columns: 1fr; }
-            .effects-grid { grid-template-columns: repeat(2, 1fr); }
-            .download-grid { grid-template-columns: 1fr; }
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .effects-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
 <body>
-    <!-- 导航 -->
+    <!-- 导航栏 -->
     <nav class="navbar">
         <div class="logo">G OPEN</div>
         <ul class="nav-links">
-            <li><a href="#showcase">作品展示</a></li>
+            <li><a href="#videos">视频展示</a></li>
             <li><a href="#effects">粒子特效</a></li>
-            <li><a href="#sdk">SDK授权</a></li>
-            <li><a href="#download">下载</a></li>
         </ul>
     </nav>
 
     <!-- Hero -->
     <section class="hero">
         <div class="hero-content">
-            <h1>G OPEN</h1>
-            <p>AI驱动的游戏与动漫内容创作平台<br>8K粒子特效 · 80集《剑破苍穹》极速制作</p>
-            <a href="#showcase" class="btn btn-primary">观看作品</a>
+            <h1>作品展示</h1>
+            <p>8K超高清粒子特效视频作品，展示AI创作的无限可能</p>
         </div>
     </section>
 
-    <!-- 统计 -->
-    <section class="stats">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number">80</div>
-                <div class="stat-label">EPISODES</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">3200</div>
-                <div class="stat-label">SCENES</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">8K</div>
-                <div class="stat-label">PARTICLES</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">24H</div>
-                <div class="stat-label">PRODUCTION</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 视频展示 -->
-    <section class="showcase" id="showcase">
+    <!-- 视频展示区 -->
+    <section class="showcase-section" id="videos">
         <div class="section-header">
-            <h2 class="section-title">作品展示</h2>
-            <p class="section-subtitle">8K超高清粒子特效视频作品</p>
+            <h2 class="section-title">精选作品</h2>
         </div>
         
-        <!-- 主视频 - 使用Bilibili嵌入 -->
+        <!-- 主视频 -->
         <div class="main-video">
-            <div class="video-wrapper">
+            <div class="main-video-container">
+                <!-- 使用Bilibili视频嵌入（国内可访问） -->
                 <iframe 
                     src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                     scrolling="no" 
@@ -530,7 +414,7 @@
         <!-- 视频网格 -->
         <div class="video-grid">
             <div class="video-card">
-                <div class="video-card-wrapper">
+                <div class="video-thumbnail">
                     <iframe 
                         src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                         scrolling="no" 
@@ -539,12 +423,12 @@
                 </div>
                 <div class="video-card-info">
                     <h3 class="video-card-title">苍穹剑气粒子特效</h3>
-                    <p class="video-card-desc">Niagara 8K粒子系统</p>
+                    <p class="video-card-desc">Niagara 8K粒子系统，剑气横扫特效</p>
                 </div>
             </div>
             
             <div class="video-card">
-                <div class="video-card-wrapper">
+                <div class="video-thumbnail">
                     <iframe 
                         src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                         scrolling="no" 
@@ -553,12 +437,12 @@
                 </div>
                 <div class="video-card-info">
                     <h3 class="video-card-title">冰心诀粒子特效</h3>
-                    <p class="video-card-desc">UE5冰霜粒子渲染</p>
+                    <p class="video-card-desc">UE5冰霜粒子渲染，寒冰护体效果</p>
                 </div>
             </div>
             
             <div class="video-card">
-                <div class="video-card-wrapper">
+                <div class="video-thumbnail">
                     <iframe 
                         src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                         scrolling="no" 
@@ -567,12 +451,12 @@
                 </div>
                 <div class="video-card-info">
                     <h3 class="video-card-title">暗影吞噬粒子特效</h3>
-                    <p class="video-card-desc">暗黑系粒子效果</p>
+                    <p class="video-card-desc">暗黑系粒子效果，吞噬一切光明</p>
                 </div>
             </div>
             
             <div class="video-card">
-                <div class="video-card-wrapper">
+                <div class="video-thumbnail">
                     <iframe 
                         src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                         scrolling="no" 
@@ -581,12 +465,12 @@
                 </div>
                 <div class="video-card-info">
                     <h3 class="video-card-title">烈焰焚天粒子特效</h3>
-                    <p class="video-card-desc">火焰粒子动力学</p>
+                    <p class="video-card-desc">火焰粒子动力学，焚尽八荒</p>
                 </div>
             </div>
             
             <div class="video-card">
-                <div class="video-card-wrapper">
+                <div class="video-thumbnail">
                     <iframe 
                         src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                         scrolling="no" 
@@ -595,12 +479,12 @@
                 </div>
                 <div class="video-card-info">
                     <h3 class="video-card-title">雷霆万钧粒子特效</h3>
-                    <p class="video-card-desc">雷电粒子效果</p>
+                    <p class="video-card-desc">雷电粒子效果，天劫降临</p>
                 </div>
             </div>
             
             <div class="video-card">
-                <div class="video-card-wrapper">
+                <div class="video-thumbnail">
                     <iframe 
                         src="//player.bilibili.com/player.html?isOutside=true&aid=113281460589028&bvid=BV1qmWHe6EkF&cid=26588426492&p=1&high_quality=1&danmaku=0"
                         scrolling="no" 
@@ -609,14 +493,14 @@
                 </div>
                 <div class="video-card-info">
                     <h3 class="video-card-title">万剑归宗粒子特效</h3>
-                    <p class="video-card-desc">剑雨特效展示</p>
+                    <p class="video-card-desc">剑雨特效，万千剑气齐发</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 粒子特效 -->
-    <section class="effects" id="effects">
+    <!-- 8K粒子特效展示 -->
+    <section class="effects-section" id="effects">
         <div class="section-header">
             <h2 class="section-title">8K粒子特效库</h2>
         </div>
@@ -661,59 +545,6 @@
                 <span class="effect-icon">🗡️</span>
                 <div class="effect-name">万剑归宗</div>
                 <div class="effect-type">SWORD RAIN</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SDK授权 -->
-    <section class="sdk" id="sdk">
-        <div class="sdk-container">
-            <div class="sdk-info">
-                <h2>SDK 授权方案</h2>
-                <p>支持二次开发，核心代码由云端服务保护<br>你掌控一切，代码无法反向控制你的系统</p>
-                <ul class="sdk-features">
-                    <li>完整API接口文档，支持深度定制</li>
-                    <li>核心AI服务云端化，无需担心代码泄露</li>
-                    <li>支付直连你的账户，资金100%归你</li>
-                    <li>用户数据、API密钥完全由你掌控</li>
-                    <li>授权验证机制，防止未授权使用</li>
-                </ul>
-                <a href="#contact" class="btn btn-primary">获取授权</a>
-            </div>
-            <div></div>
-        </div>
-    </section>
-
-    <!-- 下载 -->
-    <section class="download" id="download">
-        <div class="section-header">
-            <h2 class="section-title">下载中心</h2>
-        </div>
-        
-        <div class="download-grid">
-            <div class="download-card">
-                <div class="download-icon">🪟</div>
-                <h3>Windows</h3>
-                <p>图形安装程序</p>
-                <a href="https://github.com/a912454361/gopen/releases/download/v1.0.3/gopen-windows-v1.0.3.tar.gz" class="btn btn-primary">下载</a>
-            </div>
-            <div class="download-card">
-                <div class="download-icon">📱</div>
-                <h3>Android</h3>
-                <p>源码包本地构建</p>
-                <a href="https://github.com/a912454361/gopen/releases/download/v1.0.3/gopen-android-v1.0.3.tar.gz" class="btn btn-primary">下载</a>
-            </div>
-            <div class="download-card">
-                <div class="download-icon">🍎</div>
-                <h3>iOS</h3>
-                <p>iOS源码包</p>
-                <a href="https://github.com/a912454361/gopen/releases/download/v1.0.3/gopen-ios-v1.0.3.tar.gz" class="btn btn-primary">下载</a>
-            </div>
-            <div class="download-card">
-                <div class="download-icon">🌐</div>
-                <h3>Web</h3>
-                <p>静态文件部署</p>
-                <a href="https://github.com/a912454361/gopen/releases/download/v1.0.3/gopen-web-v1.0.3.tar.gz" class="btn btn-primary">下载</a>
             </div>
         </div>
     </section>

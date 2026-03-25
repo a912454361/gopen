@@ -28,10 +28,10 @@
 
 | 平台 | 文件 | 大小 | SHA256 | 状态 |
 |------|------|------|--------|------|
-| Windows | [gopen-1.0.5-setup.exe](https://github.com/a912454361/gopen/releases/download/v1.0.5/gopen-1.0.5-setup.exe) | 14MB | `e607bb98607bc75084f7835059d8224952dc54590b59af8ba250d75f4b086ea1` | ✅ 已发布 |
-| Android | gopen-1.0.5.apk | ~50MB | - | 🔄 EAS构建中 |
-| iOS | gopen-1.0.5.ipa | ~60MB | - | 🔄 EAS构建中 |
-| macOS | gopen-1.0.5.dmg | ~90MB | - | 🔄 构建中 |
+| **Windows** | [gopen-1.0.5-setup.exe](https://github.com/a912454361/gopen/releases/download/v1.0.5/gopen-1.0.5-setup.exe) | 14MB | `e607bb98607bc75084f7835059d8224952dc54590b59af8ba250d75f4b086ea1` | ✅ 已发布 |
+| **Android** | [gopen-1.0.5.apk](https://github.com/a912454361/gopen/releases/download/v1.0.5/gopen-1.0.5.apk) | 116MB | `399a12414388fd5888289f7e106a447a50f5bfe37581828e702c949771222369` | ✅ 已发布 |
+| **iOS** | gopen-1.0.5.ipa | - | - | ⏳ 需要配置证书 |
+| **macOS** | gopen-1.0.5.dmg | - | - | 🔄 待构建 |
 
 ## 🔧 技术栈
 

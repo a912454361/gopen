@@ -1,0 +1,63 @@
+G open 智能创作助手 - 软件许可协议
+
+版权所有 (C) 2024 G open Team. 保留所有权利。
+
+本软件授权您免费使用，但须遵守以下条款：
+
+1. 使用许可
+   - 您可以在任何数量的计算机上安装和使用本软件
+   - 您可以将本软件复制并分发给他人
+   - 但不得出售本软件或收取费用
+
+2. 限制
+   - 不得对本软件进行逆向工程、反编译或反汇编
+   - 不得修改或删除软件中的版权声明
+   - 不得利用本软件进行任何违法活动
+
+3. 免责声明
+   - 本软件按"现状"提供，不提供任何明示或暗示的保证
+   - 作者不对使用本软件所造成的任何损失负责
+   - 作者不对软件的适用性、可靠性做任何保证
+
+4. 知识产权
+   - 本软件受中华人民共和国著作权法和国际版权条约保护
+   - 您不得以任何形式侵犯本软件的知识产权
+
+5. 终止
+   - 如果您违反本协议的任何条款，您的使用许可将自动终止
+   - 终止后，您必须销毁所有副本
+
+官方网站：https://woshiguotao.cn
+
+---
+
+G open Intelligent Creation Assistant - Software License Agreement
+
+Copyright (C) 2024 G open Team. All rights reserved.
+
+This software is licensed to you for free use, subject to the following terms:
+
+1. License Grant
+   - You may install and use this software on any number of computers
+   - You may copy and distribute this software to others
+   - But you may not sell this software or charge fees
+
+2. Restrictions
+   - You may not reverse engineer, decompile, or disassemble this software
+   - You may not modify or remove copyright notices in the software
+   - You may not use this software for any illegal activities
+
+3. Disclaimer
+   - This software is provided "as is" without any express or implied warranties
+   - The authors are not responsible for any damages caused by using this software
+   - The authors make no guarantees about the suitability or reliability of the software
+
+4. Intellectual Property
+   - This software is protected by copyright laws and international treaties
+   - You may not infringe on the intellectual property rights of this software
+
+5. Termination
+   - Your license will automatically terminate if you violate any terms of this agreement
+   - Upon termination, you must destroy all copies
+
+Official Website: https://woshiguotao.cn

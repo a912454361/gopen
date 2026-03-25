@@ -29,3 +29,12 @@ android/app/*.keystore
 .env.local
 .env.*.local
 !.env.example
+
+# Release binaries (use GitHub Releases instead)
+release/
+dist/
+*.exe
+*.dmg
+*.apk
+*.ipa
+*.aab

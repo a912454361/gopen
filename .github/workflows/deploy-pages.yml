@@ -37,7 +37,7 @@ jobs:
 
       - name: 🔨 Build Web
         env:
-          EXPO_PUBLIC_BACKEND_BASE_URL: https://gopen-api.onrender.com
+          EXPO_PUBLIC_BACKEND_BASE_URL: http://8.136.229.243:9091
         run: |
           cd client
           npx expo export --platform web --output-dir ../dist

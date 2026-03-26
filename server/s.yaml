@@ -14,10 +14,10 @@ resources:
       description: G open 智能创作助手 API
       runtime: custom.debian10
       code: ./
-      handler: dist/index.handler
       memorySize: 512
+      cpu: 0.35
       timeout: 60
-      instanceConcurrency: 10
+      instanceConcurrency: 100
       customRuntimeConfig:
         command:
           - node
@@ -26,25 +26,17 @@ resources:
       environmentVariables:
         NODE_ENV: production
         PORT: 9091
-        # 以下环境变量需要在阿里云控制台手动设置
-        # SUPABASE_URL: 
-        # SUPABASE_ANON_KEY: 
-        # DATABASE_URL: 
-        # OSS_ACCESS_KEY_ID: 
-        # OSS_ACCESS_KEY_SECRET: 
-        # OSS_BUCKET_PRIMARY: 
-        # OSS_REGION: oss-cn-shanghai
-        # OSS_ENDPOINT: https://oss-cn-shanghai.aliyuncs.com
-        # JWT_SECRET: 
-        # STORAGE_ENCRYPTION_KEY: 
       triggers:
         - triggerName: httpTrigger
           triggerType: http
           triggerConfig:
             authType: anonymous
             disableURLInternet: false
-      customDomains:
-        - domainName: auto
-          protocol: HTTP
-          routeConfigs:
-            - path: /*
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - HEAD
+              - OPTIONS

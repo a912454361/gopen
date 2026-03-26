@@ -1,10 +1,11 @@
 /**
- * 国风粒子卡牌游戏 - 极致高端卡牌收藏页面
+ * 国风粒子卡牌游戏 - 移动端优化版
  * 
  * 设计理念：
- * - 万古长夜黑 + 鎏金色点缀
- * - 水墨晕染效果
- * - 奢侈品级视觉质感
+ * - 移动端优先设计
+ * - 触摸友好的交互区域
+ * - 流畅的滚动体验
+ * - 舒适的手持操作
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -18,18 +19,17 @@ import {
   FlatList,
   Dimensions,
   Platform,
+  RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { createStyles } from './styles';
+import { createStyles, CARD_WIDTH as CARD_WIDTH_CONST, CARD_GAP as CARD_GAP_CONST } from './styles';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 // 类型定义
@@ -72,37 +72,12 @@ const FACTIONS = [
 ];
 
 // 品级样式配置
-const RARITY_STYLES: Record<string, { bg: string; text: string; border: string; glow: string }> = {
-  '凡品': { 
-    bg: 'rgba(100, 100, 100, 0.95)', 
-    text: '#FFFFFF', 
-    border: '#808080',
-    glow: 'transparent'
-  },
-  '灵品': { 
-    bg: 'rgba(46, 204, 113, 0.95)', 
-    text: '#FFFFFF', 
-    border: '#2ECC71',
-    glow: 'rgba(46, 204, 113, 0.3)'
-  },
-  '仙品': { 
-    bg: 'rgba(52, 152, 219, 0.95)', 
-    text: '#FFFFFF', 
-    border: '#3498DB',
-    glow: 'rgba(52, 152, 219, 0.3)'
-  },
-  '圣品': { 
-    bg: 'rgba(155, 89, 182, 0.95)', 
-    text: '#FFFFFF', 
-    border: '#9B59B6',
-    glow: 'rgba(155, 89, 182, 0.3)'
-  },
-  '万古品': { 
-    bg: 'rgba(212, 175, 55, 0.98)', 
-    text: '#0A0A0A', 
-    border: '#D4AF37',
-    glow: 'rgba(212, 175, 55, 0.4)'
-  },
+const RARITY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  '凡品': { bg: 'rgba(100, 100, 100, 0.95)', text: '#FFFFFF', border: '#808080' },
+  '灵品': { bg: 'rgba(46, 204, 113, 0.95)', text: '#FFFFFF', border: '#2ECC71' },
+  '仙品': { bg: 'rgba(52, 152, 219, 0.95)', text: '#FFFFFF', border: '#3498DB' },
+  '圣品': { bg: 'rgba(155, 89, 182, 0.95)', text: '#FFFFFF', border: '#9B59B6' },
+  '万古品': { bg: 'rgba(212, 175, 55, 0.98)', text: '#0A0A0A', border: '#D4AF37' },
 };
 
 export default function InkCardsScreen() {
@@ -112,6 +87,7 @@ export default function InkCardsScreen() {
 
   // 状态
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerId, setPlayerId] = useState<string>('');
@@ -120,6 +96,10 @@ export default function InkCardsScreen() {
   const [drawnCards, setDrawnCards] = useState<Card[]>([]);
   const [drawLoading, setDrawLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  // 从样式文件中获取卡牌尺寸
+  const CARD_WIDTH = CARD_WIDTH_CONST || (SCREEN_WIDTH - 44) / 2;
+  const CARD_GAP = CARD_GAP_CONST || 12;
 
   // 初始化
   useEffect(() => {
@@ -175,6 +155,13 @@ export default function InkCardsScreen() {
   useEffect(() => {
     if (!loading) fetchCards();
   }, [selectedFaction]);
+
+  // 下拉刷新
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchCards();
+    setRefreshing(false);
+  }, []);
 
   const handleDraw = async () => {
     if (!playerId || (player && player.gold < 100)) {
@@ -263,7 +250,7 @@ export default function InkCardsScreen() {
                    item.faction === '蓬莱' ? 'cloud' : 
                    item.faction === '蛮荒' ? 'fire' : 
                    'star'} 
-              size={10} 
+              size={12} 
               color={faction?.color} 
             />
           </View>
@@ -287,15 +274,15 @@ export default function InkCardsScreen() {
           
           <View style={styles.cardStats}>
             <View style={styles.statItem}>
-              <FontAwesome6 name="hand-fist" size={9} color="#FF6B6B" />
+              <FontAwesome6 name="hand-fist" size={10} color="#FF6B6B" />
               <ThemedText style={styles.statValue}>{item.attack}</ThemedText>
             </View>
             <View style={styles.statItem}>
-              <FontAwesome6 name="shield-halved" size={9} color="#4ECDC4" />
+              <FontAwesome6 name="shield-halved" size={10} color="#4ECDC4" />
               <ThemedText style={styles.statValue}>{item.defense}</ThemedText>
             </View>
             <View style={styles.statItem}>
-              <FontAwesome6 name="heart" size={9} color="#FF6B9D" />
+              <FontAwesome6 name="heart" size={10} color="#FF6B9D" />
               <ThemedText style={styles.statValue}>{item.hp}</ThemedText>
             </View>
           </View>
@@ -307,23 +294,32 @@ export default function InkCardsScreen() {
   // 加载中
   if (loading) {
     return (
-      <Screen backgroundColor="#080808" statusBarStyle="light">
+      <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
         <View style={styles.loadingContainer}>
-          <View style={{ alignItems: 'center' }}>
-            <View style={styles.emptyIcon}>
-              <FontAwesome6 name="scroll" size={28} color="#D4AF37" />
-            </View>
-            <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 20 }} />
-            <ThemedText style={styles.loadingText}>正在进入万古长夜...</ThemedText>
+          <View style={styles.emptyIcon}>
+            <FontAwesome6 name="scroll" size={28} color="#D4AF37" />
           </View>
+          <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 20 }} />
+          <ThemedText style={styles.loadingText}>正在进入万古长夜...</ThemedText>
         </View>
       </Screen>
     );
   }
 
   return (
-    <Screen backgroundColor="#080808" statusBarStyle="light">
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#D4AF37"
+            colors={['#D4AF37']}
+          />
+        }
+      >
         {/* 英雄区域 */}
         <View style={styles.heroSection}>
           <View style={styles.heroGradient} />
@@ -340,9 +336,7 @@ export default function InkCardsScreen() {
         {/* 玩家状态栏 */}
         <View style={styles.playerSection}>
           <View style={styles.playerAvatar}>
-            <View style={styles.playerAvatarInner}>
-              <FontAwesome6 name="user" size={20} color="#D4AF37" />
-            </View>
+            <FontAwesome6 name="user" size={20} color="#D4AF37" />
           </View>
           
           <View style={styles.playerInfo}>
@@ -412,6 +406,7 @@ export default function InkCardsScreen() {
             contentContainerStyle={styles.cardGrid}
             showsVerticalScrollIndicator={false}
             scrollEnabled={false}
+            columnWrapperStyle={{ gap: CARD_GAP }}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIcon}>
@@ -423,8 +418,8 @@ export default function InkCardsScreen() {
           />
         </View>
         
-        {/* 底部占位 */}
-        <View style={{ height: 120 }} />
+        {/* 底部占位（避免被操作栏遮挡）*/}
+        <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* 底部操作栏 */}
@@ -438,7 +433,7 @@ export default function InkCardsScreen() {
             <ActivityIndicator size="small" color="#D4AF37" />
           ) : (
             <>
-              <FontAwesome6 name="wand-magic-sparkles" size={14} color="#D4AF37" />
+              <FontAwesome6 name="wand-magic-sparkles" size={16} color="#D4AF37" />
               <ThemedText style={styles.secondaryButtonText}>生成卡牌</ThemedText>
             </>
           )}
@@ -452,7 +447,7 @@ export default function InkCardsScreen() {
             <ActivityIndicator size="small" color="#0A0A0A" />
           ) : (
             <>
-              <FontAwesome6 name="box-open" size={14} color="#0A0A0A" />
+              <FontAwesome6 name="box-open" size={16} color="#0A0A0A" />
               <ThemedText style={styles.primaryButtonText}>抽卡 100金</ThemedText>
             </>
           )}

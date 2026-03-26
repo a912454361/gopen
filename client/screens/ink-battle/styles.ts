@@ -1,22 +1,28 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, Dimensions } from 'react-native';
 import { Spacing, BorderRadius, Theme } from '@/constants/theme';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 /**
- * 国风粒子卡牌对战 - 极致高端UI设计
+ * 国风粒子卡牌对战 - 移动端优化版
  * 
- * 设计理念：
- * - 沉浸式对战体验
- * - 动态粒子光效
- * - 金黑配色为主
- * - 水墨元素装饰
+ * 设计原则：
+ * - 触摸区域最小 44x44px
+ * - 战斗场景适配手机屏幕
+ * - 手牌可滑动查看
+ * - 操作按钮固定底部
  */
 
 export const createStyles = (theme: Theme) => {
+  // 手牌尺寸
+  const HAND_CARD_WIDTH = 72;
+  const HAND_CARD_HEIGHT = 100;
+
   return StyleSheet.create({
     // ==================== 页面容器 ====================
     container: {
       flex: 1,
-      backgroundColor: '#080808',
+      backgroundColor: '#0A0A0A',
     },
     
     // ==================== 战斗场景 ====================
@@ -27,8 +33,9 @@ export const createStyles = (theme: Theme) => {
     
     // ==================== 敌方区域 ====================
     enemyArea: {
-      height: 200,
-      padding: Spacing.xl,
+      paddingTop: Platform.OS === 'ios' ? 50 : 30,
+      paddingHorizontal: 20,
+      paddingBottom: 20,
       position: 'relative',
     },
     enemyGradient: {
@@ -36,7 +43,7 @@ export const createStyles = (theme: Theme) => {
       top: 0,
       left: 0,
       right: 0,
-      height: 200,
+      height: 180,
       backgroundColor: 'rgba(255, 68, 68, 0.03)',
     },
     enemyHeader: {
@@ -44,14 +51,14 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
     },
     enemyAvatar: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: '#151515',
-      borderWidth: 1.5,
-      borderColor: '#FF4444',
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: 'rgba(255, 68, 68, 0.1)',
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: '#FF4444',
       ...Platform.select({
         ios: {
           shadowColor: '#FF4444',
@@ -62,11 +69,11 @@ export const createStyles = (theme: Theme) => {
       }),
     },
     enemyInfo: {
-      marginLeft: Spacing.lg,
+      marginLeft: 14,
       flex: 1,
     },
     enemyName: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: '600',
       color: '#FAF8F5',
       letterSpacing: 0.5,
@@ -78,11 +85,11 @@ export const createStyles = (theme: Theme) => {
       letterSpacing: 1,
     },
     enemyHpBarContainer: {
-      marginTop: Spacing.lg,
+      marginTop: 12,
     },
     enemyHpBarBg: {
       height: 6,
-      backgroundColor: '#1A1A1A',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
       borderRadius: 3,
       overflow: 'hidden',
     },
@@ -90,22 +97,14 @@ export const createStyles = (theme: Theme) => {
       height: '100%',
       borderRadius: 3,
     },
-    enemyHpGlow: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: 'rgba(255, 68, 68, 0.2)',
-    },
     
     // ==================== 战斗日志区域 ====================
     battleLogArea: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: Spacing['2xl'],
+      paddingHorizontal: 24,
+      paddingVertical: 20,
       position: 'relative',
     },
     battleLogBg: {
@@ -116,23 +115,23 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: 'rgba(212, 175, 55, 0.02)',
     },
     battleLogText: {
-      fontSize: 16,
+      fontSize: 15,
       color: '#FAF8F5',
       textAlign: 'center',
-      lineHeight: 26,
+      lineHeight: 24,
       letterSpacing: 0.5,
     },
     turnIndicator: {
-      fontSize: 11,
+      fontSize: 10,
       color: '#D4AF37',
       letterSpacing: 3,
-      marginTop: Spacing.lg,
+      marginTop: 12,
       textTransform: 'uppercase',
     },
     
     // ==================== 玩家区域 ====================
     playerArea: {
-      padding: Spacing.xl,
+      padding: 20,
       position: 'relative',
     },
     playerGradient: {
@@ -140,7 +139,7 @@ export const createStyles = (theme: Theme) => {
       bottom: 0,
       left: 0,
       right: 0,
-      height: 200,
+      height: 180,
       backgroundColor: 'rgba(78, 205, 196, 0.03)',
     },
     playerHeader: {
@@ -148,14 +147,14 @@ export const createStyles = (theme: Theme) => {
       alignItems: 'center',
     },
     playerAvatar: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: '#151515',
-      borderWidth: 1.5,
-      borderColor: '#4ECDC4',
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: 'rgba(78, 205, 196, 0.1)',
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: '#4ECDC4',
       ...Platform.select({
         ios: {
           shadowColor: '#4ECDC4',
@@ -166,11 +165,11 @@ export const createStyles = (theme: Theme) => {
       }),
     },
     playerInfo: {
-      marginLeft: Spacing.lg,
+      marginLeft: 14,
       flex: 1,
     },
     playerName: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: '600',
       color: '#FAF8F5',
       letterSpacing: 0.5,
@@ -182,11 +181,11 @@ export const createStyles = (theme: Theme) => {
       letterSpacing: 1,
     },
     playerHpBarContainer: {
-      marginTop: Spacing.lg,
+      marginTop: 12,
     },
     playerHpBarBg: {
       height: 6,
-      backgroundColor: '#1A1A1A',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
       borderRadius: 3,
       overflow: 'hidden',
     },
@@ -200,13 +199,13 @@ export const createStyles = (theme: Theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: Spacing.xs,
-      marginVertical: Spacing.lg,
+      gap: 6,
+      marginVertical: 12,
     },
     manaOrb: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 0.5,
@@ -228,7 +227,7 @@ export const createStyles = (theme: Theme) => {
       borderColor: 'rgba(74, 144, 217, 0.3)',
     },
     manaText: {
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: '700',
     },
     
@@ -236,43 +235,43 @@ export const createStyles = (theme: Theme) => {
     handArea: {
       flexDirection: 'row',
       justifyContent: 'center',
-      gap: Spacing.sm,
-      paddingVertical: Spacing.md,
+      gap: 8,
+      paddingVertical: 12,
     },
     handCard: {
-      width: 72,
-      height: 100,
-      borderRadius: BorderRadius.lg,
+      width: HAND_CARD_WIDTH,
+      height: HAND_CARD_HEIGHT,
+      borderRadius: 12,
       backgroundColor: '#111111',
       borderWidth: 1.5,
       overflow: 'hidden',
       ...Platform.select({
         ios: {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
+          shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.4,
-          shadowRadius: 12,
+          shadowRadius: 10,
         },
         android: {
-          elevation: 8,
+          elevation: 6,
         },
       }),
     },
     handCardSelected: {
       borderColor: '#D4AF37',
-      transform: [{ translateY: -12 }],
+      transform: [{ translateY: -10 }],
       ...Platform.select({
         ios: {
           shadowColor: '#D4AF37',
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.5,
-          shadowRadius: 16,
+          shadowRadius: 12,
         },
       }),
     },
     handCardImage: {
       width: '100%',
-      height: 60,
+      height: 55,
     },
     handCardCost: {
       position: 'absolute',
@@ -314,22 +313,23 @@ export const createStyles = (theme: Theme) => {
     // ==================== 操作按钮区域 ====================
     actionArea: {
       flexDirection: 'row',
-      gap: Spacing.md,
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.lg,
-      paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.lg,
-      backgroundColor: 'rgba(8, 8, 8, 0.9)',
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+      backgroundColor: 'rgba(10, 10, 10, 0.95)',
       borderTopWidth: 0.5,
       borderTopColor: 'rgba(212, 175, 55, 0.1)',
     },
     actionButton: {
       flex: 1,
-      paddingVertical: Spacing.lg,
-      borderRadius: BorderRadius.lg,
+      paddingVertical: 14,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
-      gap: Spacing.sm,
+      gap: 6,
+      minWidth: 44, // 确保触摸区域足够大
     },
     attackButton: {
       backgroundColor: '#FF4444',
@@ -338,7 +338,7 @@ export const createStyles = (theme: Theme) => {
           shadowColor: '#FF4444',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
-          shadowRadius: 12,
+          shadowRadius: 10,
         },
       }),
     },
@@ -349,7 +349,7 @@ export const createStyles = (theme: Theme) => {
           shadowColor: '#4ECDC4',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
-          shadowRadius: 12,
+          shadowRadius: 10,
         },
       }),
     },
@@ -360,7 +360,7 @@ export const createStyles = (theme: Theme) => {
           shadowColor: '#D4AF37',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
-          shadowRadius: 12,
+          shadowRadius: 10,
         },
       }),
     },
@@ -368,8 +368,7 @@ export const createStyles = (theme: Theme) => {
       fontSize: 12,
       fontWeight: '600',
       color: '#FFF',
-      letterSpacing: 1.5,
-      textTransform: 'uppercase',
+      letterSpacing: 1,
     },
     endTurnButtonText: {
       color: '#0A0A0A',
@@ -385,18 +384,19 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: 'rgba(0, 0, 0, 0.95)',
       justifyContent: 'center',
       alignItems: 'center',
+      padding: 20,
     },
     resultContent: {
       alignItems: 'center',
-      padding: Spacing['2xl'],
+      padding: 24,
     },
     resultIcon: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
+      width: 80,
+      height: 80,
+      borderRadius: 40,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: Spacing.xl,
+      marginBottom: 20,
       borderWidth: 1,
     },
     victoryIcon: {
@@ -408,10 +408,10 @@ export const createStyles = (theme: Theme) => {
       borderColor: '#FF4444',
     },
     resultTitle: {
-      fontSize: 36,
+      fontSize: 32,
       fontWeight: '200',
       letterSpacing: 8,
-      marginBottom: Spacing.md,
+      marginBottom: 8,
     },
     victoryTitle: {
       color: '#D4AF37',
@@ -420,22 +420,24 @@ export const createStyles = (theme: Theme) => {
       color: '#FF4444',
     },
     resultSubtitle: {
-      fontSize: 14,
-      color: '#666',
-      marginBottom: Spacing['2xl'],
+      fontSize: 13,
+      color: 'rgba(255, 255, 255, 0.5)',
+      marginBottom: 24,
       letterSpacing: 1,
     },
     resultButton: {
-      paddingHorizontal: Spacing['2xl'],
-      paddingVertical: Spacing.lg,
-      borderRadius: BorderRadius.lg,
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 12,
       backgroundColor: '#D4AF37',
+      minWidth: 120,
+      alignItems: 'center',
       ...Platform.select({
         ios: {
           shadowColor: '#D4AF37',
-          shadowOffset: { width: 0, height: 8 },
+          shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.3,
-          shadowRadius: 16,
+          shadowRadius: 12,
         },
       }),
     },
@@ -444,7 +446,6 @@ export const createStyles = (theme: Theme) => {
       fontWeight: '600',
       color: '#0A0A0A',
       letterSpacing: 2,
-      textTransform: 'uppercase',
     },
     
     // ==================== 加载状态 ====================
@@ -452,11 +453,12 @@ export const createStyles = (theme: Theme) => {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: '#0A0A0A',
     },
     loadingIcon: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
       backgroundColor: 'rgba(212, 175, 55, 0.05)',
       alignItems: 'center',
       justifyContent: 'center',
@@ -464,8 +466,8 @@ export const createStyles = (theme: Theme) => {
       borderColor: 'rgba(212, 175, 55, 0.2)',
     },
     loadingText: {
-      marginTop: Spacing.lg,
-      color: '#666',
+      marginTop: 16,
+      color: 'rgba(255, 255, 255, 0.4)',
       fontSize: 12,
       letterSpacing: 2,
     },

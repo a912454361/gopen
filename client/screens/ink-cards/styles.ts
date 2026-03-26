@@ -1,29 +1,42 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, Dimensions } from 'react-native';
 import { Spacing, BorderRadius, Theme } from '@/constants/theme';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 /**
- * 国风水墨卡牌游戏 - 极致高端UI设计
+ * 国风粒子卡牌游戏 - 移动端优先设计
  * 
- * 设计理念：
- * - 万古长夜黑 + 鎏金色点缀
- * - 水墨晕染效果
- * - 极致留白与精金细线
- * - 奢侈品级视觉质感
+ * 设计原则：
+ * - 触摸区域最小 44x44px
+ * - 卡牌尺寸适配手机屏幕
+ * - 底部操作栏固定定位
+ * - 舒适的手持操作体验
  */
+
+// ==================== 卡牌尺寸常量 ====================
+export const CARD_GAP = 12;
+export const SCREEN_PADDING = 16;
+export const CARD_WIDTH = (SCREEN_WIDTH - SCREEN_PADDING * 2 - CARD_GAP) / 2;
+export const CARD_HEIGHT = CARD_WIDTH * 1.35; // 卡牌宽高比约 0.74
+
+// 手牌尺寸（对战页面）
+export const HAND_CARD_WIDTH = 72;
+export const HAND_CARD_HEIGHT = 100;
 
 export const createStyles = (theme: Theme) => {
   return StyleSheet.create({
     // ==================== 页面容器 ====================
     container: {
       flex: 1,
-      backgroundColor: '#080808', // 万古长夜黑
+      backgroundColor: '#0A0A0A',
     },
     
-    // ==================== 顶部英雄区 ====================
+    // ==================== 英雄区域 ====================
     heroSection: {
       paddingTop: Platform.OS === 'ios' ? 60 : 40,
-      paddingHorizontal: 0,
-      paddingBottom: Spacing['2xl'],
+      paddingBottom: 24,
+      paddingHorizontal: 20,
+      backgroundColor: '#0A0A0A',
       position: 'relative',
       overflow: 'hidden',
     },
@@ -32,8 +45,8 @@ export const createStyles = (theme: Theme) => {
       top: 0,
       left: 0,
       right: 0,
-      height: 300,
-      backgroundColor: '#0D0D0D',
+      bottom: 0,
+      backgroundColor: 'rgba(212, 175, 55, 0.03)',
     },
     heroInkEffect: {
       position: 'absolute',
@@ -42,166 +55,138 @@ export const createStyles = (theme: Theme) => {
       width: 200,
       height: 200,
       borderRadius: 100,
-      backgroundColor: 'rgba(212, 175, 55, 0.03)',
+      backgroundColor: 'rgba(212, 175, 55, 0.02)',
     },
     headerContent: {
-      paddingHorizontal: Spacing.xl,
+      alignItems: 'center',
+      zIndex: 1,
     },
     headerLabel: {
       fontSize: 10,
-      letterSpacing: 6,
+      color: 'rgba(212, 175, 55, 0.6)',
+      letterSpacing: 3,
+      marginBottom: 8,
       textTransform: 'uppercase',
-      color: '#D4AF37',
-      fontWeight: '300',
-      marginBottom: Spacing.sm,
     },
     headerTitle: {
       fontSize: 32,
       fontWeight: '200',
       color: '#FAF8F5',
-      letterSpacing: 4,
-      lineHeight: 42,
+      letterSpacing: 8,
+      marginBottom: 8,
     },
     headerSubtitle: {
-      fontSize: 14,
-      color: '#8B7355',
-      marginTop: Spacing.sm,
+      fontSize: 13,
+      color: 'rgba(255, 255, 255, 0.5)',
       letterSpacing: 1,
-      fontWeight: '300',
+      marginBottom: 16,
     },
     goldDivider: {
       width: 60,
-      height: 0.5,
+      height: 1,
       backgroundColor: '#D4AF37',
-      marginTop: Spacing.lg,
+      opacity: 0.3,
     },
     
     // ==================== 玩家状态栏 ====================
     playerSection: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginHorizontal: Spacing.lg,
-      paddingVertical: Spacing.lg,
-      paddingHorizontal: Spacing.xl,
-      backgroundColor: 'rgba(20, 20, 20, 0.8)',
-      borderRadius: BorderRadius.xl,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      borderRadius: 16,
       borderWidth: 0.5,
-      borderColor: 'rgba(212, 175, 55, 0.2)',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#D4AF37',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.08,
-          shadowRadius: 24,
-        },
-        android: {
-          elevation: 8,
-        },
-      }),
+      borderColor: 'rgba(212, 175, 55, 0.15)',
     },
     playerAvatar: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      borderWidth: 1.5,
-      borderColor: '#D4AF37',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#151515',
-    },
-    playerAvatarInner: {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#1A1A1A',
+      backgroundColor: 'rgba(212, 175, 55, 0.1)',
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(212, 175, 55, 0.3)',
     },
     playerInfo: {
       flex: 1,
-      marginLeft: Spacing.lg,
+      marginLeft: 14,
     },
     playerName: {
-      fontSize: 17,
-      fontWeight: '500',
+      fontSize: 16,
+      fontWeight: '600',
       color: '#FAF8F5',
-      letterSpacing: 0.5,
+      marginBottom: 2,
     },
     playerLevel: {
-      fontSize: 11,
-      color: '#D4AF37',
-      marginTop: 2,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
+      fontSize: 12,
+      color: 'rgba(212, 175, 55, 0.8)',
+      marginBottom: 2,
     },
     playerRank: {
-      fontSize: 10,
-      color: '#666',
-      marginTop: 4,
+      fontSize: 11,
+      color: 'rgba(255, 255, 255, 0.4)',
     },
     resourceContainer: {
-      flexDirection: 'row',
-      gap: Spacing.lg,
+      alignItems: 'flex-end',
     },
     resourceItem: {
+      flexDirection: 'row',
       alignItems: 'center',
+      marginBottom: 4,
     },
     resourceIconBg: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 4,
+      marginRight: 6,
     },
     goldBg: {
       backgroundColor: 'rgba(212, 175, 55, 0.15)',
-      borderWidth: 0.5,
-      borderColor: 'rgba(212, 175, 55, 0.4)',
     },
     gemBg: {
       backgroundColor: 'rgba(147, 112, 219, 0.15)',
-      borderWidth: 0.5,
-      borderColor: 'rgba(147, 112, 219, 0.4)',
     },
     resourceValue: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '600',
       color: '#FAF8F5',
-      letterSpacing: 0.5,
+      minWidth: 40,
     },
     
     // ==================== 阵营筛选 ====================
     factionSection: {
-      paddingVertical: Spacing.lg,
-      borderBottomWidth: 0.5,
-      borderBottomColor: 'rgba(212, 175, 55, 0.1)',
+      marginBottom: 16,
     },
     factionScroll: {
-      paddingHorizontal: Spacing.lg,
+      paddingHorizontal: 16,
     },
     factionContent: {
       flexDirection: 'row',
-      gap: Spacing.sm,
+      gap: 8,
     },
     factionButton: {
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.md,
-      borderRadius: BorderRadius.xl,
-      borderWidth: 0.5,
-      borderColor: 'rgba(212, 175, 55, 0.2)',
-      backgroundColor: 'transparent',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      minWidth: 60,
       alignItems: 'center',
-      justifyContent: 'center',
     },
     factionButtonActive: {
+      backgroundColor: 'rgba(212, 175, 55, 0.1)',
       borderColor: '#D4AF37',
-      backgroundColor: 'rgba(212, 175, 55, 0.08)',
     },
     factionText: {
-      fontSize: 12,
-      color: '#666',
-      letterSpacing: 1,
+      fontSize: 13,
+      color: 'rgba(255, 255, 255, 0.6)',
       fontWeight: '500',
     },
     factionTextActive: {
@@ -209,131 +194,105 @@ export const createStyles = (theme: Theme) => {
       fontWeight: '600',
     },
     
-    // ==================== 卡牌网格 ====================
+    // ==================== 卡牌列表 ====================
     cardSection: {
-      paddingVertical: Spacing.xl,
+      flex: 1,
+      paddingHorizontal: 16,
     },
     cardGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      paddingHorizontal: Spacing.md,
-      gap: Spacing.md,
+      gap: CARD_GAP,
+      paddingBottom: 20,
     },
     
-    // ==================== 卡牌卡片（核心） ====================
+    // ==================== 卡牌卡片 ====================
     card: {
-      width: 165,
-      borderRadius: BorderRadius.lg,
-      overflow: 'hidden',
+      width: CARD_WIDTH,
       backgroundColor: '#111111',
+      borderRadius: 16,
+      overflow: 'hidden',
+      borderWidth: 0.5,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
       ...Platform.select({
         ios: {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 12 },
-          shadowOpacity: 0.4,
-          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
         },
         android: {
-          elevation: 12,
+          elevation: 4,
         },
       }),
     },
     cardImageContainer: {
       width: '100%',
-      aspectRatio: 3/4,
+      height: CARD_WIDTH * 1.2,
       position: 'relative',
-      overflow: 'hidden',
+      backgroundColor: '#1A1A1A',
     },
     cardImage: {
       width: '100%',
       height: '100%',
-      backgroundColor: '#1A1A1A',
     },
     cardImageOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    },
-    cardRarityBadge: {
       position: 'absolute',
-      top: 10,
-      right: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 4,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cardRarityText: {
-      fontSize: 9,
-      fontWeight: '700',
-      letterSpacing: 1.5,
-      textTransform: 'uppercase',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: '40%',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
     },
     cardFactionBadge: {
       position: 'absolute',
-      top: 10,
-      left: 10,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      top: 8,
+      left: 8,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 0.5,
+      borderWidth: 1,
+    },
+    cardRarityBadge: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    cardRarityText: {
+      fontSize: 9,
+      fontWeight: '600',
+      letterSpacing: 0.5,
     },
     cardInfo: {
-      padding: Spacing.md,
+      padding: 12,
     },
     cardName: {
       fontSize: 14,
       fontWeight: '600',
       color: '#FAF8F5',
-      letterSpacing: 0.5,
-      marginBottom: 2,
+      marginBottom: 4,
     },
     cardFaction: {
-      fontSize: 10,
-      color: '#666',
-      letterSpacing: 1,
-      marginBottom: Spacing.sm,
+      fontSize: 11,
+      color: 'rgba(255, 255, 255, 0.4)',
+      marginBottom: 8,
     },
     cardStats: {
       flexDirection: 'row',
-      gap: Spacing.md,
-      paddingTop: Spacing.sm,
-      borderTopWidth: 0.5,
-      borderTopColor: 'rgba(212, 175, 55, 0.1)',
+      justifyContent: 'space-around',
     },
     statItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
     },
     statValue: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '600',
       color: '#FAF8F5',
-    },
-    
-    // ==================== 品级样式 ====================
-    rarityCommon: {
-      backgroundColor: 'rgba(128, 128, 128, 0.9)',
-      borderColor: '#808080',
-    },
-    raritySpirit: {
-      backgroundColor: 'rgba(46, 204, 113, 0.9)',
-      borderColor: '#2ECC71',
-    },
-    rarityImmortal: {
-      backgroundColor: 'rgba(52, 152, 219, 0.9)',
-      borderColor: '#3498DB',
-    },
-    raritySaint: {
-      backgroundColor: 'rgba(155, 89, 182, 0.9)',
-      borderColor: '#9B59B6',
-    },
-    rarityAncient: {
-      backgroundColor: 'rgba(212, 175, 55, 0.95)',
-      borderColor: '#D4AF37',
     },
     
     // ==================== 底部操作栏 ====================
@@ -343,55 +302,80 @@ export const createStyles = (theme: Theme) => {
       left: 0,
       right: 0,
       flexDirection: 'row',
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.lg,
-      paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.lg,
-      backgroundColor: 'rgba(8, 8, 8, 0.95)',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+      backgroundColor: 'rgba(10, 10, 10, 0.95)',
       borderTopWidth: 0.5,
-      borderTopColor: 'rgba(212, 175, 55, 0.15)',
-      gap: Spacing.md,
+      borderTopColor: 'rgba(212, 175, 55, 0.1)',
     },
     actionButton: {
       flex: 1,
-      paddingVertical: Spacing.lg,
-      borderRadius: BorderRadius.lg,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      flexDirection: 'row',
-      gap: Spacing.sm,
+      gap: 8,
+      paddingVertical: 16,
+      borderRadius: 12,
+      minWidth: 44, // 确保触摸区域足够大
     },
     primaryButton: {
       backgroundColor: '#D4AF37',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#D4AF37',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 8,
-        },
-      }),
     },
     secondaryButton: {
       backgroundColor: 'transparent',
-      borderWidth: 0.5,
-      borderColor: '#D4AF37',
+      borderWidth: 1,
+      borderColor: 'rgba(212, 175, 55, 0.3)',
     },
     primaryButtonText: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '600',
       color: '#0A0A0A',
-      letterSpacing: 2,
-      textTransform: 'uppercase',
+      letterSpacing: 1,
     },
     secondaryButtonText: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '600',
       color: '#D4AF37',
-      letterSpacing: 2,
-      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    
+    // ==================== 空状态 ====================
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: 'rgba(212, 175, 55, 0.05)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 0.5,
+      borderColor: 'rgba(212, 175, 55, 0.2)',
+      marginBottom: 16,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.4)',
+    },
+    
+    // ==================== 加载状态 ====================
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#0A0A0A',
+    },
+    loadingText: {
+      fontSize: 13,
+      color: 'rgba(255, 255, 255, 0.4)',
+      marginTop: 16,
+      letterSpacing: 1,
     },
     
     // ==================== 抽卡模态框 ====================
@@ -400,129 +384,64 @@ export const createStyles = (theme: Theme) => {
       backgroundColor: 'rgba(0, 0, 0, 0.95)',
       justifyContent: 'center',
       alignItems: 'center',
+      padding: 20,
     },
     modalContent: {
-      width: '90%',
-      maxWidth: 380,
+      width: '100%',
+      maxWidth: 320,
       backgroundColor: '#111111',
-      borderRadius: BorderRadius.xl,
-      padding: Spacing['2xl'],
-      borderWidth: 0.5,
-      borderColor: '#D4AF37',
+      borderRadius: 24,
+      padding: 24,
       alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#D4AF37',
-          shadowOffset: { width: 0, height: 20 },
-          shadowOpacity: 0.2,
-          shadowRadius: 40,
-        },
-        android: {
-          elevation: 20,
-        },
-      }),
+      borderWidth: 0.5,
+      borderColor: 'rgba(212, 175, 55, 0.2)',
     },
     modalTitle: {
-      fontSize: 11,
-      letterSpacing: 6,
+      fontSize: 10,
+      color: 'rgba(212, 175, 55, 0.6)',
+      letterSpacing: 3,
+      marginBottom: 4,
       textTransform: 'uppercase',
-      color: '#D4AF37',
-      fontWeight: '300',
     },
     modalSubtitle: {
-      fontSize: 24,
-      fontWeight: '200',
+      fontSize: 20,
+      fontWeight: '300',
       color: '#FAF8F5',
-      marginTop: Spacing.md,
-      letterSpacing: 2,
-    },
-    modalDivider: {
-      width: 40,
-      height: 0.5,
-      backgroundColor: '#D4AF37',
-      marginVertical: Spacing.lg,
+      marginBottom: 16,
     },
     modalCardContainer: {
       alignItems: 'center',
-      paddingVertical: Spacing.xl,
+      marginVertical: 16,
     },
     modalCardImage: {
-      width: 200,
-      height: 280,
-      borderRadius: BorderRadius.lg,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 16 },
-          shadowOpacity: 0.5,
-          shadowRadius: 24,
-        },
-        android: {
-          elevation: 16,
-        },
-      }),
+      width: 180,
+      height: 252,
+      borderRadius: 12,
     },
     modalCardName: {
       fontSize: 18,
       fontWeight: '600',
       color: '#FAF8F5',
-      marginTop: Spacing.lg,
-      letterSpacing: 1,
+      marginTop: 12,
     },
     modalCardInfo: {
-      fontSize: 12,
-      color: '#666',
-      marginTop: Spacing.xs,
-      letterSpacing: 1,
+      fontSize: 13,
+      color: 'rgba(255, 255, 255, 0.5)',
+      marginTop: 4,
     },
     modalCloseButton: {
-      marginTop: Spacing.xl,
-      paddingVertical: Spacing.lg,
-      paddingHorizontal: Spacing['2xl'],
-      borderRadius: BorderRadius.lg,
+      marginTop: 24,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
       backgroundColor: '#D4AF37',
+      borderRadius: 12,
+      minWidth: 120,
       alignItems: 'center',
     },
     modalCloseText: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '600',
       color: '#0A0A0A',
-      letterSpacing: 2,
-      textTransform: 'uppercase',
-    },
-    
-    // ==================== 加载与空状态 ====================
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      marginTop: Spacing.lg,
-      color: '#666',
-      fontSize: 12,
-      letterSpacing: 2,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingVertical: Spacing['3xl'],
-    },
-    emptyIcon: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: 'rgba(212, 175, 55, 0.05)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 0.5,
-      borderColor: 'rgba(212, 175, 55, 0.2)',
-    },
-    emptyText: {
-      fontSize: 13,
-      color: '#666',
-      marginTop: Spacing.lg,
       letterSpacing: 1,
     },
   });

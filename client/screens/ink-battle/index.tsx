@@ -1,10 +1,11 @@
 /**
- * 国风粒子卡牌对战 - 极致高端UI设计
+ * 国风粒子卡牌对战 - 移动端优化版
  * 
  * 功能：
  * - 回合制卡牌对战
  * - 技能释放与粒子特效
  * - 沉浸式战斗体验
+ * - 移动端触摸优化
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -14,6 +15,7 @@ import {
   Image,
   ActivityIndicator,
   FlatList,
+  ScrollView,
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
@@ -300,9 +302,9 @@ export default function InkBattleScreen() {
             {item.name}
           </ThemedText>
           <View style={styles.handCardStats}>
-            <FontAwesome6 name="hand-fist" size={6} color="#FF6B6B" />
+            <FontAwesome6 name="hand-fist" size={7} color="#FF6B6B" />
             <ThemedText style={[styles.handCardStatValue, { color: '#FF6B6B' }]}>{item.attack}</ThemedText>
-            <FontAwesome6 name="shield-halved" size={6} color="#4ECDC4" />
+            <FontAwesome6 name="shield-halved" size={7} color="#4ECDC4" />
             <ThemedText style={[styles.handCardStatValue, { color: '#4ECDC4' }]}>{item.defense}</ThemedText>
           </View>
         </View>
@@ -313,12 +315,12 @@ export default function InkBattleScreen() {
   // 加载中
   if (loading) {
     return (
-      <Screen backgroundColor="#080808" statusBarStyle="light">
+      <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
         <View style={styles.loadingContainer}>
           <View style={styles.loadingIcon}>
             <FontAwesome6 name="shield-halved" size={28} color="#D4AF37" />
           </View>
-          <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 20 }} />
+          <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 16 }} />
           <ThemedText style={styles.loadingText}>正在进入战场...</ThemedText>
         </View>
       </Screen>
@@ -337,7 +339,7 @@ export default function InkBattleScreen() {
   const latestLog = battleLog.logs[battleLog.logs.length - 1];
 
   return (
-    <Screen backgroundColor="#080808" statusBarStyle="light">
+    <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
       <View style={styles.battleScene}>
         {/* 敌方区域 */}
         <View style={styles.enemyArea}>
@@ -416,15 +418,16 @@ export default function InkBattleScreen() {
             ))}
           </View>
 
-          {/* 手牌区域 */}
-          <FlatList
-            data={playerDeck.slice(0, 5)}
-            renderItem={renderHandCard}
-            keyExtractor={(item) => item.id}
-            horizontal
-            contentContainerStyle={styles.handArea}
-            showsHorizontalScrollIndicator={false}
-          />
+          {/* 手牌区域 - 横向滑动 */}
+          <View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.handArea}
+            >
+              {playerDeck.slice(0, 5).map((card) => renderHandCard({ item: card }))}
+            </ScrollView>
+          </View>
         </View>
 
         {/* 操作按钮区域 */}
@@ -434,7 +437,7 @@ export default function InkBattleScreen() {
             onPress={handleAttack}
             disabled={!selectedCard || actionLoading}
           >
-            <FontAwesome6 name="hand-fist" size={12} color="#FFF" />
+            <FontAwesome6 name="hand-fist" size={14} color="#FFF" />
             <ThemedText style={styles.actionButtonText}>攻击</ThemedText>
           </TouchableOpacity>
           
@@ -443,7 +446,7 @@ export default function InkBattleScreen() {
             onPress={handleSkill}
             disabled={!selectedCard || actionLoading}
           >
-            <FontAwesome6 name="wand-magic-sparkles" size={12} color="#FFF" />
+            <FontAwesome6 name="wand-magic-sparkles" size={14} color="#FFF" />
             <ThemedText style={styles.actionButtonText}>技能</ThemedText>
           </TouchableOpacity>
           
@@ -452,7 +455,7 @@ export default function InkBattleScreen() {
             onPress={handleEndTurn}
             disabled={actionLoading}
           >
-            <FontAwesome6 name="forward" size={12} color="#0A0A0A" />
+            <FontAwesome6 name="forward" size={14} color="#0A0A0A" />
             <ThemedText style={[styles.actionButtonText, styles.endTurnButtonText]}>结束回合</ThemedText>
           </TouchableOpacity>
         </View>
@@ -468,7 +471,7 @@ export default function InkBattleScreen() {
             ]}>
               <FontAwesome6 
                 name={isVictory ? 'trophy' : 'skull'} 
-                size={36} 
+                size={32} 
                 color={isVictory ? '#D4AF37' : '#FF4444'} 
               />
             </View>

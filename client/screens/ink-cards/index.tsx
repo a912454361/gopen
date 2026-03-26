@@ -1,11 +1,11 @@
 /**
- * 国风粒子卡牌游戏 - 移动端优化版
+ * 国风粒子卡牌游戏 - 完整升级版
  * 
- * 设计理念：
- * - 移动端优先设计
- * - 触摸友好的交互区域
- * - 流畅的滚动体验
- * - 舒适的手持操作
+ * 集成功能：
+ * - 粒子特效背景
+ * - 卡牌翻转效果
+ * - 抽卡开箱动画
+ * - 深度游戏系统（羁绊、进化、装备）
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Modal,
   FlatList,
   Dimensions,
   Platform,
@@ -28,6 +27,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { createStyles, CARD_WIDTH as CARD_WIDTH_CONST, CARD_GAP as CARD_GAP_CONST } from './styles';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ParticleSystem, PARTICLE_PRESETS } from '@/components/ParticleSystem';
+import { FlippableCard } from '@/components/FlippableCard';
+import { DrawCardAnimation } from '@/components/DrawCardAnimation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
@@ -61,14 +63,14 @@ interface Player {
   losses: number;
 }
 
-// 阵营配置（带颜色）
+// 阵营配置（带粒子预设映射）
 const FACTIONS = [
-  { id: 'all', name: '全部', color: '#D4AF37', bgColor: 'rgba(212, 175, 55, 0.1)' },
-  { id: '幽冥', name: '幽冥', color: '#9B59B6', bgColor: 'rgba(155, 89, 182, 0.1)' },
-  { id: '昆仑', name: '昆仑', color: '#3498DB', bgColor: 'rgba(52, 152, 219, 0.1)' },
-  { id: '蓬莱', name: '蓬莱', color: '#E91E63', bgColor: 'rgba(233, 30, 99, 0.1)' },
-  { id: '蛮荒', name: '蛮荒', color: '#FF6F00', bgColor: 'rgba(255, 111, 0, 0.1)' },
-  { id: '万古', name: '万古', color: '#D4AF37', bgColor: 'rgba(212, 175, 55, 0.15)' },
+  { id: 'all', name: '全部', color: '#D4AF37', bgColor: 'rgba(212, 175, 55, 0.1)', particle: 'wangu' },
+  { id: '幽冥', name: '幽冥', color: '#9B59B6', bgColor: 'rgba(155, 89, 182, 0.1)', particle: 'youming' },
+  { id: '昆仑', name: '昆仑', color: '#3498DB', bgColor: 'rgba(52, 152, 219, 0.1)', particle: 'kunlun' },
+  { id: '蓬莱', name: '蓬莱', color: '#E91E63', bgColor: 'rgba(233, 30, 99, 0.1)', particle: 'penglai' },
+  { id: '蛮荒', name: '蛮荒', color: '#FF6F00', bgColor: 'rgba(255, 111, 0, 0.1)', particle: 'manhuang' },
+  { id: '万古', name: '万古', color: '#D4AF37', bgColor: 'rgba(212, 175, 55, 0.15)', particle: 'wangu' },
 ];
 
 // 品级样式配置
@@ -92,10 +94,11 @@ export default function InkCardsScreen() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerId, setPlayerId] = useState<string>('');
   const [selectedFaction, setSelectedFaction] = useState('all');
-  const [drawModalVisible, setDrawModalVisible] = useState(false);
   const [drawnCards, setDrawnCards] = useState<Card[]>([]);
+  const [showDrawAnimation, setShowDrawAnimation] = useState(false);
   const [drawLoading, setDrawLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'flip'>('grid');
 
   // 从样式文件中获取卡牌尺寸
   const CARD_WIDTH = CARD_WIDTH_CONST || (SCREEN_WIDTH - 44) / 2;
@@ -184,7 +187,7 @@ export default function InkCardsScreen() {
       const data = await response.json();
       if (data.success && data.cards.length > 0) {
         setDrawnCards(data.cards);
-        setDrawModalVisible(true);
+        setShowDrawAnimation(true);
         if (player) setPlayer({ ...player, gold: player.gold - data.cost });
       } else {
         alert(data.error || '抽卡失败');
@@ -219,11 +222,31 @@ export default function InkCardsScreen() {
     }
   };
 
+  // 获取当前阵营的粒子预设
+  const currentParticlePreset = useMemo(() => {
+    const faction = FACTIONS.find(f => f.id === selectedFaction);
+    return faction?.particle || 'wangu';
+  }, [selectedFaction]);
+
   // 渲染卡牌
   const renderCard = useCallback(({ item }: { item: Card }) => {
     const rarityStyle = RARITY_STYLES[item.rarity] || RARITY_STYLES['凡品'];
     const faction = FACTIONS.find(f => f.id === item.faction);
 
+    // 翻转模式使用 FlippableCard 组件
+    if (viewMode === 'flip') {
+      return (
+        <View style={{ width: CARD_WIDTH, marginBottom: CARD_GAP }}>
+          <FlippableCard
+            card={item}
+            onPress={() => router.push('/ink-battle', { cardId: item.id })}
+            showParticles={true}
+          />
+        </View>
+      );
+    }
+
+    // 网格模式
     return (
       <TouchableOpacity
         style={[styles.card, { width: CARD_WIDTH }]}
@@ -289,13 +312,16 @@ export default function InkCardsScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [CARD_WIDTH]);
+  }, [CARD_WIDTH, CARD_GAP, viewMode]);
 
   // 加载中
   if (loading) {
     return (
       <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
         <View style={styles.loadingContainer}>
+          {/* 粒子特效 */}
+          <ParticleSystem config={PARTICLE_PRESETS.wangu} intensity="medium" />
+          
           <View style={styles.emptyIcon}>
             <FontAwesome6 name="scroll" size={28} color="#D4AF37" />
           </View>
@@ -308,6 +334,9 @@ export default function InkCardsScreen() {
 
   return (
     <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
+      {/* 全局粒子背景 */}
+      <ParticleSystem config={PARTICLE_PRESETS[currentParticlePreset]} intensity="low" />
+      
       <ScrollView 
         style={styles.container} 
         showsVerticalScrollIndicator={false}
@@ -396,17 +425,48 @@ export default function InkCardsScreen() {
           </ScrollView>
         </View>
 
+        {/* 视图切换 */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, marginBottom: 12 }}>
+          <TouchableOpacity
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              backgroundColor: viewMode === 'grid' ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
+              borderWidth: 1,
+              borderColor: viewMode === 'grid' ? '#D4AF37' : 'rgba(255, 255, 255, 0.1)',
+              marginRight: 8,
+            }}
+            onPress={() => setViewMode('grid')}
+          >
+            <FontAwesome6 name="grip" size={14} color={viewMode === 'grid' ? '#D4AF37' : '#666'} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              backgroundColor: viewMode === 'flip' ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
+              borderWidth: 1,
+              borderColor: viewMode === 'flip' ? '#D4AF37' : 'rgba(255, 255, 255, 0.1)',
+            }}
+            onPress={() => setViewMode('flip')}
+          >
+            <FontAwesome6 name="clone" size={14} color={viewMode === 'flip' ? '#D4AF37' : '#666'} />
+          </TouchableOpacity>
+        </View>
+
         {/* 卡牌列表 */}
         <View style={styles.cardSection}>
           <FlatList
             data={cards}
             renderItem={renderCard}
             keyExtractor={(item) => item.id}
-            numColumns={2}
+            numColumns={viewMode === 'grid' ? 2 : 1}
             contentContainerStyle={styles.cardGrid}
             showsVerticalScrollIndicator={false}
             scrollEnabled={false}
-            columnWrapperStyle={{ gap: CARD_GAP }}
+            columnWrapperStyle={viewMode === 'grid' ? { gap: CARD_GAP } : undefined}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIcon}>
@@ -418,7 +478,7 @@ export default function InkCardsScreen() {
           />
         </View>
         
-        {/* 底部占位（避免被操作栏遮挡）*/}
+        {/* 底部占位 */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -454,54 +514,16 @@ export default function InkCardsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 抽卡结果模态框 */}
-      <Modal
-        visible={drawModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDrawModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle}>Card Acquired</ThemedText>
-            <ThemedText style={styles.modalSubtitle}>获得新卡</ThemedText>
-            <View style={styles.goldDivider} />
-            
-            {drawnCards.map((card) => {
-              const rarityStyle = RARITY_STYLES[card.rarity] || RARITY_STYLES['凡品'];
-              return (
-                <View key={card.id} style={styles.modalCardContainer}>
-                  <Image
-                    source={{ uri: card.image_url || `https://picsum.photos/seed/${card.id}/400/560` }}
-                    style={styles.modalCardImage}
-                    resizeMode="cover"
-                  />
-                  <View style={[
-                    styles.cardRarityBadge, 
-                    { backgroundColor: rarityStyle.bg, position: 'relative', marginTop: 16 }
-                  ]}>
-                    <ThemedText style={[styles.cardRarityText, { color: rarityStyle.text }]}>
-                      {card.rarity}
-                    </ThemedText>
-                  </View>
-                  <ThemedText style={styles.modalCardName}>{card.name}</ThemedText>
-                  <ThemedText style={styles.modalCardInfo}>{card.faction} · {card.card_type}</ThemedText>
-                </View>
-              );
-            })}
-
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => {
-                setDrawModalVisible(false);
-                setDrawnCards([]);
-              }}
-            >
-              <ThemedText style={styles.modalCloseText}>确认</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* 抽卡动画 */}
+      <DrawCardAnimation
+        visible={showDrawAnimation}
+        cards={drawnCards}
+        onComplete={() => {
+          setShowDrawAnimation(false);
+          setDrawnCards([]);
+          fetchCards();
+        }}
+      />
     </Screen>
   );
 }

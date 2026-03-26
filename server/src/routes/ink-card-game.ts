@@ -177,13 +177,16 @@ const generateCardImage = async (name: string, faction: string, cardType: string
     high quality, masterpiece, detailed, 4K`;
     
     const client = getImageClient();
-    const result = await client.imageGeneration(prompt, {
-      model: 'doubao-seedream-3-0-t2i-250415',
-      width: 512,
-      height: 768,
+    const result = await client.generate({
+      prompt,
+      size: '512x768',
     });
     
-    return result.images?.[0]?.url || '';
+    const helper = client.getResponseHelper(result);
+    if (helper.success && helper.imageUrls.length > 0) {
+      return helper.imageUrls[0];
+    }
+    return '';
   } catch (error) {
     console.error('生成卡牌图像失败:', error);
     // 返回默认图片

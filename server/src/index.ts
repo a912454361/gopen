@@ -257,7 +257,7 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       { role: 'user' as const, content: message }
     ];
 
-    const response = await client.chat(messages, {
+    const response = await client.invoke(messages, {
       model: 'doubao-seed-1-8-251228',
       temperature: 0.8,
     });

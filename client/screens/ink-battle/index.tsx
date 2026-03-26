@@ -1,10 +1,10 @@
 /**
- * 国风粒子卡牌游戏 - 对战页面
+ * 国风粒子卡牌对战 - 极致高端UI设计
  * 
  * 功能：
  * - 回合制卡牌对战
- * - 技能释放
- * - 粒子特效展示
+ * - 技能释放与粒子特效
+ * - 沉浸式战斗体验
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -98,18 +98,12 @@ export default function InkBattleScreen() {
       }
       setPlayerId(storedPlayerId);
 
-      // 获取卡牌作为手牌
       const cardsResponse = await fetch(
         `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ink/cards?limit=10`
       );
       const cardsData = await cardsResponse.json();
       setPlayerDeck(cardsData.cards || []);
 
-      /**
-       * 服务端文件：server/src/routes/ink-card-game.ts
-       * 接口：POST /api/v1/ink/battle/create
-       * Body 参数：playerId: string, deckId?: string, isAi?: boolean
-       */
       const battleResponse = await fetch(
         `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ink/battle/create`,
         {
@@ -125,7 +119,6 @@ export default function InkBattleScreen() {
       setBattle(battleData.battle);
     } catch (error) {
       console.error('初始化战斗失败:', error);
-      // 创建模拟战斗
       setBattle({
         id: `battle_${Date.now()}`,
         player1_id: playerId || 'player',
@@ -147,17 +140,11 @@ export default function InkBattleScreen() {
     }
   };
 
-  // 执行攻击
   const handleAttack = async () => {
     if (!selectedCard || !battle || actionLoading) return;
     
     setActionLoading(true);
     try {
-      /**
-       * 服务端文件：server/src/routes/ink-card-game.ts
-       * 接口：POST /api/v1/ink/battle/action
-       * Body 参数：battleId: string, playerId: string, action: string, cardId?: string
-       */
       const response = await fetch(
         `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ink/battle/action`,
         {
@@ -176,8 +163,6 @@ export default function InkBattleScreen() {
       if (data.success) {
         setBattle(data.battle);
         setSelectedCard(null);
-        
-        // 检查战斗结束
         if (data.battle.status === 'finished') {
           setGameEnded(true);
           setIsVictory(data.battle.winner_id === playerId);
@@ -185,7 +170,6 @@ export default function InkBattleScreen() {
       }
     } catch (error) {
       console.error('攻击失败:', error);
-      // 本地模拟
       if (battle) {
         const newLog = { ...battle.battle_log };
         newLog.player2_hp = Math.max(0, newLog.player2_hp - selectedCard.attack);
@@ -196,9 +180,7 @@ export default function InkBattleScreen() {
           damage: selectedCard.attack,
           log: `【${selectedCard.name}】发动攻击，造成${selectedCard.attack}点伤害！`,
         });
-        
         setBattle({ ...battle, battle_log: newLog });
-        
         if (newLog.player2_hp <= 0) {
           setGameEnded(true);
           setIsVictory(true);
@@ -210,7 +192,6 @@ export default function InkBattleScreen() {
     }
   };
 
-  // 释放技能
   const handleSkill = async () => {
     if (!selectedCard || !battle || actionLoading) return;
     
@@ -234,7 +215,6 @@ export default function InkBattleScreen() {
       if (data.success) {
         setBattle(data.battle);
         setSelectedCard(null);
-        
         if (data.battle.status === 'finished') {
           setGameEnded(true);
           setIsVictory(data.battle.winner_id === playerId);
@@ -242,7 +222,6 @@ export default function InkBattleScreen() {
       }
     } catch (error) {
       console.error('技能释放失败:', error);
-      // 本地模拟
       if (battle) {
         const newLog = { ...battle.battle_log };
         const damage = selectedCard.attack * 2;
@@ -254,9 +233,7 @@ export default function InkBattleScreen() {
           damage,
           log: `【${selectedCard.name}】释放【${selectedCard.skill_name}】，造成${damage}点伤害！`,
         });
-        
         setBattle({ ...battle, battle_log: newLog });
-        
         if (newLog.player2_hp <= 0) {
           setGameEnded(true);
           setIsVictory(true);
@@ -268,11 +245,9 @@ export default function InkBattleScreen() {
     }
   };
 
-  // 结束回合（AI自动行动）
   const handleEndTurn = () => {
     if (!battle || actionLoading) return;
     
-    // 简单AI：随机攻击
     const aiDamage = 5 + Math.floor(Math.random() * 15);
     const newLog = { ...battle.battle_log };
     newLog.player1_hp = Math.max(0, newLog.player1_hp - aiDamage);
@@ -293,13 +268,12 @@ export default function InkBattleScreen() {
     }
   };
 
-  // 返回
   const handleBack = () => {
     router.back();
   };
 
   // 渲染手牌
-  const renderHandCard = useCallback(({ item, index }: { item: Card; index: number }) => {
+  const renderHandCard = useCallback(({ item }: { item: Card }) => {
     const isSelected = selectedCard?.id === item.id;
     const rarityColor = RARITY_COLORS[item.rarity] || '#808080';
     
@@ -321,15 +295,15 @@ export default function InkBattleScreen() {
         <View style={styles.handCardCost}>
           <ThemedText style={styles.handCardCostText}>{item.cost}</ThemedText>
         </View>
-        <View style={{ padding: 4, alignItems: 'center' }}>
-          <ThemedText style={{ fontSize: 10, color: '#F5F5F0' }} numberOfLines={1}>
+        <View style={styles.handCardInfo}>
+          <ThemedText style={styles.handCardName} numberOfLines={1}>
             {item.name}
           </ThemedText>
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            <FontAwesome6 name="hand-fist" size={8} color="#FF6B6B" />
-            <ThemedText style={{ fontSize: 9, color: '#FF6B6B' }}>{item.attack}</ThemedText>
-            <FontAwesome6 name="shield-halved" size={8} color="#4ECDC4" />
-            <ThemedText style={{ fontSize: 9, color: '#4ECDC4' }}>{item.defense}</ThemedText>
+          <View style={styles.handCardStats}>
+            <FontAwesome6 name="hand-fist" size={6} color="#FF6B6B" />
+            <ThemedText style={[styles.handCardStatValue, { color: '#FF6B6B' }]}>{item.attack}</ThemedText>
+            <FontAwesome6 name="shield-halved" size={6} color="#4ECDC4" />
+            <ThemedText style={[styles.handCardStatValue, { color: '#4ECDC4' }]}>{item.defense}</ThemedText>
           </View>
         </View>
       </TouchableOpacity>
@@ -339,9 +313,12 @@ export default function InkBattleScreen() {
   // 加载中
   if (loading) {
     return (
-      <Screen backgroundColor="#0D0D0D" statusBarStyle="light">
+      <Screen backgroundColor="#080808" statusBarStyle="light">
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4AF37" />
+          <View style={styles.loadingIcon}>
+            <FontAwesome6 name="shield-halved" size={28} color="#D4AF37" />
+          </View>
+          <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 20 }} />
           <ThemedText style={styles.loadingText}>正在进入战场...</ThemedText>
         </View>
       </Screen>
@@ -360,38 +337,35 @@ export default function InkBattleScreen() {
   const latestLog = battleLog.logs[battleLog.logs.length - 1];
 
   return (
-    <Screen backgroundColor="#0D0D0D" statusBarStyle="light">
+    <Screen backgroundColor="#080808" statusBarStyle="light">
       <View style={styles.battleScene}>
         {/* 敌方区域 */}
         <View style={styles.enemyArea}>
-          <View style={styles.enemyInfo}>
+          <View style={styles.enemyGradient} />
+          <View style={styles.enemyHeader}>
             <View style={styles.enemyAvatar}>
               <FontAwesome6 name="skull" size={20} color="#FF4444" />
             </View>
-            <View style={styles.enemyName}>
-              <ThemedText style={{ fontSize: 16, fontWeight: '600', color: '#F5F5F0' }}>
-                AI对手
-              </ThemedText>
-              <ThemedText style={{ fontSize: 12, color: '#FF4444' }}>
-                HP: {battleLog.player2_hp}/100
-              </ThemedText>
+            <View style={styles.enemyInfo}>
+              <ThemedText style={styles.enemyName}>AI 对手</ThemedText>
+              <ThemedText style={styles.enemyHpText}>HP: {battleLog.player2_hp}/100</ThemedText>
             </View>
           </View>
-          <View style={styles.enemyHpBar}>
-            <View
-              style={[
-                styles.enemyHpFill,
-                {
-                  width: `${battleLog.player2_hp}%`,
-                  backgroundColor: '#FF4444',
-                },
-              ]}
-            />
+          <View style={styles.enemyHpBarContainer}>
+            <View style={styles.enemyHpBarBg}>
+              <View
+                style={[
+                  styles.enemyHpBarFill,
+                  { width: `${battleLog.player2_hp}%`, backgroundColor: '#FF4444' },
+                ]}
+              />
+            </View>
           </View>
         </View>
 
         {/* 战斗日志区域 */}
         <View style={styles.battleLogArea}>
+          <View style={styles.battleLogBg} />
           <ThemedText style={styles.battleLogText}>
             {latestLog?.log || '选择一张卡牌开始战斗'}
           </ThemedText>
@@ -402,42 +376,40 @@ export default function InkBattleScreen() {
 
         {/* 玩家区域 */}
         <View style={styles.playerArea}>
-          <View style={styles.playerInfo}>
+          <View style={styles.playerGradient} />
+          
+          <View style={styles.playerHeader}>
             <View style={styles.playerAvatar}>
               <FontAwesome6 name="user" size={20} color="#4ECDC4" />
             </View>
-            <View style={styles.playerName}>
-              <ThemedText style={{ fontSize: 16, fontWeight: '600', color: '#F5F5F0' }}>
-                修士
-              </ThemedText>
-              <ThemedText style={{ fontSize: 12, color: '#4ECDC4' }}>
-                HP: {battleLog.player1_hp}/100
-              </ThemedText>
+            <View style={styles.playerInfo}>
+              <ThemedText style={styles.playerName}>修士</ThemedText>
+              <ThemedText style={styles.playerHpText}>HP: {battleLog.player1_hp}/100</ThemedText>
             </View>
           </View>
-          <View style={styles.playerHpBar}>
-            <View
-              style={[
-                styles.playerHpFill,
-                {
-                  width: `${battleLog.player1_hp}%`,
-                  backgroundColor: '#4ECDC4',
-                },
-              ]}
-            />
+          
+          <View style={styles.playerHpBarContainer}>
+            <View style={styles.playerHpBarBg}>
+              <View
+                style={[
+                  styles.playerHpBarFill,
+                  { width: `${battleLog.player1_hp}%`, backgroundColor: '#4ECDC4' },
+                ]}
+              />
+            </View>
           </View>
 
           {/* 法力值 */}
-          <View style={styles.manaBar}>
+          <View style={styles.manaContainer}>
             {Array.from({ length: 10 }).map((_, i) => (
               <View
                 key={i}
                 style={[
                   styles.manaOrb,
-                  i < battleLog.player1_mana ? styles.manaOrbFilled : styles.manaOrbEmpty,
+                  i < battleLog.player1_mana ? styles.manaFilled : styles.manaEmpty,
                 ]}
               >
-                <ThemedText style={[styles.manaText, { color: i < battleLog.player1_mana ? '#FFF' : '#4A90D9' }]}>
+                <ThemedText style={[styles.manaText, { color: i < battleLog.player1_mana ? '#FFF' : 'rgba(74, 144, 217, 0.5)' }]}>
                   {i + 1}
                 </ThemedText>
               </View>
@@ -462,7 +434,7 @@ export default function InkBattleScreen() {
             onPress={handleAttack}
             disabled={!selectedCard || actionLoading}
           >
-            <FontAwesome6 name="hand-fist" size={16} color="#FFF" />
+            <FontAwesome6 name="hand-fist" size={12} color="#FFF" />
             <ThemedText style={styles.actionButtonText}>攻击</ThemedText>
           </TouchableOpacity>
           
@@ -471,7 +443,7 @@ export default function InkBattleScreen() {
             onPress={handleSkill}
             disabled={!selectedCard || actionLoading}
           >
-            <FontAwesome6 name="wand-magic-sparkles" size={16} color="#FFF" />
+            <FontAwesome6 name="wand-magic-sparkles" size={12} color="#FFF" />
             <ThemedText style={styles.actionButtonText}>技能</ThemedText>
           </TouchableOpacity>
           
@@ -480,8 +452,8 @@ export default function InkBattleScreen() {
             onPress={handleEndTurn}
             disabled={actionLoading}
           >
-            <FontAwesome6 name="forward" size={16} color="#0D0D0D" />
-            <ThemedText style={[styles.actionButtonText, { color: '#0D0D0D' }]}>结束回合</ThemedText>
+            <FontAwesome6 name="forward" size={12} color="#0A0A0A" />
+            <ThemedText style={[styles.actionButtonText, styles.endTurnButtonText]}>结束回合</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -490,13 +462,18 @@ export default function InkBattleScreen() {
       {gameEnded && (
         <View style={styles.resultOverlay}>
           <View style={styles.resultContent}>
-            <ThemedText
-              style={[
-                styles.resultTitle,
-                isVictory ? styles.victoryTitle : styles.defeatTitle,
-              ]}
-            >
-              {isVictory ? '胜 利' : '战 败'}
+            <View style={[
+              styles.resultIcon, 
+              isVictory ? styles.victoryIcon : styles.defeatIcon
+            ]}>
+              <FontAwesome6 
+                name={isVictory ? 'trophy' : 'skull'} 
+                size={36} 
+                color={isVictory ? '#D4AF37' : '#FF4444'} 
+              />
+            </View>
+            <ThemedText style={[styles.resultTitle, isVictory ? styles.victoryTitle : styles.defeatTitle]}>
+              {isVictory ? '胜利' : '战败'}
             </ThemedText>
             <ThemedText style={styles.resultSubtitle}>
               {isVictory ? '恭喜获得胜利！' : '下次再接再厉'}

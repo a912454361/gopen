@@ -68,6 +68,7 @@ function RootLayoutContent() {
         <Stack.Screen name="vendor-dashboard" options={{ title: "厂商后台" }} />
         <Stack.Screen name="ink-cards" options={{ title: "万古长夜" }} />
         <Stack.Screen name="ink-battle" options={{ title: "卡牌对战" }} />
+        <Stack.Screen name="game" options={{ title: "游戏平台" }} />
       </Stack>
     </View>
   );

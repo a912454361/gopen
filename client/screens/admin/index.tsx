@@ -35,11 +35,12 @@ import RechargePanel from './components/RechargePanel';
 import FundsPanel from './components/FundsPanel';
 import { VideosPanel } from './components/VideosPanel';
 import { VendorPanel } from './components/VendorPanel';
+import GamePanel from './components/GamePanel';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 const LOGIN_STORAGE_KEY = 'admin_login_status';
 
-type TabType = 'dashboard' | 'profit' | 'funds' | 'orders' | 'users' | 'videos' | 'promotion' | 'vendors' | 'recharge' | 'model-sync' | 'config' | 'logs';
+type TabType = 'dashboard' | 'profit' | 'funds' | 'orders' | 'users' | 'videos' | 'game' | 'promotion' | 'vendors' | 'recharge' | 'model-sync' | 'config' | 'logs';
 
 interface AdminStats {
   totalUsers: number;
@@ -204,6 +205,7 @@ export default function AdminDashboardScreen() {
     { key: 'recharge', label: '充值审核', icon: 'credit-card' },
     { key: 'users', label: '用户管理', icon: 'users' },
     { key: 'videos', label: '视频管理', icon: 'video' },
+    { key: 'game', label: '游戏平台', icon: 'moon' },
     { key: 'promotion', label: '推广中心', icon: 'bullhorn' },
     { key: 'vendors', label: '厂商管理', icon: 'building' },
     { key: 'model-sync', label: '模型同步', icon: 'rotate' },
@@ -377,6 +379,7 @@ export default function AdminDashboardScreen() {
             {activeTab === 'recharge' && <RechargePanel adminKey={adminKey} />}
             {activeTab === 'users' && <UsersPanel adminKey={adminKey} />}
             {activeTab === 'videos' && <VideosPanel adminKey={adminKey} />}
+            {activeTab === 'game' && <GamePanel adminKey={adminKey} />}
             {activeTab === 'promotion' && <PromotionPanel adminKey={adminKey} />}
             {activeTab === 'vendors' && <VendorPanel adminKey={adminKey} />}
             {activeTab === 'model-sync' && <ModelSyncPanel />}

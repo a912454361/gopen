@@ -89,6 +89,7 @@ import vendorStorageRouter from "./routes/vendor-storage.js";
 import storageConfigRouter from "./routes/storage-config.js";
 import inkCardGameRouter from "./routes/ink-card-game.js";
 import inkGameSystemsRouter from "./routes/ink-game-systems.js";
+import gameRechargeRouter from "./routes/game-recharge.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -215,6 +216,7 @@ app.use('/api/v1/vendor-storage', vendorStorageRouter);
 app.use('/api/v1/storage-config', storageConfigRouter);
 app.use('/api/v1/ink', inkCardGameRouter);
 app.use('/api/v1/ink/systems', inkGameSystemsRouter);
+app.use('/api/v1/game-recharge', gameRechargeRouter);
 
 // AI Chat Stream Endpoint (SSE)
 app.post('/api/v1/chat/stream', async (req: Request, res: Response) => {

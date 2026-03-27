@@ -69,6 +69,9 @@ function RootLayoutContent() {
         <Stack.Screen name="ink-cards" options={{ title: "万古长夜" }} />
         <Stack.Screen name="ink-battle" options={{ title: "卡牌对战" }} />
         <Stack.Screen name="ink-home" options={{ title: "游戏平台" }} />
+        <Stack.Screen name="game-recharge" options={{ title: "充值中心" }} />
+        <Stack.Screen name="gm-admin" options={{ title: "GM后台管理" }} />
+        <Stack.Screen name="game-inventory" options={{ title: "道具背包" }} />
       </Stack>
     </View>
   );

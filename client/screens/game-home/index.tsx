@@ -65,6 +65,14 @@ export default function GameHomeScreen() {
     action?: string;
   }> = [
     {
+      id: 'recharge',
+      title: '充值中心',
+      subtitle: '上线送10000元 · 0.05折',
+      icon: 'wallet',
+      gradient: ['#F59E0B', '#D97706'],
+      route: '/game-recharge',
+    },
+    {
       id: 'battle',
       title: '即刻对战',
       subtitle: '匹配对手，争夺荣耀',
@@ -79,6 +87,14 @@ export default function GameHomeScreen() {
       icon: 'layer-group',
       gradient: ['#9B59B6', '#8E44AD'],
       route: '/ink-cards',
+    },
+    {
+      id: 'inventory',
+      title: '道具背包',
+      subtitle: '管理你的道具',
+      icon: 'backpack',
+      gradient: ['#27AE60', '#1E8449'],
+      route: '/game-inventory',
     },
     {
       id: 'draw',
@@ -217,14 +233,26 @@ export default function GameHomeScreen() {
             end={{ x: 1, y: 0 }}
             style={styles.announcementCard}
           >
-            <FontAwesome6 name="bullhorn" size={16} color={GOLD} />
+            <FontAwesome6 name="fire" size={16} color="#F59E0B" />
             <ThemedText variant="small" color={theme.textPrimary} style={{ marginLeft: 10, flex: 1 }}>
-              新手福利：首次登录送10连抽！
+              新用户福利：上线送10000元代金券！充值一律0.05折！
             </ThemedText>
-            <TouchableOpacity>
-              <ThemedText variant="captionMedium" color={GOLD}>领取</ThemedText>
+            <TouchableOpacity onPress={() => router.push('/game-recharge')}>
+              <ThemedText variant="captionMedium" color={GOLD}>充值</ThemedText>
             </TouchableOpacity>
           </LinearGradient>
+          
+          {/* GM入口（开发测试用） */}
+          <TouchableOpacity 
+            style={[styles.announcementCard, { marginTop: 8, backgroundColor: `${theme.error}20` }]}
+            onPress={() => router.push('/gm-admin')}
+          >
+            <FontAwesome6 name="shield-halved" size={16} color={theme.error} />
+            <ThemedText variant="small" color={theme.textPrimary} style={{ marginLeft: 10, flex: 1 }}>
+              GM后台管理（测试）
+            </ThemedText>
+            <FontAwesome6 name="chevron-right" size={14} color={theme.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* 底部 */}

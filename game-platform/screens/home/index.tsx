@@ -73,6 +73,14 @@ const FACTIONS = [
 // 菜单项
 const MENU_ITEMS = [
   {
+    id: 'cloud',
+    title: '云游戏',
+    subtitle: '无需下载，即刻畅玩',
+    icon: 'cloud',
+    gradient: ['#D4AF37', '#B8860B'] as [string, string],
+    route: '/cloud-play',
+  },
+  {
     id: 'battle',
     title: '即刻对战',
     subtitle: '匹配对手，争夺荣耀',
@@ -95,14 +103,6 @@ const MENU_ITEMS = [
     icon: 'wallet',
     gradient: ['#F59E0B', '#D97706'] as [string, string],
     route: '/recharge',
-  },
-  {
-    id: 'inventory',
-    title: '道具背包',
-    subtitle: '管理你的道具',
-    icon: 'backpack',
-    gradient: ['#10B981', '#059669'] as [string, string],
-    route: '/profile',
   },
 ];
 

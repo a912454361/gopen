@@ -72,6 +72,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="download"
+        options={{
+          title: '下载',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="download" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: '我的',

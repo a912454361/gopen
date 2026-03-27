@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MembershipProvider } from '@/contexts/MembershipContext';
 import { ToastProvider } from '@/components/Toast';
 import { useTheme } from '@/hooks/useTheme';
@@ -79,11 +80,13 @@ function RootLayoutContent() {
 
 export default function RootLayout() {
   return (
-    <MembershipProvider>
-      <ToastProvider>
-        <RootLayoutContent />
-      </ToastProvider>
-    </MembershipProvider>
+    <SafeAreaProvider>
+      <MembershipProvider>
+        <ToastProvider>
+          <RootLayoutContent />
+        </ToastProvider>
+      </MembershipProvider>
+    </SafeAreaProvider>
   );
 }
 

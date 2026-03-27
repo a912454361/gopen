@@ -1,8 +1,21 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const connect = require('connect');
+const path = require('path');
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '..');
+
+const config = getDefaultConfig(projectRoot);
+
+// 添加工作区根目录到 watchFolders，以便 Metro 可以找到 pnpm 的依赖
+config.watchFolders = [workspaceRoot];
+
+// 配置模块解析，帮助 Metro 找到 pnpm 的依赖
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
 
 // 安全地获取 Expo 的默认排除列表
 const existingBlockList = [].concat(config.resolver.blockList || []);

@@ -16,7 +16,9 @@
   },
   "pnpm": {
     "overrides": {
-      "esbuild": "0.27.2"
+      "esbuild": "0.27.2",
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
     },
     "patchedDependencies": {
       "expo@54.0.33": "patches/expo@54.0.33.patch"

@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View, StyleSheet, Text, Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { MembershipProvider } from '@/contexts/MembershipContext';
 import { ToastProvider } from '@/components/Toast';
 import { useTheme } from '@/hooks/useTheme';
@@ -73,12 +73,13 @@ function RootLayoutContent() {
         <Stack.Screen name="game-recharge" options={{ title: "充值中心" }} />
         <Stack.Screen name="gm-admin" options={{ title: "GM后台管理" }} />
         <Stack.Screen name="game-inventory" options={{ title: "道具背包" }} />
+        <Stack.Screen name="test" options={{ title: "测试页面" }} />
       </Stack>
     </View>
   );
 }
 
-export default function RootLayout() {
+function App() {
   return (
     <SafeAreaProvider>
       <MembershipProvider>
@@ -89,6 +90,8 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default App;
 
 const styles = StyleSheet.create({
   container: {

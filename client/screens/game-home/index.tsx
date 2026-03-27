@@ -13,7 +13,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { ParticleSystem, PARTICLE_PRESETS } from '@/components/ParticleSystem';
 import { createStyles } from './styles';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -100,11 +99,21 @@ export default function GameHomeScreen() {
 
   return (
     <Screen backgroundColor="#0A0A0F" statusBarStyle="light">
-      {/* 粒子背景 */}
-      <ParticleSystem
-        config={PARTICLE_PRESETS.wangu}
-        intensity="low"
-      />
+      {/* 背景装饰 */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: '#0A0A0F',
+      }}>
+        {/* 星空渐变背景 */}
+        <LinearGradient
+          colors={['#1A1A2E', '#0A0A0F', '#0A0A0F']}
+          style={{ flex: 1 }}
+        />
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}

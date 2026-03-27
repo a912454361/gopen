@@ -1,0 +1,133 @@
+/* 用户页面样式 */
+
+.container {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  padding-bottom: 160rpx;
+}
+
+.user-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64rpx 32rpx;
+  background: linear-gradient(180deg, #1A1A2E 0%, var(--color-bg) 100%);
+}
+
+.avatar {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 80rpx;
+  background: linear-gradient(135deg, var(--color-primary), #B8960F);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.avatar-text {
+  font-size: 64rpx;
+  font-weight: 600;
+  color: #000;
+}
+
+.nickname {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8rpx;
+}
+
+.level {
+  font-size: 24rpx;
+  color: var(--color-primary);
+  padding: 4rpx 16rpx;
+  background: rgba(212, 175, 55, 0.2);
+  border-radius: 24rpx;
+}
+
+.assets {
+  display: flex;
+  justify-content: space-around;
+  margin: 24rpx 32rpx;
+}
+
+.asset-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.asset-icon {
+  font-size: 48rpx;
+}
+
+.asset-value {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  display: block;
+}
+
+.asset-label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 0 32rpx 24rpx;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+  display: block;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+.menu {
+  margin: 0 32rpx 24rpx;
+  padding: 0;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-icon {
+  font-size: 32rpx;
+  margin-right: 24rpx;
+}
+
+.menu-title {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--color-text);
+}
+
+.menu-arrow {
+  font-size: 28rpx;
+  color: var(--color-text-muted);
+}
+
+.recharge-btn {
+  margin: 0 32rpx;
+}

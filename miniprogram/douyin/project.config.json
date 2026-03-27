@@ -1,0 +1,10 @@
+{
+  "name": "inkcards-douyin",
+  "version": "1.0.0",
+  "description": "万古长夜 - 国风粒子卡牌游戏 - 抖音小程序",
+  "appVersion": "1.0.0",
+  "mini-android": {
+    "buildEnable": true,
+    "useAndroidX": true
+  }
+}

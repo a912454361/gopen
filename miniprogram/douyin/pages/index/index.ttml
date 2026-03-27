@@ -1,0 +1,52 @@
+<!--抖音小程序首页-->
+<view class="container">
+  <!-- Hero -->
+  <view class="hero">
+    <text class="logo">🌙</text>
+    <text class="title">万古长夜</text>
+    <text class="subtitle">国风粒子卡牌 · AI 智能创作</text>
+  </view>
+
+  <!-- 玩家信息 -->
+  <view class="player-card card" tt:if="{{player}}">
+    <view class="player-info">
+      <view class="avatar">
+        <text>{{player.nickname[0]}}</text>
+      </view>
+      <view class="player-detail">
+        <text class="player-name">{{player.nickname}}</text>
+        <text class="player-level">Lv.{{player.level}}</text>
+      </view>
+    </view>
+    <view class="currency">
+      <text class="currency-item">🪙 {{player.gold}}</text>
+      <text class="currency-item">💎 {{player.gems}}</text>
+    </view>
+  </view>
+
+  <!-- 菜单 -->
+  <view class="menu-grid">
+    <view class="menu-item" bindtap="goToBattle">
+      <view class="menu-icon battle">⚔️</view>
+      <text class="menu-title">即刻对战</text>
+    </view>
+    <view class="menu-item" bindtap="goToCards">
+      <view class="menu-icon cards">🃏</view>
+      <text class="menu-title">卡牌收藏</text>
+    </view>
+    <view class="menu-item" bindtap="drawCard">
+      <view class="menu-icon draw">🎁</view>
+      <text class="menu-title">神秘抽卡</text>
+    </view>
+    <view class="menu-item" bindtap="watchAd">
+      <view class="menu-icon ad">📺</view>
+      <text class="menu-title">看广告领金币</text>
+    </view>
+  </view>
+
+  <!-- WebView 入口 -->
+  <view class="webview-entry card" bindtap="openWebView">
+    <text class="webview-title">🎮 完整游戏体验</text>
+    <text class="webview-desc">点击进入完整版游戏界面</text>
+  </view>
+</view>

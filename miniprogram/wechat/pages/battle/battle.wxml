@@ -1,0 +1,53 @@
+<!--对战页面-->
+<view class="container">
+  <!-- 对战状态 -->
+  <view class="battle-header" wx:if="{{battle}}">
+    <view class="hp-bar">
+      <text class="hp-label">你的生命</text>
+      <progress percent="{{battle.playerHp}}" stroke-width="12" color="#10B981" />
+      <text class="hp-value">{{battle.playerHp}}/100</text>
+    </view>
+    <view class="hp-bar enemy">
+      <text class="hp-label">对手生命</text>
+      <progress percent="{{battle.enemyHp}}" stroke-width="12" color="#EF4444" />
+      <text class="hp-value">{{battle.enemyHp}}/100</text>
+    </view>
+    <view class="turn-info">
+      <text>第 {{battle.turn}} 回合</text>
+      <text class="mana">法力: {{battle.mana}}/10</text>
+    </view>
+  </view>
+
+  <!-- 手牌 -->
+  <view class="hand-cards" wx:if="{{handCards.length > 0}}">
+    <text class="section-title">手牌</text>
+    <scroll-view scroll-x class="cards-scroll">
+      <view class="card-item" wx:for="{{handCards}}" wx:key="id" bindtap="playCard" data-card="{{item}}">
+        <view class="card-cost">{{item.cost}}</view>
+        <text class="card-name">{{item.name}}</text>
+        <text class="card-attack">⚔️ {{item.attack}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 操作区 -->
+  <view class="actions">
+    <button class="btn-primary" bindtap="attack" wx:if="{{battle && !battleFinished}}">
+      发动攻击
+    </button>
+    <button class="btn-secondary" bindtap="endTurn" wx:if="{{battle && !battleFinished}}">
+      结束回合
+    </button>
+    <button class="btn-primary" bindtap="startBattle" wx:if="{{!battle || battleFinished}}">
+      开始对战
+    </button>
+  </view>
+
+  <!-- 战斗日志 -->
+  <view class="battle-log" wx:if="{{logs.length > 0}}">
+    <text class="section-title">战斗记录</text>
+    <view class="log-item" wx:for="{{logs}}" wx:key="index">
+      <text class="log-text">{{item}}</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,84 @@
+<!--万古长夜首页-->
+<view class="container">
+  <!-- Hero 区域 -->
+  <view class="hero">
+    <view class="logo-container">
+      <view class="logo-glow"></view>
+      <text class="logo-icon">🌙</text>
+    </view>
+    <text class="title">万古长夜</text>
+    <text class="subtitle">国风粒子卡牌 · AI 智能创作</text>
+  </view>
+
+  <!-- 玩家信息 -->
+  <view class="player-card card" wx:if="{{player}}">
+    <view class="player-info">
+      <view class="avatar">
+        <text class="avatar-text">{{player.nickname[0]}}</text>
+      </view>
+      <view class="player-detail">
+        <text class="player-name">{{player.nickname}}</text>
+        <text class="player-level">Lv.{{player.level}} · {{player.wins}}胜 {{player.losses}}负</text>
+      </view>
+    </view>
+    <view class="currency-row">
+      <view class="currency-item">
+        <text class="currency-icon">🪙</text>
+        <text class="currency-value">{{player.gold}}</text>
+      </view>
+      <view class="currency-item">
+        <text class="currency-icon">💎</text>
+        <text class="currency-value">{{player.gems}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 主菜单 -->
+  <view class="menu-grid">
+    <view class="menu-item" bindtap="goToBattle">
+      <view class="menu-icon battle">
+        <text>⚔️</text>
+      </view>
+      <text class="menu-title">即刻对战</text>
+      <text class="menu-subtitle">匹配对手，争夺荣耀</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToCards">
+      <view class="menu-icon cards">
+        <text>🃏</text>
+      </view>
+      <text class="menu-title">卡牌收藏</text>
+      <text class="menu-subtitle">查看你的卡组</text>
+    </view>
+
+    <view class="menu-item" bindtap="drawCard">
+      <view class="menu-icon draw">
+        <text>🎁</text>
+      </view>
+      <text class="menu-title">神秘抽卡</text>
+      <text class="menu-subtitle">100金币/次</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToRank">
+      <view class="menu-icon rank">
+        <text>🏆</text>
+      </view>
+      <text class="menu-title">排行榜</text>
+      <text class="menu-subtitle">全服高手</text>
+    </view>
+  </view>
+
+  <!-- 公告 -->
+  <view class="announcement card">
+    <text class="announcement-icon">📢</text>
+    <text class="announcement-text">新手福利：首次登录送10连抽！</text>
+    <text class="announcement-btn" bindtap="claimReward">领取</text>
+  </view>
+
+  <!-- WebView 游戏入口 -->
+  <view class="webview-entry card" bindtap="openWebView">
+    <text class="webview-title">🎮 完整游戏体验</text>
+    <text class="webview-desc">点击进入完整版游戏界面</text>
+    <text class="webview-arrow">→</text>
+  </view>
+</view>

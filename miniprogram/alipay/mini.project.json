@@ -1,0 +1,8 @@
+{
+  "name": "inkcards-alipay",
+  "version": "1.0.0",
+  "description": "万古长夜 - 国风粒子卡牌游戏 - 支付宝小程序",
+  "appid": "2021INKCARDSALIPAY",
+  "component2": true,
+  "enableAppxNg": true
+}

@@ -21,7 +21,8 @@ import { Spacing, BorderRadius } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+// API 基础路径 - 开发环境通过代理访问，生产环境为空
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || '';
 
 // 金色主题色
 const GOLD = '#D4AF37';
@@ -129,7 +130,7 @@ export default function HomeScreen() {
 
       // 尝试从后端获取玩家数据
       try {
-        const response = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/ink/player/${playerId}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/ink/player/${playerId}`);
         const data = await response.json();
         setPlayer(data.player);
       } catch (e) {

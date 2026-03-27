@@ -94,8 +94,41 @@ import { startScheduler } from "./promo-scheduler.js";
 const app = express();
 const port = process.env.PORT || 9091;
 
+// ============================================================
+// CORS 配置 - 适配腾讯云 SCF 函数 URL 部署
+// ============================================================
+// 生产环境请将 origin 改为具体前端域名数组
+const corsOptions = {
+  origin: '*',  // 允许所有来源（测试阶段），生产环境改为具体域名
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers',
+    'X-Admin-Key',
+    'X-Player-Id',
+  ],
+  exposedHeaders: [
+    'Content-Length',
+    'Content-Range',
+    'X-Total-Count',
+  ],
+  credentials: true,  // 允许携带 Cookie
+  maxAge: 86400,      // 预检请求缓存 24 小时
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
+// 处理 OPTIONS 预检请求（确保 SCF 函数 URL 正确响应）
+app.options('*', cors(corsOptions));
+
 // Middleware
-app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

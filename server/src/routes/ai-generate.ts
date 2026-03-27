@@ -152,8 +152,9 @@ router.post('/generate', async (req: Request, res: Response) => {
     let fullResponse = '';
 
     try {
+      // 使用默认模型（豆包），不指定model参数
       const stream = client.stream(llmMessages, {
-        model: 'doubao-pro-32k',
+        temperature: 0.7,
       });
 
       for await (const chunk of stream) {

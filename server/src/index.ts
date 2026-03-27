@@ -92,6 +92,7 @@ import inkCardGameRouter from "./routes/ink-card-game.js";
 import inkGameSystemsRouter from "./routes/ink-game-systems.js";
 import gameRechargeRouter from "./routes/game-recharge.js";
 import aiGenerateRouter from "./routes/ai-generate.js";
+import modelProvidersRouter from "./routes/model-providers.js";
 import { startScheduler } from "./promo-scheduler.js";
 
 const app = express();
@@ -171,6 +172,7 @@ app.use('/api/v1/billing', billingRouter);
 app.use('/api/v1/ollama', ollamaRouter);
 app.use('/api/v1/gpu', gpuRouter);
 app.use('/api/v1/ai', aiGatewayRouter);
+app.use('/api/v1/model-providers', modelProvidersRouter);
 app.use('/api/v1/model-sync', modelSyncRouter);
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/auth', authRouter);

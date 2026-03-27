@@ -1,10 +1,18 @@
 /**
  * AI内容生成路由
  * 用于游戏工作台和动漫工作台的AI生成功能
+ * 支持所有厂商模型
  */
 import express from 'express';
 import type { Request, Response } from 'express';
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import {
+  AVAILABLE_MODELS,
+  isProviderAvailable,
+  getModelPricing,
+  type ModelConfig,
+} from '../config/model-providers.js';
+import ModelService from '../services/model-service.js';
 
 const router = express.Router();
 const config = new Config();
@@ -18,10 +26,11 @@ const config = new Config();
  * - prompt: 描述文本
  * - style?: 动漫风格 (anime, comic, chibi, realistic, watercolor)
  * - projectId?: 项目ID
+ * - model?: 模型代码（可选，默认使用豆包）
  */
 router.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { type, prompt, style, projectId } = req.body;
+    const { type, prompt, style, projectId, model: modelCode } = req.body;
 
     if (!type || !prompt) {
       return res.status(400).json({ 
@@ -30,12 +39,8 @@ router.post('/generate', async (req: Request, res: Response) => {
       });
     }
 
-    const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
-    const client = new LLMClient(config, customHeaders);
-
     // 根据类型构建不同的系统提示
     let systemPrompt = '';
-    let responseFormat = '';
 
     switch (type) {
       case 'character':
@@ -150,19 +155,42 @@ router.post('/generate', async (req: Request, res: Response) => {
     ];
 
     let fullResponse = '';
+    let usedModel = 'coze-default';
 
     try {
-      // 使用默认模型（豆包），不指定model参数
-      const stream = client.stream(llmMessages, {
-        temperature: 0.7,
-      });
+      // 如果指定了模型，尝试使用模型服务
+      if (modelCode) {
+        const modelConfig = AVAILABLE_MODELS.find(m => m.code === modelCode);
+        if (modelConfig && isProviderAvailable(modelConfig.provider)) {
+          usedModel = modelCode;
+          const response = await ModelService.chat({
+            model: modelCode,
+            messages: llmMessages,
+            temperature: 0.7,
+          });
+          fullResponse = response.content;
+        } else {
+          // 模型不可用，使用 Coze SDK
+          console.log(`模型 ${modelCode} 不可用，使用默认模型`);
+        }
+      }
 
-      for await (const chunk of stream) {
-        const content = chunk.content;
-        if (typeof content === 'string') {
-          fullResponse += content;
-        } else if (content && typeof content === 'object' && 'content' in content) {
-          fullResponse += (content as any).content;
+      // 如果没有指定模型或模型不可用，使用 Coze SDK
+      if (!fullResponse) {
+        const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
+        const client = new LLMClient(config, customHeaders);
+        
+        const stream = client.stream(llmMessages, {
+          temperature: 0.7,
+        });
+
+        for await (const chunk of stream) {
+          const content = chunk.content;
+          if (typeof content === 'string') {
+            fullResponse += content;
+          } else if (content && typeof content === 'object' && 'content' in content) {
+            fullResponse += (content as any).content;
+          }
         }
       }
     } catch (llmError) {
@@ -190,6 +218,7 @@ router.post('/generate', async (req: Request, res: Response) => {
           success: true,
           ...result,
           image: '', // 图片需要单独生成
+          model: usedModel,
         });
       }
     } catch (parseError) {
@@ -202,6 +231,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       name: type.includes('character') ? '创作角色' : type.includes('scene') ? '创作场景' : '创作内容',
       description: fullResponse.substring(0, 200),
       image: '',
+      model: usedModel,
     });
 
   } catch (error) {
@@ -210,6 +240,118 @@ router.post('/generate', async (req: Request, res: Response) => {
       success: false, 
       error: 'AI生成失败，请稍后重试' 
     });
+  }
+});
+
+/**
+ * POST /api/v1/ai/generate-stream
+ * AI生成内容（流式输出）
+ * 
+ * Body:
+ * - type: 'character' | 'scene' | 'item' | 'script' | 'anime_character' | 'anime_scene'
+ * - prompt: 描述文本
+ * - style?: 动漫风格
+ * - model?: 模型代码（可选）
+ */
+router.post('/generate-stream', async (req: Request, res: Response) => {
+  try {
+    const { type, prompt, style, model: modelCode } = req.body;
+
+    if (!type || !prompt) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'type 和 prompt 是必需参数' 
+      });
+    }
+
+    // 设置流式响应头
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, no-transform, must-revalidate');
+    res.setHeader('Connection', 'keep-alive');
+
+    // 根据类型构建系统提示
+    let systemPrompt = '';
+    
+    switch (type) {
+      case 'character':
+        systemPrompt = '你是专业的游戏角色设计师，请根据用户描述设计角色，返回JSON格式数据。';
+        break;
+      case 'anime_character':
+        systemPrompt = `你是专业的${style || '日式动漫'}风格角色设计师，请根据用户描述设计角色，返回JSON格式数据。`;
+        break;
+      case 'scene':
+        systemPrompt = '你是专业的游戏场景设计师，请根据用户描述设计场景，返回JSON格式数据。';
+        break;
+      case 'anime_scene':
+        systemPrompt = `你是专业的${style || '日式动漫'}风格场景设计师，请根据用户描述设计场景，返回JSON格式数据。`;
+        break;
+      case 'item':
+        systemPrompt = '你是专业的游戏道具设计师，请根据用户描述设计道具，返回JSON格式数据。';
+        break;
+      case 'script':
+        systemPrompt = '你是专业的游戏剧情编剧，请根据用户描述编写剧情，返回JSON格式数据。';
+        break;
+      default:
+        res.write(`data: ${JSON.stringify({ error: '不支持的生成类型' })}\n\n`);
+        res.end();
+        return;
+    }
+
+    const llmMessages = [
+      { role: 'system' as const, content: systemPrompt },
+      { role: 'user' as const, content: prompt }
+    ];
+
+    try {
+      // 如果指定了模型且可用，使用模型服务
+      if (modelCode) {
+        const modelConfig = AVAILABLE_MODELS.find(m => m.code === modelCode);
+        if (modelConfig && isProviderAvailable(modelConfig.provider)) {
+          await ModelService.chatStream(
+            { model: modelCode, messages: llmMessages },
+            (chunk) => {
+              res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            },
+            () => {
+              res.write('data: [DONE]\n\n');
+              res.end();
+            },
+            (error) => {
+              console.error('Stream error:', error);
+              res.write(`data: ${JSON.stringify({ error: '处理失败' })}\n\n`);
+              res.end();
+            }
+          );
+          return;
+        }
+      }
+
+      // 使用 Coze SDK
+      const customHeaders = HeaderUtils.extractForwardHeaders(req.headers as Record<string, string>);
+      const client = new LLMClient(config, customHeaders);
+
+      const stream = client.stream(llmMessages, {
+        temperature: 0.7,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.content;
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content: content.toString() })}\n\n`);
+        }
+      }
+
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (streamError) {
+      console.error('Stream error:', streamError);
+      res.write(`data: ${JSON.stringify({ error: '处理失败' })}\n\n`);
+      res.end();
+    }
+  } catch (error) {
+    console.error('AI生成失败:', error);
+    res.write(`data: ${JSON.stringify({ error: 'AI生成失败' })}\n\n`);
+    res.end();
   }
 });
 
@@ -244,5 +386,37 @@ router.post('/generate-image', async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * GET /api/v1/ai/models
+ * 获取可用的AI模型列表
+ */
+router.get('/models', async (req: Request, res: Response) => {
+  try {
+    const models = AVAILABLE_MODELS
+      .filter(m => m.type === 'chat')
+      .map(m => ({
+        code: m.code,
+        name: m.name,
+        provider: m.provider,
+        providerName: MODEL_PROVIDERS[m.provider]?.name || m.provider,
+        description: m.description,
+        isAvailable: isProviderAvailable(m.provider),
+        pricing: getModelPricing(m),
+        tags: m.tags,
+      }));
+
+    res.json({
+      success: true,
+      models,
+    });
+  } catch (error) {
+    console.error('获取模型列表失败:', error);
+    res.status(500).json({ success: false, error: '获取模型列表失败' });
+  }
+});
+
+// 导入 MODEL_PROVIDERS
+import { MODEL_PROVIDERS } from '../config/model-providers.js';
 
 export default router;

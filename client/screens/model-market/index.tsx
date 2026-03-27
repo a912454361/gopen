@@ -1148,5 +1148,3 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
 });
-
-export default ModelMarketScreen;

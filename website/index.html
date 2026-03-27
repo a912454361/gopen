@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="G open 智能创作助手 - AI驱动的游戏与动漫内容创作平台">
-    <meta name="keywords" content="AI创作,动漫制作,8K粒子特效,游戏开发">
+    <meta name="keywords" content="AI创作,动漫制作,8K粒子特效,游戏开发,万古长夜">
     <title>G open 智能创作助手 - 官网</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -12,12 +12,15 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #00F0FF;
-            --secondary: #BF00FF;
-            --bg-dark: #000000;
-            --bg-card: rgba(10, 10, 20, 0.9);
+            --gold-primary: #FFD700;
+            --gold-light: #FFF8DC;
+            --gold-dark: #B8860B;
+            --accent-cyan: #00F0FF;
+            --accent-purple: #BF00FF;
+            --bg-dark: #0A0A0F;
+            --bg-card: rgba(15, 15, 25, 0.85);
             --text-primary: #FFFFFF;
-            --text-secondary: #8888AA;
+            --text-secondary: #A0A0B8;
         }
         
         html { scroll-behavior: smooth; }
@@ -27,6 +30,91 @@
             background: var(--bg-dark);
             color: var(--text-primary);
             line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ==================== 8K金色粒子背景 ==================== */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ==================== 24H动漫轮播背景 ==================== */
+        #carousel-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+            background-size: cover;
+            background-position: center;
+            transition: opacity 2s ease-in-out, background-image 2s ease-in-out;
+        }
+
+        #carousel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background: linear-gradient(
+                180deg,
+                rgba(10, 10, 15, 0.7) 0%,
+                rgba(10, 10, 15, 0.5) 50%,
+                rgba(10, 10, 15, 0.9) 100%
+            );
+            pointer-events: none;
+        }
+
+        /* ==================== 轮播指示器 ==================== */
+        .carousel-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .carousel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 215, 0, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .carousel-dot.active {
+            background: var(--gold-primary);
+            box-shadow: 0 0 10px var(--gold-primary);
+            transform: scale(1.3);
+        }
+
+        .carousel-timer {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: var(--gold-primary);
+            letter-spacing: 2px;
+            opacity: 0.8;
         }
         
         /* 导航 */
@@ -36,21 +124,29 @@
             left: 0;
             right: 0;
             padding: 1.2rem 3rem;
-            background: rgba(0, 0, 0, 0.95);
-            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            background: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
             z-index: 1000;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            backdrop-filter: blur(10px);
         }
         
         .logo {
             font-family: 'Orbitron', sans-serif;
             font-size: 1.6rem;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-light) 50%, var(--gold-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            animation: goldGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes goldGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
         }
         
         .nav-links {
@@ -64,37 +160,109 @@
             font-size: 0.85rem;
             color: var(--text-secondary);
             text-decoration: none;
-            transition: color 0.3s;
+            transition: all 0.3s;
+            position: relative;
         }
         
-        .nav-links a:hover { color: var(--primary); }
+        .nav-links a:hover { 
+            color: var(--gold-primary); 
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gold-primary);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
         
         /* Hero */
         .hero {
-            min-height: 80vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 8rem 2rem 4rem;
-            background: radial-gradient(ellipse at center, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+            position: relative;
+            z-index: 10;
         }
         
-        .hero-content { text-align: center; max-width: 800px; }
+        .hero-content { 
+            text-align: center; 
+            max-width: 900px; 
+        }
         
         .hero h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 3.5rem;
+            font-size: 4.5rem;
             font-weight: 900;
             margin-bottom: 1rem;
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 50%, var(--gold-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            animation: titleShine 4s ease-in-out infinite;
+            text-shadow: 0 0 60px rgba(255, 215, 0, 0.3);
+        }
+
+        @keyframes titleShine {
+            0%, 100% { 
+                background-position: 0% 50%;
+                filter: brightness(1);
+            }
+            50% { 
+                background-position: 100% 50%;
+                filter: brightness(1.2);
+            }
+        }
+
+        .hero .subtitle {
+            font-size: 1.4rem;
+            color: var(--gold-light);
+            margin-bottom: 0.5rem;
+            font-weight: 300;
+            letter-spacing: 3px;
         }
         
         .hero p {
             font-size: 1.1rem;
             color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
             margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            padding: 0.5rem 1.2rem;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid var(--gold-primary);
+            border-radius: 20px;
+            color: var(--gold-primary);
+            letter-spacing: 1px;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        .badge:nth-child(2) { animation-delay: 0.3s; }
+        .badge:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
         }
         
         .btn {
@@ -106,22 +274,44 @@
             text-decoration: none;
             transition: all 0.3s;
             letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, #00C4CC 100%);
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
             color: #000;
+            font-weight: 700;
         }
         
         .btn-primary:hover {
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
-            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 80px rgba(255, 215, 0, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
         }
         
         /* 统计 */
         .stats {
-            padding: 3rem 2rem;
-            background: rgba(10, 10, 20, 0.5);
+            padding: 4rem 2rem;
+            background: rgba(10, 10, 20, 0.8);
+            position: relative;
+            z-index: 10;
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
         }
         
         .stats-grid {
@@ -134,17 +324,24 @@
         
         .stat-card {
             text-align: center;
-            padding: 1.5rem;
+            padding: 2rem 1.5rem;
             background: var(--bg-card);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            border-radius: 8px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+            transform: translateY(-5px);
         }
         
         .stat-number {
             font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 50%, var(--gold-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -156,10 +353,19 @@
             margin-top: 0.5rem;
             letter-spacing: 2px;
         }
+
+        .stat-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            opacity: 0.7;
+        }
         
         /* 视频展示区 */
         .showcase {
             padding: 6rem 2rem;
+            position: relative;
+            z-index: 10;
         }
         
         .section-header {
@@ -171,7 +377,7 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 2.5rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--primary) 100%);
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -186,15 +392,16 @@
             max-width: 1200px;
             margin: 0 auto 4rem;
             background: var(--bg-card);
-            border: 2px solid rgba(0, 240, 255, 0.3);
+            border: 2px solid rgba(255, 215, 0, 0.4);
             border-radius: 16px;
             overflow: hidden;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.1);
         }
         
         .video-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 */
+            padding-top: 56.25%;
         }
         
         .video-wrapper iframe {
@@ -209,13 +416,14 @@
         .video-info {
             padding: 1.5rem 2rem;
             background: rgba(0, 0, 0, 0.8);
-            border-top: 1px solid rgba(0, 240, 255, 0.2);
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
         }
         
         .video-title {
             font-family: 'Orbitron', sans-serif;
             font-size: 1.3rem;
             margin-bottom: 0.5rem;
+            color: var(--gold-light);
         }
         
         .video-desc {
@@ -234,10 +442,10 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 0.7rem;
             padding: 0.4rem 1rem;
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid var(--primary);
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid var(--gold-primary);
             border-radius: 20px;
-            color: var(--primary);
+            color: var(--gold-primary);
         }
         
         /* 视频网格 */
@@ -251,16 +459,16 @@
         
         .video-card {
             background: var(--bg-card);
-            border: 1px solid rgba(0, 240, 255, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.2);
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.3s;
         }
         
         .video-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 240, 255, 0.2);
-            border-color: var(--primary);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(255, 215, 0, 0.2);
+            border-color: var(--gold-primary);
         }
         
         .video-card-wrapper {
@@ -286,6 +494,7 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 0.95rem;
             margin-bottom: 0.3rem;
+            color: var(--gold-light);
         }
         
         .video-card-desc {
@@ -296,7 +505,9 @@
         /* 特效展示 */
         .effects {
             padding: 6rem 2rem;
-            background: radial-gradient(ellipse at center, rgba(191, 0, 255, 0.1) 0%, transparent 70%);
+            background: rgba(10, 10, 20, 0.8);
+            position: relative;
+            z-index: 10;
         }
         
         .effects-grid {
@@ -310,37 +521,139 @@
         .effect-card {
             aspect-ratio: 1;
             background: var(--bg-card);
-            border: 1px solid rgba(191, 0, 255, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.2);
             border-radius: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .effect-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .effect-card:hover::before {
+            opacity: 1;
         }
         
         .effect-card:hover {
             transform: scale(1.05);
-            border-color: var(--secondary);
-            box-shadow: 0 0 30px rgba(191, 0, 255, 0.3);
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
         }
         
-        .effect-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+        .effect-icon { 
+            font-size: 3.5rem; 
+            margin-bottom: 0.5rem; 
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+        }
         
         .effect-name {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.9rem;
+            color: var(--gold-light);
         }
         
         .effect-type {
             font-size: 0.7rem;
-            color: var(--secondary);
+            color: var(--text-secondary);
             margin-top: 0.3rem;
         }
         
+        /* 万古长夜特色区 */
+        .wangu-section {
+            padding: 6rem 2rem;
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(10, 10, 20, 0.8) 0%, rgba(15, 15, 30, 0.9) 100%);
+        }
+
+        .wangu-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .wangu-info h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .wangu-info .tagline {
+            font-size: 1.2rem;
+            color: var(--gold-light);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .wangu-info p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .faction-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .faction-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .faction-card:hover {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .faction-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .faction-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--gold-light);
+        }
+
+        .faction-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+
         /* SDK */
         .sdk {
             padding: 6rem 2rem;
+            position: relative;
+            z-index: 10;
         }
         
         .sdk-container {
@@ -356,7 +669,7 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 2rem;
             margin-bottom: 1rem;
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -372,21 +685,27 @@
         }
         
         .sdk-features li {
-            padding: 0.6rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.8rem 0;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
             color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
         }
         
         .sdk-features li::before {
-            content: '✓ ';
-            color: var(--primary);
+            content: '✓';
+            color: var(--gold-primary);
             font-weight: bold;
+            font-size: 1.2rem;
         }
         
         /* 下载 */
         .download {
             padding: 6rem 2rem;
-            background: rgba(10, 10, 20, 0.5);
+            background: rgba(10, 10, 20, 0.8);
+            position: relative;
+            z-index: 10;
         }
         
         .download-grid {
@@ -399,7 +718,7 @@
         
         .download-card {
             background: var(--bg-card);
-            border: 1px solid rgba(0, 240, 255, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.2);
             border-radius: 12px;
             padding: 2rem 1.5rem;
             text-align: center;
@@ -407,16 +726,22 @@
         }
         
         .download-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
+            transform: translateY(-8px);
+            border-color: var(--gold-primary);
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.2);
         }
         
-        .download-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .download-icon { 
+            font-size: 3.5rem; 
+            margin-bottom: 1rem; 
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+        }
         
         .download-card h3 {
             font-family: 'Orbitron', sans-serif;
             font-size: 1rem;
             margin-bottom: 0.5rem;
+            color: var(--gold-light);
         }
         
         .download-card p {
@@ -428,14 +753,34 @@
         /* 页脚 */
         .footer {
             padding: 3rem 2rem;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid rgba(0, 240, 255, 0.2);
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
             text-align: center;
+            position: relative;
+            z-index: 10;
         }
         
         .footer p {
             color: var(--text-secondary);
             font-size: 0.85rem;
+        }
+
+        .footer-links {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--gold-primary);
         }
         
         /* 响应式 */
@@ -445,24 +790,43 @@
             .effects-grid { grid-template-columns: repeat(2, 1fr); }
             .download-grid { grid-template-columns: repeat(2, 1fr); }
             .sdk-container { grid-template-columns: 1fr; }
+            .wangu-content { grid-template-columns: 1fr; }
         }
         
         @media (max-width: 768px) {
             .hero h1 { font-size: 2.5rem; }
+            .hero .subtitle { font-size: 1rem; }
             .nav-links { display: none; }
             .video-grid { grid-template-columns: 1fr; }
             .effects-grid { grid-template-columns: repeat(2, 1fr); }
             .download-grid { grid-template-columns: 1fr; }
+            .faction-grid { grid-template-columns: 1fr; }
+            .carousel-indicator { display: none; }
+            .carousel-timer { display: none; }
         }
     </style>
 </head>
 <body>
+    <!-- 24H动漫轮播背景 -->
+    <div id="carousel-bg"></div>
+    <div id="carousel-overlay"></div>
+    
+    <!-- 8K金色粒子画布 -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- 轮播计时器 -->
+    <div class="carousel-timer" id="carousel-timer">24H ANIME CAROUSEL</div>
+    
+    <!-- 轮播指示器 -->
+    <div class="carousel-indicator" id="carousel-indicator"></div>
+
     <!-- 导航 -->
     <nav class="navbar">
         <div class="logo">G OPEN</div>
         <ul class="nav-links">
             <li><a href="#showcase">作品展示</a></li>
             <li><a href="#effects">粒子特效</a></li>
+            <li><a href="#wangu">万古长夜</a></li>
             <li><a href="#sdk">SDK授权</a></li>
             <li><a href="#download">下载</a></li>
         </ul>
@@ -471,8 +835,14 @@
     <!-- Hero -->
     <section class="hero">
         <div class="hero-content">
+            <p class="subtitle">AI POWERED CREATION PLATFORM</p>
             <h1>G OPEN</h1>
-            <p>AI驱动的游戏与动漫内容创作平台<br>8K粒子特效 · 80集《剑破苍穹》极速制作</p>
+            <div class="hero-badges">
+                <span class="badge">8K PARTICLES</span>
+                <span class="badge">24H PRODUCTION</span>
+                <span class="badge">AI GENERATED</span>
+            </div>
+            <p>AI驱动的游戏与动漫内容创作平台<br>8K金色粒子特效 · 万古长夜国风卡牌</p>
             <a href="#showcase" class="btn btn-primary">观看作品</a>
         </div>
     </section>
@@ -483,18 +853,22 @@
             <div class="stat-card">
                 <div class="stat-number">80</div>
                 <div class="stat-label">EPISODES</div>
+                <div class="stat-desc">《剑破苍穹》剧集</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">3200</div>
                 <div class="stat-label">SCENES</div>
+                <div class="stat-desc">AI生成场景</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">8K</div>
                 <div class="stat-label">PARTICLES</div>
+                <div class="stat-desc">金色粒子特效</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">24H</div>
                 <div class="stat-label">PRODUCTION</div>
+                <div class="stat-desc">极速制作周期</div>
             </div>
         </div>
     </section>
@@ -503,10 +877,10 @@
     <section class="showcase" id="showcase">
         <div class="section-header">
             <h2 class="section-title">作品展示</h2>
-            <p class="section-subtitle">8K超高清粒子特效视频作品</p>
+            <p class="section-subtitle">8K超高清金色粒子特效视频作品</p>
         </div>
         
-        <!-- 主视频 - 使用Bilibili嵌入 -->
+        <!-- 主视频 -->
         <div class="main-video">
             <div class="video-wrapper">
                 <iframe 
@@ -517,12 +891,13 @@
                 </iframe>
             </div>
             <div class="video-info">
-                <h3 class="video-title">《剑破苍穹》8K粒子特效预告片</h3>
-                <p class="video-desc">80集国风动漫项目预告，展示8K粒子特效与AI生成的完美融合</p>
+                <h3 class="video-title">《剑破苍穹》8K金色粒子特效预告片</h3>
+                <p class="video-desc">80集国风动漫项目预告，展示8K金色粒子特效与AI生成的完美融合</p>
                 <div class="video-tags">
                     <span class="tag">8K ULTRA HD</span>
-                    <span class="tag">PARTICLE EFFECTS</span>
+                    <span class="tag">GOLD PARTICLES</span>
                     <span class="tag">AI GENERATED</span>
+                    <span class="tag">NIAGARA FX</span>
                 </div>
             </div>
         </div>
@@ -538,7 +913,7 @@
                     </iframe>
                 </div>
                 <div class="video-card-info">
-                    <h3 class="video-card-title">苍穹剑气粒子特效</h3>
+                    <h3 class="video-card-title">金色剑气粒子特效</h3>
                     <p class="video-card-desc">Niagara 8K粒子系统</p>
                 </div>
             </div>
@@ -618,7 +993,8 @@
     <!-- 粒子特效 -->
     <section class="effects" id="effects">
         <div class="section-header">
-            <h2 class="section-title">8K粒子特效库</h2>
+            <h2 class="section-title">8K金色粒子特效库</h2>
+            <p class="section-subtitle">国风仙侠特效 · 8K超高清渲染</p>
         </div>
         
         <div class="effects-grid">
@@ -665,6 +1041,47 @@
         </div>
     </section>
 
+    <!-- 万古长夜特色区 -->
+    <section class="wangu-section" id="wangu">
+        <div class="section-header">
+            <h2 class="section-title">万古长夜 · 国风卡牌</h2>
+            <p class="section-subtitle">粒子卡牌对战 · 五大阵营</p>
+        </div>
+        
+        <div class="wangu-content">
+            <div class="wangu-info">
+                <h2>万古长夜</h2>
+                <p class="tagline">"一夜长夜，万古寂寥"</p>
+                <p>国风粒子卡牌游戏平台，融合东方玄幻美学与现代粒子特效技术。</p>
+                <p>五大阵营各具特色，每张卡牌都是8K粒子特效的艺术品。</p>
+                
+                <div class="faction-grid">
+                    <div class="faction-card">
+                        <div class="faction-icon">🌙</div>
+                        <div class="faction-name">幽冥</div>
+                        <div class="faction-desc">深紫幽暗 · 魂火水墨</div>
+                    </div>
+                    <div class="faction-card">
+                        <div class="faction-icon">🏔️</div>
+                        <div class="faction-name">昆仑</div>
+                        <div class="faction-desc">冰雪天青 · 流云剑气</div>
+                    </div>
+                    <div class="faction-card">
+                        <div class="faction-icon">🌸</div>
+                        <div class="faction-name">蓬莱</div>
+                        <div class="faction-desc">粉霞仙气 · 花瓣云雾</div>
+                    </div>
+                    <div class="faction-card">
+                        <div class="faction-icon">🔥</div>
+                        <div class="faction-name">蛮荒</div>
+                        <div class="faction-desc">烈焰狂野 · 火焰星尘</div>
+                    </div>
+                </div>
+            </div>
+            <div></div>
+        </div>
+    </section>
+
     <!-- SDK授权 -->
     <section class="sdk" id="sdk">
         <div class="sdk-container">
@@ -688,6 +1105,7 @@
     <section class="download" id="download">
         <div class="section-header">
             <h2 class="section-title">下载中心</h2>
+            <p class="section-subtitle">多平台支持 · 一键部署</p>
         </div>
         
         <div class="download-grid">
@@ -720,7 +1138,258 @@
 
     <!-- 页脚 -->
     <footer class="footer">
-        <p>© 2024 G open 智能创作助手. All rights reserved. | woshiguotao.cn</p>
+        <p>© 2024 G open 智能创作助手. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">隐私政策</a>
+            <a href="#">服务条款</a>
+            <a href="#">联系我们</a>
+        </div>
     </footer>
+
+    <script>
+        // ==================== 8K金色粒子系统 ====================
+        class GoldParticleSystem {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouseX = 0;
+                this.mouseY = 0;
+                this.particleCount = 150; // 8K效果粒子数量
+                
+                this.resize();
+                this.init();
+                this.bindEvents();
+                this.animate();
+            }
+            
+            resize() {
+                this.width = this.canvas.width = window.innerWidth;
+                this.height = this.canvas.height = window.innerHeight;
+            }
+            
+            init() {
+                this.particles = [];
+                for (let i = 0; i < this.particleCount; i++) {
+                    this.particles.push(this.createParticle());
+                }
+            }
+            
+            createParticle() {
+                const size = Math.random() * 3 + 1;
+                const speedX = (Math.random() - 0.5) * 0.5;
+                const speedY = (Math.random() - 0.5) * 0.5;
+                
+                // 金色色调变化
+                const goldHue = 40 + Math.random() * 20; // 40-60 金色范围
+                const saturation = 80 + Math.random() * 20;
+                const lightness = 50 + Math.random() * 30;
+                
+                return {
+                    x: Math.random() * this.width,
+                    y: Math.random() * this.height,
+                    size: size,
+                    speedX: speedX,
+                    speedY: speedY,
+                    hue: goldHue,
+                    saturation: saturation,
+                    lightness: lightness,
+                    opacity: Math.random() * 0.5 + 0.3,
+                    pulse: Math.random() * Math.PI * 2,
+                    pulseSpeed: 0.02 + Math.random() * 0.03
+                };
+            }
+            
+            bindEvents() {
+                window.addEventListener('resize', () => {
+                    this.resize();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+                });
+            }
+            
+            animate() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                
+                this.particles.forEach((p, index) => {
+                    // 更新位置
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    
+                    // 脉冲效果
+                    p.pulse += p.pulseSpeed;
+                    const pulseSize = p.size * (1 + Math.sin(p.pulse) * 0.3);
+                    
+                    // 鼠标交互
+                    const dx = this.mouseX - p.x;
+                    const dy = this.mouseY - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 150) {
+                        const force = (150 - dist) / 150;
+                        p.x -= dx * force * 0.02;
+                        p.y -= dy * force * 0.02;
+                    }
+                    
+                    // 边界检测
+                    if (p.x < 0 || p.x > this.width) p.speedX *= -1;
+                    if (p.y < 0 || p.y > this.height) p.speedY *= -1;
+                    
+                    // 绘制粒子
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `hsla(${p.hue}, ${p.saturation}%, ${p.lightness}%, ${p.opacity})`;
+                    this.ctx.fill();
+                    
+                    // 发光效果
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, pulseSize * 2, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `hsla(${p.hue}, ${p.saturation}%, ${p.lightness}%, ${p.opacity * 0.3})`;
+                    this.ctx.fill();
+                    
+                    // 连接线
+                    this.particles.slice(index + 1).forEach(p2 => {
+                        const dx2 = p.x - p2.x;
+                        const dy2 = p.y - p2.y;
+                        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                        
+                        if (dist2 < 100) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(p.x, p.y);
+                            this.ctx.lineTo(p2.x, p2.y);
+                            this.ctx.strokeStyle = `hsla(45, 100%, 70%, ${(100 - dist2) / 100 * 0.15})`;
+                            this.ctx.lineWidth = 0.5;
+                            this.ctx.stroke();
+                        }
+                    });
+                });
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // ==================== 24H动漫轮播系统 ====================
+        class AnimeCarousel {
+            constructor() {
+                this.bgElement = document.getElementById('carousel-bg');
+                this.indicatorElement = document.getElementById('carousel-indicator');
+                this.timerElement = document.getElementById('carousel-timer');
+                this.currentIndex = 0;
+                this.intervalTime = 30000; // 30秒切换
+                
+                // 动漫场景图片（使用 Unsplash 高质量图片）
+                this.images = [
+                    'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80', // 动漫风格天空
+                    'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1920&q=80', // 星空
+                    'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80', // 山峦
+                    'https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=1920&q=80', // 日落
+                    'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&q=80', // 城市夜景
+                    'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80', // 雪山星空
+                    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80', // 山峰云海
+                    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80', // 山脉
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                // 创建指示器
+                this.images.forEach((_, index) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'carousel-dot' + (index === 0 ? ' active' : '');
+                    dot.addEventListener('click', () => this.goTo(index));
+                    this.indicatorElement.appendChild(dot);
+                });
+                
+                // 设置初始背景
+                this.setBackground(0);
+                
+                // 启动自动轮播
+                this.startAutoPlay();
+                
+                // 更新计时器显示
+                this.updateTimer();
+            }
+            
+            setBackground(index) {
+                this.bgElement.style.backgroundImage = `url(${this.images[index]})`;
+            }
+            
+            goTo(index) {
+                if (index === this.currentIndex) return;
+                
+                // 淡出
+                this.bgElement.style.opacity = '0';
+                
+                setTimeout(() => {
+                    this.currentIndex = index;
+                    this.setBackground(index);
+                    
+                    // 更新指示器
+                    document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+                        dot.classList.toggle('active', i === index);
+                    });
+                    
+                    // 淡入
+                    setTimeout(() => {
+                        this.bgElement.style.opacity = '0.15';
+                    }, 100);
+                }, 500);
+            }
+            
+            next() {
+                const nextIndex = (this.currentIndex + 1) % this.images.length;
+                this.goTo(nextIndex);
+            }
+            
+            startAutoPlay() {
+                setInterval(() => {
+                    this.next();
+                }, this.intervalTime);
+            }
+            
+            updateTimer() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                this.timerElement.textContent = `${hours}:${minutes}:${seconds} | 24H ANIME CAROUSEL`;
+                
+                setTimeout(() => this.updateTimer(), 1000);
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('particle-canvas');
+            new GoldParticleSystem(canvas);
+            new AnimeCarousel();
+            
+            // 滚动动画
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            document.querySelectorAll('.stat-card, .video-card, .effect-card, .download-card, .faction-card').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        });
+    </script>
 </body>
 </html>

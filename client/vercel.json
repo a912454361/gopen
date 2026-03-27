@@ -40,6 +40,6 @@
     }
   ],
   "env": {
-    "EXPO_PUBLIC_BACKEND_BASE_URL": "https://gopen-api.onrender.com"
+    "EXPO_PUBLIC_BACKEND_BASE_URL": "https://gopen.com.cn"
   }
 }

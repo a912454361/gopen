@@ -1,0 +1,40 @@
+# 腾讯云 SCF Serverless 部署配置
+# 使用 Serverless Framework 部署
+
+service: gopen-backend
+
+provider:
+  name: tencent
+  runtime: Nodejs18.15
+  region: ap-guangzhou  # 根据实际情况修改
+  stage: prod
+  memorySize: 512
+  timeout: 30
+  environment:
+    NODE_ENV: production
+
+functions:
+  api:
+    handler: scf-handler.handler
+    runtime: Nodejs18.15
+    memorySize: 512
+    timeout: 30
+    events:
+      - apigw:
+          name: gopen-api
+          parameters:
+            protocols:
+              - https
+            environment: release
+            endpoints:
+              - path: /
+                method: ANY
+                cors: true
+                serviceScfFunctionIsReturnResponseBody: true
+
+plugins:
+  - serverless-tencent
+
+# 部署命令:
+# npm install -g serverless
+# serverless deploy

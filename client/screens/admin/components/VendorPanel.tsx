@@ -60,6 +60,40 @@ const createStyles = (theme: any) => ({
   container: {
     flex: 1,
   },
+  syncBar: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    backgroundColor: theme.backgroundTertiary,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+  },
+  syncButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    backgroundColor: theme.backgroundDefault,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.primary,
+  },
+  syncButtonActive: {
+    borderColor: theme.textMuted,
+  },
+  autoSyncToggle: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+  },
+  autoSyncEnabled: {
+    // 额外样式可以在这里添加
+  },
   tabBar: {
     flexDirection: 'row' as const,
     borderBottomWidth: 1,
@@ -170,10 +204,101 @@ export function VendorPanel({ adminKey }: VendorPanelProps) {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pricingTarget, setPricingTarget] = useState<VendorService | null>(null);
   const [platformMarkup, setPlatformMarkup] = useState('30');
+  
+  // 同步状态
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<string>('');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
 
   useEffect(() => {
     loadData();
   }, [activeTab]);
+  
+  // 自动同步（每30秒）
+  useEffect(() => {
+    if (!autoSyncEnabled) return;
+    
+    const interval = setInterval(() => {
+      syncVendorData(true); // 静默同步
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [autoSyncEnabled, activeTab]);
+
+  /**
+   * 同步厂商数据（实时对接）
+   * @param silent 静默模式，不显示进度
+   */
+  const syncVendorData = async (silent: boolean = false) => {
+    if (!silent) {
+      setSyncing(true);
+      setSyncProgress('正在连接服务器...');
+    }
+    
+    try {
+      // 并行同步厂商和服务数据
+      const syncPromises: Promise<any>[] = [];
+      
+      // 同步厂商数据
+      syncPromises.push(
+        fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/vendor/vendors?adminKey=${adminKey}&status=${activeTab === 'approved' ? 'approved' : 'pending'}`
+        ).then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setVendors(data.data);
+              if (!silent) setSyncProgress('厂商数据同步完成');
+            }
+          })
+      );
+      
+      // 同步服务数据
+      syncPromises.push(
+        fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/vendor/services/pending?adminKey=${adminKey}`
+        ).then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setServices(data.data);
+              if (!silent) setSyncProgress('服务数据同步完成');
+            }
+          })
+      );
+      
+      // 同步统计数据
+      syncPromises.push(
+        fetch(
+          `${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/admin/vendor-stats?adminKey=${adminKey}`
+        ).then(res => res.json())
+          .then(data => {
+            if (data.success && !silent) {
+              setSyncProgress(`统计: ${data.data?.vendorStats?.total || 0} 厂商, ${data.data?.serviceStats?.total || 0} 服务`);
+            }
+          })
+      );
+      
+      await Promise.all(syncPromises);
+      
+      setLastSyncTime(new Date());
+      
+      if (!silent) {
+        setTimeout(() => {
+          setSyncing(false);
+          setSyncProgress('');
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Sync vendor data error:', error);
+      if (!silent) {
+        setSyncProgress('同步失败，请重试');
+        setTimeout(() => {
+          setSyncing(false);
+          setSyncProgress('');
+        }, 2000);
+      }
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -440,6 +565,52 @@ export function VendorPanel({ adminKey }: VendorPanelProps) {
 
   return (
     <View style={styles.container}>
+      {/* 同步状态栏 */}
+      <View style={styles.syncBar}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+          <TouchableOpacity
+            style={[styles.syncButton, syncing && styles.syncButtonActive]}
+            onPress={() => syncVendorData(false)}
+            disabled={syncing}
+          >
+            <FontAwesome6 
+              name={syncing ? "spinner" : "rotate"} 
+              size={14} 
+              color={syncing ? theme.textMuted : theme.primary} 
+            />
+            <ThemedText variant="small" color={syncing ? theme.textMuted : theme.primary}>
+              {syncing ? '同步中...' : '同步厂商'}
+            </ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.autoSyncToggle, autoSyncEnabled && styles.autoSyncEnabled]}
+            onPress={() => setAutoSyncEnabled(!autoSyncEnabled)}
+          >
+            <FontAwesome6 
+              name={autoSyncEnabled ? "toggle-on" : "toggle-off"} 
+              size={16} 
+              color={autoSyncEnabled ? theme.success : theme.textMuted} 
+            />
+            <ThemedText variant="caption" color={theme.textMuted}>
+              自动
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={{ alignItems: 'flex-end' }}>
+          {syncProgress ? (
+            <ThemedText variant="caption" color={theme.textMuted}>
+              {syncProgress}
+            </ThemedText>
+          ) : lastSyncTime ? (
+            <ThemedText variant="caption" color={theme.textMuted}>
+              上次同步: {lastSyncTime.toLocaleTimeString()}
+            </ThemedText>
+          ) : null}
+        </View>
+      </View>
+      
       {/* Tabs */}
       <View style={styles.tabBar}>
         <TouchableOpacity

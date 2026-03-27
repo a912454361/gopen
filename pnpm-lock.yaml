@@ -16,7 +16,11 @@ patchedDependencies:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      http-proxy:
+        specifier: ^1.18.1
+        version: 1.18.1(debug@4.4.3)
 
   client:
     dependencies:

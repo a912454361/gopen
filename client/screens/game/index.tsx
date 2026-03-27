@@ -17,6 +17,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  Image,
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '@/hooks/useTheme';

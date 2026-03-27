@@ -21,6 +21,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
+import { DamageNumbers } from '@/components/DamageNumber';
 import { createStyles } from './styles';
 import { FontAwesome6 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -85,6 +86,32 @@ export default function InkBattleScreen() {
   const [playerId, setPlayerId] = useState<string>('');
   const [gameEnded, setGameEnded] = useState(false);
   const [isVictory, setIsVictory] = useState(false);
+  
+  // 伤害飘字状态
+  const [damageNumbers, setDamageNumbers] = useState<Array<{
+    id: string;
+    value: number;
+    type: 'damage' | 'heal' | 'critical' | 'block';
+    x: number;
+    y: number;
+  }>>([]);
+  
+  // 显示伤害飘字
+  const showDamageNumber = useCallback((value: number, type: 'damage' | 'heal' | 'critical' | 'block', x?: number, y?: number) => {
+    const id = `damage_${Date.now()}_${Math.random()}`;
+    setDamageNumbers(prev => [...prev, {
+      id,
+      value,
+      type,
+      x: x || 180 + Math.random() * 40,
+      y: y || 250,
+    }]);
+  }, []);
+  
+  // 移除伤害飘字
+  const removeDamageNumber = useCallback((id: string) => {
+    setDamageNumbers(prev => prev.filter(n => n.id !== id));
+  }, []);
 
   // 初始化战斗
   useEffect(() => {
@@ -183,6 +210,10 @@ export default function InkBattleScreen() {
           log: `【${selectedCard.name}】发动攻击，造成${selectedCard.attack}点伤害！`,
         });
         setBattle({ ...battle, battle_log: newLog });
+        
+        // 显示伤害飘字
+        showDamageNumber(selectedCard.attack, 'damage');
+        
         if (newLog.player2_hp <= 0) {
           setGameEnded(true);
           setIsVictory(true);
@@ -236,6 +267,10 @@ export default function InkBattleScreen() {
           log: `【${selectedCard.name}】释放【${selectedCard.skill_name}】，造成${damage}点伤害！`,
         });
         setBattle({ ...battle, battle_log: newLog });
+        
+        // 显示伤害飘字（技能用暴击样式）
+        showDamageNumber(damage, 'critical');
+        
         if (newLog.player2_hp <= 0) {
           setGameEnded(true);
           setIsVictory(true);
@@ -263,6 +298,9 @@ export default function InkBattleScreen() {
     });
     
     setBattle({ ...battle, battle_log: newLog });
+    
+    // 显示AI伤害飘字（显示在玩家区域）
+    showDamageNumber(aiDamage, 'damage', 180, 450);
     
     if (newLog.player1_hp <= 0) {
       setGameEnded(true);
@@ -341,6 +379,9 @@ export default function InkBattleScreen() {
   return (
     <Screen backgroundColor="#0A0A0A" statusBarStyle="light">
       <View style={styles.battleScene}>
+        {/* 伤害飘字层 */}
+        <DamageNumbers numbers={damageNumbers} onRemove={removeDamageNumber} />
+        
         {/* 敌方区域 */}
         <View style={styles.enemyArea}>
           <View style={styles.enemyGradient} />

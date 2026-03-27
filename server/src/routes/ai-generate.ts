@@ -144,7 +144,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     }
 
     // 调用LLM生成内容
-    const messages = [
+    const llmMessages = [
       { role: 'system' as const, content: systemPrompt },
       { role: 'user' as const, content: `请根据以下描述生成${type === 'character' ? '游戏角色' : type === 'anime_character' ? '动漫角色' : type === 'scene' ? '游戏场景' : type === 'anime_scene' ? '动漫场景' : type === 'item' ? '游戏道具' : '剧情脚本'}：\n\n${prompt}` }
     ];
@@ -152,14 +152,16 @@ router.post('/generate', async (req: Request, res: Response) => {
     let fullResponse = '';
 
     try {
-      const stream = await client.stream({
-        messages,
+      const stream = client.stream(llmMessages, {
         model: 'doubao-pro-32k',
       });
 
       for await (const chunk of stream) {
-        if (chunk.choices?.[0]?.delta?.content) {
-          fullResponse += chunk.choices[0].delta.content;
+        const content = chunk.content;
+        if (typeof content === 'string') {
+          fullResponse += content;
+        } else if (content && typeof content === 'object' && 'content' in content) {
+          fullResponse += (content as any).content;
         }
       }
     } catch (llmError) {

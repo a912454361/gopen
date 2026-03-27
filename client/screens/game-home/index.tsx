@@ -65,6 +65,22 @@ export default function GameHomeScreen() {
     action?: string;
   }> = [
     {
+      id: 'game-studio',
+      title: '游戏制作工作台',
+      subtitle: '创建你的游戏世界',
+      icon: 'gamepad',
+      gradient: ['#8B5CF6', '#7C3AED'],
+      route: '/game-studio',
+    },
+    {
+      id: 'anime-studio',
+      title: '动漫制作工作台',
+      subtitle: '创作专属动漫',
+      icon: 'film',
+      gradient: ['#FF6B9D', '#EC4899'],
+      route: '/anime-studio',
+    },
+    {
       id: 'recharge',
       title: '充值中心',
       subtitle: '上线送10000元 · 0.05折',

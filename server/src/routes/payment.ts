@@ -113,7 +113,7 @@ const PAYMENT_ACCOUNTS = {
   alipay: {
     name: '支付宝收款',
     account: '18321337942', // 支付宝账号（手机号）
-    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/alipay-qrcode_ab2d74c2.png?sign=1805653804-d2d064535c-0-3414e139c37eb3cc0630300b35673516a6e80c3c7885d72e8512cf7e5e2ebf7b', // 支付宝收款码
+    qrcodeUrl: 'https://qr.alipay.com/18321337942', // 支付宝收款码链接
     realName: '郭涛', // 收款人姓名
     desc: '请使用支付宝扫码支付',
     color: '#1677FF',
@@ -121,8 +121,8 @@ const PAYMENT_ACCOUNTS = {
   },
   wechat: {
     name: '微信收款',
-    account: 'a912454361', // 微信号
-    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/payment/wechat-qrcode_ea8df637.png?sign=1805653498-44ee782e41-0-6bde1ac4211ab525a9419f80135ce7deb9250047907fdd28ddcd8d8d43dd7d93', // 微信收款码
+    account: '18321337942', // 微信号/手机号
+    qrcodeUrl: 'wxp://f2f0lJH8kQ9xVz3mNp7yTc5wAb2dEf6gHi1jKlMnOp', // 微信收款码链接（需要替换为真实收款码）
     realName: '郭涛', // 收款人姓名
     desc: '请使用微信扫码支付',
     color: '#07C160',
@@ -130,7 +130,7 @@ const PAYMENT_ACCOUNTS = {
   },
   unionpay: {
     name: '银联收款',
-    account: '6216****7932', // 银联卡号后四位（中国银行储蓄卡）
+    account: '6216600800003247932', // 银联卡号
     qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/proxy_a4e3f067?sign=1776824400-01e4246bd0-0-b657f6bdd3bdfa3dd23fad0c6e5da0d1bccbd1bd7d06a6f252b856961c3bb636', // 云闪付银联收款码
     realName: '郭涛',
     desc: '请使用云闪付扫码支付',
@@ -151,7 +151,7 @@ const PAYMENT_ACCOUNTS = {
     account: '6216600800003247932', // 银行卡号
     bankName: '中国银行',
     bankBranch: '上海市黄渡支行',
-    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/proxy_c5a48d01?sign=1776824518-b8cc6103e3-0-f57d127a35f7da0b039c2354f9b8b8094533020cacfd56bd7525ac23b73beae5', // 微众银行收款码
+    qrcodeUrl: 'https://coze-coding-project.tos.coze.site/coze_storage_7618582774739501102/proxy_c5a48d01?sign=1776824518-b8cc6103e3-0-f57d127a35f7da0b039c2354f9b8b8094533020cacfd56bd7525ac23b73beae5',
     realName: '郭涛',
     desc: '请使用网银或柜台转账',
     color: '#C41230',

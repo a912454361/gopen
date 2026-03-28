@@ -4,7 +4,9 @@ import { getSupabaseClient } from '../storage/database/supabase-client.js';
 import crypto from 'crypto';
 
 const router = Router();
-const client = getSupabaseClient();
+
+// 动态获取 Supabase 客户端，确保环境变量已加载
+const getClient = () => getSupabaseClient();
 
 // ==================== OAuth 登录配置 ====================
 
@@ -222,18 +224,66 @@ router.post('/callback', async (req: Request, res: Response) => {
     const body = callbackSchema.parse(req.body);
     
     // 模拟获取access_token（实际应调用各平台API）
-    const mockOpenId = `${body.platform}_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
     const mockAccessToken = `access_${crypto.randomBytes(32).toString('hex')}`;
     const mockRefreshToken = `refresh_${crypto.randomBytes(32).toString('hex')}`;
     const expiresIn = 7200; // 2小时
     
+    // 获取数据库客户端
+    const supabase = getClient();
+    
+    // 如果是模拟登录（code以"mock_"开头），优先查找该平台已有的绑定
+    let existingBinding = null;
+    if (body.code.startsWith('mock_')) {
+      // 查找该平台已有的绑定
+      const { data: bindings, error: bindError } = await supabase
+        .from('oauth_bindings')
+        .select('*')
+        .eq('platform', body.platform)
+        .order('created_at', { ascending: true });
+      
+      if (bindings && bindings.length > 0) {
+        // 获取所有用户信息，按会员等级排序
+        const userIds = bindings.map((b: any) => b.user_id);
+        const { data: users, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .in('id', userIds);
+        
+        // 创建用户ID到用户信息的映射
+        const userMap = new Map((users || []).map((u: any) => [u.id, u]));
+        
+        // 优先选择super用户，其次是member用户，最后是free用户
+        const sortedBindings = bindings.sort((a: any, b: any) => {
+          const userA = userMap.get(a.user_id);
+          const userB = userMap.get(b.user_id);
+          const levelOrder: Record<string, number> = { 'super': 0, 'member': 1, 'free': 2 };
+          const levelA = userA?.member_level?.trim() || '';
+          const levelB = userB?.member_level?.trim() || '';
+          const orderA = levelOrder[levelA] ?? 2;
+          const orderB = levelOrder[levelB] ?? 2;
+          return orderA - orderB;
+        });
+        
+        existingBinding = sortedBindings[0];
+        if (existingBinding) {
+          existingBinding.users = userMap.get(existingBinding.user_id);
+        }
+      }
+    }
+    
+    // 如果不是模拟登录或没找到已有绑定，生成新的open_id
+    const mockOpenId = existingBinding?.open_id || `${body.platform}_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    
     // 检查是否已有绑定
-    const { data: existingBinding } = await client
-      .from('oauth_bindings')
-      .select('*, users(*)')
-      .eq('platform', body.platform)
-      .eq('open_id', mockOpenId)
-      .single();
+    if (!existingBinding) {
+      const { data } = await supabase
+        .from('oauth_bindings')
+        .select('*, users(*)')
+        .eq('platform', body.platform)
+        .eq('open_id', mockOpenId)
+        .single();
+      existingBinding = data;
+    }
     
     let user;
     let isNewUser = false;
@@ -242,7 +292,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       // 已绑定，更新token
       user = Array.isArray(existingBinding.users) ? existingBinding.users[0] : existingBinding.users;
       
-      await client
+      await supabase
         .from('oauth_bindings')
         .update({
           access_token: mockAccessToken,
@@ -255,7 +305,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       // 新用户，创建用户和绑定
       isNewUser = true;
       
-      const { data: newUser, error: userError } = await client
+      const { data: newUser, error: userError } = await supabase
         .from('users')
         .insert([{
           nickname: `${body.platform}用户`,
@@ -271,7 +321,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       user = newUser;
       
       // 创建OAuth绑定
-      await client
+      await supabase
         .from('oauth_bindings')
         .insert([{
           user_id: user.id,
@@ -283,7 +333,7 @@ router.post('/callback', async (req: Request, res: Response) => {
         }]);
       
       // 初始化支付限额
-      await client
+      await supabase
         .from('pay_limits')
         .insert([{
           user_id: user.id,
@@ -293,7 +343,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       if (body.referrerCode) {
         try {
           // 验证推广码
-          const { data: promoter } = await client
+          const { data: promoter } = await supabase
             .from('promoters')
             .select('id, status')
             .eq('promoter_code', body.referrerCode)
@@ -301,7 +351,7 @@ router.post('/callback', async (req: Request, res: Response) => {
           
           if (promoter && promoter.status === 'active') {
             // 创建转化记录
-            await client
+            await supabase
               .from('promotion_conversions')
               .insert([{
                 promoter_id: promoter.id,
@@ -354,9 +404,10 @@ const bindAccountSchema = z.object({
 router.post('/bind', async (req: Request, res: Response) => {
   try {
     const body = bindAccountSchema.parse(req.body);
+    const supabase = getClient();
     
     // 检查用户是否存在
-    const { data: user, error: userError } = await client
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('id', body.userId)
@@ -370,7 +421,7 @@ router.post('/bind', async (req: Request, res: Response) => {
     const mockOpenId = `${body.platform}_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
     
     // 检查是否已绑定其他账号
-    const { data: existingBinding } = await client
+    const { data: existingBinding } = await supabase
       .from('oauth_bindings')
       .select('*')
       .eq('platform', body.platform)
@@ -382,7 +433,7 @@ router.post('/bind', async (req: Request, res: Response) => {
     }
     
     // 检查当前用户是否已绑定该平台
-    const { data: userBinding } = await client
+    const { data: userBinding } = await supabase
       .from('oauth_bindings')
       .select('*')
       .eq('user_id', body.userId)
@@ -394,7 +445,7 @@ router.post('/bind', async (req: Request, res: Response) => {
     }
     
     // 创建绑定
-    const { error: bindError } = await client
+    const { error: bindError } = await supabase
       .from('oauth_bindings')
       .insert([{
         user_id: body.userId,
@@ -438,9 +489,10 @@ const unbindAccountSchema = z.object({
 router.post('/unbind', async (req: Request, res: Response) => {
   try {
     const body = unbindAccountSchema.parse(req.body);
+    const supabase = getClient();
     
     // 检查绑定数量，至少保留一种登录方式
-    const { data: bindings } = await client
+    const { data: bindings } = await supabase
       .from('oauth_bindings')
       .select('*')
       .eq('user_id', body.userId);
@@ -450,7 +502,7 @@ router.post('/unbind', async (req: Request, res: Response) => {
     }
     
     // 删除绑定
-    const { error } = await client
+    const { error } = await supabase
       .from('oauth_bindings')
       .delete()
       .eq('user_id', body.userId)
@@ -479,8 +531,9 @@ router.post('/unbind', async (req: Request, res: Response) => {
 router.get('/bindings/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const supabase = getClient();
     
-    const { data: bindings, error } = await client
+    const { data: bindings, error } = await supabase
       .from('oauth_bindings')
       .select('id, platform, open_id, nickname, avatar, created_at')
       .eq('user_id', userId);
@@ -514,8 +567,9 @@ const refreshTokenSchema = z.object({
 router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const body = refreshTokenSchema.parse(req.body);
+    const supabase = getClient();
     
-    const { data: binding, error } = await client
+    const { data: binding, error } = await supabase
       .from('oauth_bindings')
       .select('*')
       .eq('user_id', body.userId)
@@ -530,7 +584,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const newAccessToken = `access_${crypto.randomBytes(32).toString('hex')}`;
     const expiresIn = 7200;
     
-    await client
+    await supabase
       .from('oauth_bindings')
       .update({
         access_token: newAccessToken,

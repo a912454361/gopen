@@ -17,12 +17,27 @@ import { createStyles } from './styles';
 import { Spacing } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+/**
+ * 获取后端API基础URL
+ * 优先级：环境变量 > 当前域名 > localhost
+ */
+const getBackendBaseUrl = (): string => {
+  // 1. 优先使用环境变量
+  if (process.env.EXPO_PUBLIC_BACKEND_BASE_URL) {
+    return process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+  }
+  
+  // 2. Web环境下，使用当前域名（前端和后端在同一域名下）
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}`;
+  }
+  
+  // 3. 默认localhost（开发环境）
+  return 'http://localhost:9091';
+};
 
-// 调试日志
-if (!process.env.EXPO_PUBLIC_BACKEND_BASE_URL) {
-  console.warn('[Login] EXPO_PUBLIC_BACKEND_BASE_URL not set, using default:', EXPO_PUBLIC_BACKEND_BASE_URL);
-}
+const EXPO_PUBLIC_BACKEND_BASE_URL = getBackendBaseUrl();
 
 interface UserInfo {
   id: string;

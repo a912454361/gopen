@@ -45,11 +45,10 @@ const upload = multer({
 
 // ==================== 安全配置 ====================
 
-// 管理员密钥 - 必须通过环境变量设置，禁止使用默认值
-const ADMIN_KEY = process.env.ADMIN_KEY;
-if (!ADMIN_KEY) {
-  console.error('⚠️ SECURITY WARNING: ADMIN_KEY environment variable is not set!');
-  console.error('Please set ADMIN_KEY in your environment variables.');
+// 管理员密钥 - 优先使用环境变量，开发环境使用默认值
+const ADMIN_KEY = process.env.ADMIN_KEY || 'gopen_admin_2024';
+if (!process.env.ADMIN_KEY) {
+  console.warn('⚠️ ADMIN_KEY not set in environment, using default value (仅限开发环境)');
 }
 
 // 防刷配置
@@ -59,10 +58,13 @@ const submitHistory = new Map<string, { count: number; resetAt: number }>();
 
 /**
  * 验证管理员权限
- * 从请求头获取密钥，避免URL参数泄露
+ * 支持多种方式传递密钥：header、body、query
  */
 const verifyAdmin = (req: Request): boolean => {
-  const adminKey = req.headers['x-admin-key'] as string || req.body.adminKey;
+  const adminKey = req.headers['x-admin-key'] as string 
+    || req.body?.adminKey 
+    || req.body?.key
+    || req.query?.key as string;
   if (!ADMIN_KEY) {
     console.error('[Security] ADMIN_KEY not configured');
     return false;
@@ -121,20 +123,13 @@ const validateProofImages = (proofImages: string[] | undefined): { valid: boolea
 const validateTransactionId = (transactionId: string, payMethod: string): { valid: boolean; error?: string } => {
   const cleanId = transactionId.trim();
   
-  if (cleanId.length < 10 || cleanId.length > 50) {
-    return { valid: false, error: '流水号长度应为10-50位' };
+  if (cleanId.length < 6 || cleanId.length > 100) {
+    return { valid: false, error: '流水号长度应为6-100位' };
   }
   
-  if (payMethod === 'alipay') {
-    // 支付宝流水号：纯数字，通常以年份开头
-    if (!/^\d{10,50}$/.test(cleanId)) {
-      return { valid: false, error: '支付宝流水号应为10-50位数字' };
-    }
-  } else if (payMethod === 'wechat') {
-    // 微信流水号：字母数字组合
-    if (!/^[a-zA-Z0-9]{10,50}$/.test(cleanId)) {
-      return { valid: false, error: '微信流水号应为10-50位字母数字' };
-    }
+  // 放宽验证：允许字母、数字、横线、下划线组合
+  if (!/^[a-zA-Z0-9\-_]{6,100}$/.test(cleanId)) {
+    return { valid: false, error: '流水号只能包含字母、数字、横线和下划线' };
   }
   
   return { valid: true };
@@ -156,7 +151,7 @@ const submitRechargeSchema = z.object({
   userId: z.string().min(1),
   amount: z.number().int().positive(),
   rechargeType: z.enum(['balance', 'membership', 'super_member', 'g_points']),
-  payMethod: z.enum(['alipay', 'wechat', 'jdpay', 'bank_transfer']),
+  payMethod: z.enum(['alipay', 'wechat', 'unionpay', 'jdpay', 'bank_transfer', 'bank']),
   transactionId: z.string().min(1), // 必填
   proofImages: z.array(z.string().min(1)).min(1).max(5), // 必须上传至少1张凭证
   remark: z.string().optional(),
@@ -380,6 +375,7 @@ router.get('/:orderNo', async (req: Request, res: Response) => {
 // ==================== 管理员审核 ====================
 
 const adminReviewSchema = z.object({
+  key: z.string().optional(), // 支持query/body方式传递
   orderNo: z.string().min(1),
   action: z.enum(['approve', 'reject']),
   rejectReason: z.string().optional(),

@@ -46,9 +46,20 @@ const RECHARGE_OPTIONS = [
 const PAY_METHODS = [
   { key: 'alipay', name: '支付宝', icon: 'alipay', color: '#1677FF' },
   { key: 'wechat', name: '微信支付', icon: 'wechat', color: '#07C160' },
-  { key: 'jdpay', name: '京东支付', icon: 'jd', color: '#E4393C' },
+  { key: 'unionpay', name: '银联支付', icon: 'credit-card', color: '#E21836' },
   { key: 'bank_transfer', name: '银行转账', icon: 'building-columns', color: '#6B7280' },
 ];
+
+// 收款账户信息
+interface PaymentAccount {
+  name: string;
+  account: string;
+  qrcodeUrl: string;
+  realName: string;
+  desc?: string;
+  bankName?: string;
+  bankBranch?: string;
+}
 
 // 充值记录
 interface RechargeRecord {
@@ -109,6 +120,10 @@ export default function RechargeScreen() {
   
   // 充值记录
   const [records, setRecords] = useState<RechargeRecord[]>([]);
+  
+  // 收款账户信息
+  const [paymentAccounts, setPaymentAccounts] = useState<Record<string, PaymentAccount>>({});
+  const [isLoadingQrcode, setIsLoadingQrcode] = useState(false);
 
   /**
    * 选择支付凭证图片
@@ -237,13 +252,31 @@ export default function RechargeScreen() {
   }, [userId]);
 
   /**
+   * 获取收款账户信息（二维码）
+   */
+  const fetchPaymentAccounts = useCallback(async () => {
+    setIsLoadingQrcode(true);
+    try {
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/payment/accounts`);
+      const data = await res.json();
+      if (data.success) {
+        setPaymentAccounts(data.data);
+      }
+    } catch (error) {
+      console.error('Fetch payment accounts error:', error);
+    } finally {
+      setIsLoadingQrcode(false);
+    }
+  }, []);
+
+  /**
    * 加载所有数据
    */
   const loadAllData = useCallback(async () => {
     setIsLoading(true);
-    await Promise.all([fetchBalance(), fetchRecords()]);
+    await Promise.all([fetchBalance(), fetchRecords(), fetchPaymentAccounts()]);
     setIsLoading(false);
-  }, [fetchBalance, fetchRecords]);
+  }, [fetchBalance, fetchRecords, fetchPaymentAccounts]);
 
   /**
    * 刷新数据
@@ -549,6 +582,59 @@ export default function RechargeScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          
+          {/* 收款二维码显示区域 */}
+          {selectedPayMethod && paymentAccounts[selectedPayMethod] && (
+            <View style={[styles.qrcodeContainer, { backgroundColor: theme.backgroundDefault, borderColor: theme.border }]}>
+              <View style={styles.qrcodeHeader}>
+                <FontAwesome6 
+                  name={PAY_METHODS.find(m => m.key === selectedPayMethod)?.icon as any || 'qrcode'} 
+                  size={20} 
+                  color={theme.primary} 
+                />
+                <ThemedText variant="smallMedium" color={theme.textPrimary} style={{ marginLeft: 8 }}>
+                  {paymentAccounts[selectedPayMethod]?.name || '收款码'}
+                </ThemedText>
+              </View>
+              
+              <View style={styles.qrcodeImageContainer}>
+                {isLoadingQrcode ? (
+                  <ActivityIndicator size="large" color={theme.primary} />
+                ) : (
+                  <Image 
+                    source={{ uri: paymentAccounts[selectedPayMethod]?.qrcodeUrl }} 
+                    style={styles.qrcodeImage}
+                    resizeMode="contain"
+                  />
+                )}
+              </View>
+              
+              <View style={styles.qrcodeInfo}>
+                {paymentAccounts[selectedPayMethod]?.realName && (
+                  <ThemedText variant="small" color={theme.textSecondary}>
+                    收款人：{paymentAccounts[selectedPayMethod]?.realName}
+                  </ThemedText>
+                )}
+                {paymentAccounts[selectedPayMethod]?.account && (
+                  <ThemedText variant="small" color={theme.textSecondary} style={{ marginTop: 4 }}>
+                    账号：{paymentAccounts[selectedPayMethod]?.account}
+                  </ThemedText>
+                )}
+                {paymentAccounts[selectedPayMethod]?.bankName && (
+                  <ThemedText variant="small" color={theme.textSecondary} style={{ marginTop: 4 }}>
+                    开户行：{paymentAccounts[selectedPayMethod]?.bankName} {paymentAccounts[selectedPayMethod]?.bankBranch}
+                  </ThemedText>
+                )}
+              </View>
+              
+              <View style={[styles.qrcodeTip, { backgroundColor: theme.primary + '10' }]}>
+                <FontAwesome6 name="info-circle" size={14} color={theme.primary} />
+                <ThemedText variant="tiny" color={theme.primary} style={{ marginLeft: 6 }}>
+                  {paymentAccounts[selectedPayMethod]?.desc || '请使用对应App扫码支付'}
+                </ThemedText>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* 流水号输入 */}
@@ -928,5 +1014,42 @@ const createStyles = (theme: any) => ({
   },
   recordDetails: {
     marginTop: Spacing.xs,
+  },
+  qrcodeContainer: {
+    marginTop: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    alignItems: 'center' as const,
+  },
+  qrcodeHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginBottom: Spacing.md,
+  },
+  qrcodeImageContainer: {
+    width: 200,
+    height: 200,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#fff',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+  },
+  qrcodeImage: {
+    width: 180,
+    height: 180,
+  },
+  qrcodeInfo: {
+    marginTop: Spacing.md,
+    alignItems: 'center' as const,
+  },
+  qrcodeTip: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
   },
 });

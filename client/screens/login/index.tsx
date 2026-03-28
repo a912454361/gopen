@@ -17,7 +17,12 @@ import { createStyles } from './styles';
 import { Spacing } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+
+// 调试日志
+if (!process.env.EXPO_PUBLIC_BACKEND_BASE_URL) {
+  console.warn('[Login] EXPO_PUBLIC_BACKEND_BASE_URL not set, using default:', EXPO_PUBLIC_BACKEND_BASE_URL);
+}
 
 interface UserInfo {
   id: string;
@@ -170,7 +175,12 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error('OAuth login error:', error);
-      Alert.alert('登录失败', '网络错误，请重试');
+      const errorMsg = '网络错误，请重试';
+      if (Platform.OS === 'web') {
+        window.alert(`登录失败：${errorMsg}`);
+      } else {
+        Alert.alert('登录失败', errorMsg);
+      }
     } finally {
       setIsLoading(false);
       setLoadingPlatform(null);

@@ -30,7 +30,7 @@ import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
-const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
 /**
  * 处理收款码URL

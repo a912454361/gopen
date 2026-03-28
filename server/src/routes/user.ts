@@ -8,7 +8,9 @@ import multer from 'multer';
 import { S3Storage } from 'coze-coding-dev-sdk';
 
 const router = Router();
-const client = getSupabaseClient();
+
+// 动态获取 Supabase 客户端，确保环境变量已加载
+const getClient = () => getSupabaseClient();
 
 // 初始化对象存储
 const s3Storage = new S3Storage({
@@ -47,7 +49,7 @@ router.get('/:userId/token-usage', async (req: Request, res: Response) => {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     
-    const { data: monthUsage } = await client
+    const { data: monthUsage } = await getClient()
       .from('consumption_records')
       .select('input_tokens, output_tokens, created_at')
       .eq('user_id', userId)
@@ -59,7 +61,7 @@ router.get('/:userId/token-usage', async (req: Request, res: Response) => {
     
     // 获取今日使用情况
     const today = new Date().toISOString().split('T')[0];
-    const { data: todayUsage } = await client
+    const { data: todayUsage } = await getClient()
       .from('consumption_records')
       .select('input_tokens, output_tokens')
       .eq('user_id', userId)
@@ -69,7 +71,7 @@ router.get('/:userId/token-usage', async (req: Request, res: Response) => {
     const todayOutputTokens = todayUsage?.reduce((sum, r) => sum + (r.output_tokens || 0), 0) || 0;
     
     // 获取总使用情况
-    const { data: totalUsage } = await client
+    const { data: totalUsage } = await getClient()
       .from('consumption_records')
       .select('input_tokens, output_tokens')
       .eq('user_id', userId);
@@ -78,14 +80,14 @@ router.get('/:userId/token-usage', async (req: Request, res: Response) => {
     const totalOutputTokens = totalUsage?.reduce((sum, r) => sum + (r.output_tokens || 0), 0) || 0;
     
     // 获取用户余额
-    const { data: balance } = await client
+    const { data: balance } = await getClient()
       .from('user_balances')
       .select('balance, total_recharged, total_consumed')
       .eq('user_id', userId)
       .single();
     
     // 获取最近使用记录
-    const { data: recentUsage } = await client
+    const { data: recentUsage } = await getClient()
       .from('consumption_records')
       .select('resource_name, input_tokens, output_tokens, sell_total, created_at')
       .eq('user_id', userId)
@@ -135,7 +137,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     
-    const { data: user, error } = await client
+    const { data: user, error } = await getClient()
       .from('users')
       .select('id, nickname, avatar, bio, member_level, member_expire_at, created_at')
       .eq('id', userId)
@@ -184,7 +186,7 @@ router.put('/:userId', async (req: Request, res: Response) => {
     if (avatarUrl !== undefined) updateData.avatar = avatarUrl;
     if (bio !== undefined) updateData.bio = bio;
     
-    const { error } = await client
+    const { error } = await getClient()
       .from('users')
       .update(updateData)
       .eq('id', userId);
@@ -229,7 +231,7 @@ router.post('/:userId/avatar', upload.single('avatar'), async (req: Request, res
     });
     
     // 更新用户头像（存储对象存储key）
-    const { error } = await client
+    const { error } = await getClient()
       .from('users')
       .update({
         avatar: objectKey,
@@ -266,7 +268,7 @@ router.get('/:userId/favorites', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
-    const { data, error } = await client
+    const { data, error } = await getClient()
       .from('user_favorite_models')
       .select('model_id, created_at')
       .eq('user_id', userId)
@@ -304,7 +306,7 @@ router.post('/:userId/favorites', async (req: Request, res: Response) => {
     }
 
     // 检查是否已收藏
-    const { data: existing } = await client
+    const { data: existing } = await getClient()
       .from('user_favorite_models')
       .select('id')
       .eq('user_id', userId)
@@ -320,7 +322,7 @@ router.post('/:userId/favorites', async (req: Request, res: Response) => {
     }
 
     // 添加收藏
-    const { error } = await client
+    const { error } = await getClient()
       .from('user_favorite_models')
       .insert([{
         user_id: userId,
@@ -351,7 +353,7 @@ router.delete('/:userId/favorites/:modelId', async (req: Request, res: Response)
   try {
     const { userId, modelId } = req.params;
 
-    const { error } = await client
+    const { error } = await getClient()
       .from('user_favorite_models')
       .delete()
       .eq('user_id', userId)
@@ -387,7 +389,7 @@ router.put('/:userId/favorites', async (req: Request, res: Response) => {
     }
 
     // 先删除所有收藏
-    await client
+    await getClient()
       .from('user_favorite_models')
       .delete()
       .eq('user_id', userId);
@@ -400,7 +402,7 @@ router.put('/:userId/favorites', async (req: Request, res: Response) => {
         created_at: new Date().toISOString(),
       }));
 
-      const { error } = await client
+      const { error } = await getClient()
         .from('user_favorite_models')
         .insert(insertData);
 
@@ -428,7 +430,7 @@ router.get('/:userId/favorites/:modelId/check', async (req: Request, res: Respon
   try {
     const { userId, modelId } = req.params;
 
-    const { data } = await client
+    const { data } = await getClient()
       .from('user_favorite_models')
       .select('id')
       .eq('user_id', userId)
@@ -496,7 +498,7 @@ router.post('/:userId/membership/upgrade', async (req: Request, res: Response) =
     }
 
     // 获取用户余额
-    const { data: user, error: userError } = await client
+    const { data: user, error: userError } = await getClient()
       .from('users')
       .select('id, balance, member_level, member_expire_at')
       .eq('id', userId)
@@ -533,7 +535,7 @@ router.post('/:userId/membership/upgrade', async (req: Request, res: Response) =
 
     // 使用事务处理
     // 1. 扣除余额
-    const { error: deductError } = await client
+    const { error: deductError } = await getClient()
       .rpc('update_user_balance', {
         p_user_id: userId,
         p_amount: -price,
@@ -547,7 +549,7 @@ router.post('/:userId/membership/upgrade', async (req: Request, res: Response) =
     }
 
     // 2. 更新会员等级和到期时间
-    const { error: updateError } = await client
+    const { error: updateError } = await getClient()
       .from('users')
       .update({
         member_level: memberLevel,
@@ -559,7 +561,7 @@ router.post('/:userId/membership/upgrade', async (req: Request, res: Response) =
     if (updateError) {
       console.error('Update membership error:', updateError);
       // 尝试回滚余额
-      await client.rpc('update_user_balance', {
+      await getClient().rpc('update_user_balance', {
         p_user_id: userId,
         p_amount: price,
         p_type: 'refund',
@@ -569,7 +571,7 @@ router.post('/:userId/membership/upgrade', async (req: Request, res: Response) =
     }
 
     // 3. 记录会员开通日志
-    await client
+    await getClient()
       .from('member_upgrade_records')
       .insert([{
         user_id: userId,
@@ -585,7 +587,7 @@ router.post('/:userId/membership/upgrade', async (req: Request, res: Response) =
       });
 
     // 4. 获取更新后的余额
-    const { data: balanceData } = await client
+    const { data: balanceData } = await getClient()
       .from('users')
       .select('balance')
       .eq('id', userId)

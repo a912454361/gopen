@@ -20,7 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
 interface UserInfo {
-  id: number;
+  id: string;
   phone?: string;
   nickname?: string;
   membershipLevel: number;
@@ -178,7 +178,10 @@ export default function LoginScreen() {
   };
 
   const handleBind = async (platform: string) => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('请先登录', '请先登录后再绑定账号');
+      return;
+    }
     
     setLoadingPlatform(platform);
     try {

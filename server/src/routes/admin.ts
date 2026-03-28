@@ -1781,4 +1781,114 @@ router.get('/funds/logs/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== 服务更新 ====================
+
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+/**
+ * 远程更新服务
+ * POST /api/v1/admin/update
+ * Body: { key: string }
+ */
+router.post('/update', async (req: Request, res: Response) => {
+  try {
+    const { key } = req.body;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    console.log('[Admin] Starting remote update...');
+    
+    // 执行 git pull
+    try {
+      const { stdout: pullResult } = await execAsync('git pull origin main', {
+        cwd: '/app',
+        timeout: 60000,
+      });
+      console.log('[Admin] Git pull result:', pullResult);
+      
+      // 检查是否有更新
+      if (pullResult.includes('Already up to date')) {
+        return res.json({
+          success: true,
+          message: '服务已是最新版本',
+          updated: false,
+        });
+      }
+      
+      // 安装依赖
+      console.log('[Admin] Installing dependencies...');
+      const { stdout: installResult } = await execAsync('pnpm install', {
+        cwd: '/app/server',
+        timeout: 120000,
+      });
+      console.log('[Admin] Install result:', installResult);
+      
+      return res.json({
+        success: true,
+        message: '更新成功，请重启服务',
+        updated: true,
+        pullResult,
+        installResult,
+      });
+    } catch (execError) {
+      console.error('[Admin] Update error:', execError);
+      return res.status(500).json({
+        error: '更新失败',
+        details: execError instanceof Error ? execError.message : String(execError),
+      });
+    }
+  } catch (error) {
+    console.error('Remote update error:', error);
+    res.status(500).json({ error: '更新失败' });
+  }
+});
+
+/**
+ * 获取服务状态
+ * GET /api/v1/admin/status
+ */
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    
+    if (!verifyAdmin(key)) {
+      return res.status(403).json({ error: '无权限' });
+    }
+
+    // 获取git版本
+    let gitVersion = 'unknown';
+    let gitBranch = 'unknown';
+    try {
+      const { stdout: version } = await execAsync('git rev-parse --short HEAD', { cwd: '/app' });
+      gitVersion = version.trim();
+      const { stdout: branch } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: '/app' });
+      gitBranch = branch.trim();
+    } catch {
+      // 忽略git错误
+    }
+
+    res.json({
+      success: true,
+      data: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        uptime: Math.floor(process.uptime()),
+        memoryUsage: process.memoryUsage(),
+        env: process.env.NODE_ENV || 'development',
+        gitVersion,
+        gitBranch,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Get status error:', error);
+    res.status(500).json({ error: '获取状态失败' });
+  }
+});
+
 export default router;

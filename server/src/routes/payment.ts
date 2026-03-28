@@ -1,6 +1,12 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getSupabaseClient } from '../storage/database/supabase-client.js';
+
+// ES Module 环境下获取 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = Router();
 const client = getSupabaseClient();
@@ -122,7 +128,7 @@ const PAYMENT_ACCOUNTS = {
   wechat: {
     name: '微信收款',
     account: '18321337942', // 微信号/手机号
-    qrcodeUrl: 'wxp://f2f0lJH8kQ9xVz3mNp7yTc5wAb2dEf6gHi1jKlMnOp', // 微信收款码链接（需要替换为真实收款码）
+    qrcodeUrl: '/api/v1/payment/wechat-qr', // 使用本地静态文件服务路由
     realName: '郭涛', // 收款人姓名
     desc: '请使用微信扫码支付',
     color: '#07C160',
@@ -161,6 +167,12 @@ const PAYMENT_ACCOUNTS = {
 
 // 将收款链接转换为可显示的二维码图片URL
 const getQRCodeImageUrl = (qrcodeUrl: string, payType: string): string => {
+  // 如果是本地API路由（直接提供图片的路由），直接返回相对路径
+  // 前端需要拼接 EXPO_PUBLIC_BACKEND_BASE_URL
+  if (qrcodeUrl.startsWith('/api/')) {
+    return qrcodeUrl;
+  }
+  
   // 如果已经是图片URL，直接返回
   // 支持：qrserver.com、对象存储URL(.png/.jpg等后缀或带查询参数的图片URL)、图片文件后缀
   if (
@@ -987,6 +999,24 @@ router.post('/admin/merchant', async (req: Request, res: Response) => {
       return res.status(400).json({ error: '参数错误', details: error.issues });
     }
     res.status(500).json({ error: '开通失败' });
+  }
+});
+
+// ==================== 微信收款码图片路由 ====================
+
+/**
+ * 获取微信收款码图片
+ * GET /api/v1/payment/wechat-qr
+ */
+router.get('/wechat-qr', async (req: Request, res: Response) => {
+  try {
+    // 返回静态文件目录中的微信收款码图片
+    // __dirname = server/src/routes, 需要回退两级到 server/public
+    const imagePath = path.join(__dirname, '../../public/images/wechat-pay-qr.png');
+    res.sendFile(imagePath);
+  } catch (error) {
+    console.error('Get wechat QR error:', error);
+    res.status(500).json({ error: '获取微信收款码失败' });
   }
 });
 

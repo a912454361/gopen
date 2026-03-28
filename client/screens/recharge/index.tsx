@@ -32,6 +32,18 @@ import { Spacing, BorderRadius } from '@/constants/theme';
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
+/**
+ * 处理收款码URL
+ * 如果是相对路径（以/api/开头），拼接后端域名
+ */
+const getFullQrcodeUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.startsWith('/api/')) {
+    return `${EXPO_PUBLIC_BACKEND_BASE_URL}${url}`;
+  }
+  return url;
+};
+
 // 充值金额选项
 const RECHARGE_OPTIONS = [
   { amount: 1000, bonus: 0, label: '10元', desc: '' },
@@ -602,7 +614,7 @@ export default function RechargeScreen() {
                   <ActivityIndicator size="large" color={theme.primary} />
                 ) : (
                   <Image 
-                    source={{ uri: paymentAccounts[selectedPayMethod]?.qrcodeUrl }} 
+                    source={{ uri: getFullQrcodeUrl(paymentAccounts[selectedPayMethod]?.qrcodeUrl || '') }} 
                     style={styles.qrcodeImage}
                     resizeMode="contain"
                   />

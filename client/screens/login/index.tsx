@@ -19,22 +19,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * 获取后端API基础URL
- * 优先级：环境变量 > 当前域名 > localhost
+ * 独立服务器地址: http://127.0.0.1:18789
  */
 const getBackendBaseUrl = (): string => {
-  // 1. 优先使用环境变量
+  // 优先使用环境变量
   if (process.env.EXPO_PUBLIC_BACKEND_BASE_URL) {
     return process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
   }
   
-  // 2. Web环境下，使用当前域名（前端和后端在同一域名下）
-  if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}`;
-  }
-  
-  // 3. 默认localhost（开发环境）
-  return 'http://localhost:9091';
+  // 独立服务器默认地址
+  return 'http://127.0.0.1:18789';
 };
 
 const EXPO_PUBLIC_BACKEND_BASE_URL = getBackendBaseUrl();

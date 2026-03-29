@@ -6,13 +6,17 @@
     "build": "node build.js",
     "dev": "bash ../.cozeproj/scripts/server_dev_run.sh",
     "preinstall": "npx only-allow pnpm",
-    "start": "NODE_ENV=production PORT=${PORT:-5000} node dist/index.js"
+    "start": "NODE_ENV=production PORT=${PORT:-5000} node dist/index.js",
+    "independent": "NODE_ENV=development PORT=18789 tsx src/index-independent.ts",
+    "independent:build": "tsc src/index-independent.ts --outDir dist --module ES2022 --moduleResolution node --target ES2022 --esModuleInterop",
+    "independent:prod": "NODE_ENV=production PORT=18789 node dist/index-independent.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.95.3",
     "@types/node-cron": "^3.0.11",
     "ali-oss": "^6.23.0",
     "axios": "^1.13.6",
+    "better-sqlite3": "^12.8.0",
     "cors": "^2.8.5",
     "coze-coding-dev-sdk": "^0.7.17",
     "dayjs": "^1.11.19",
@@ -29,6 +33,7 @@
   },
   "devDependencies": {
     "@types/ali-oss": "^6.23.3",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",

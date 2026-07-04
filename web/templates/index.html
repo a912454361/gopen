@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gopen - 首页</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 30px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: background 0.3s;
+        }
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .nav-links a.btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        .nav-links a.btn-primary:hover {
+            background: #f0f0f0;
+        }
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+            color: white;
+        }
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 20px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 50px;
+            flex-wrap: wrap;
+        }
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .feature-card .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .feature-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🔐 Gopen</div>
+        <div class="nav-links">
+            <a href="/login">登录</a>
+            <a href="/register" class="btn-primary">注册</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>安全的登录系统</h1>
+        <p>Gopen 是一个基于 Go + Gin 的现代化登录系统，支持 JWT 认证、OAuth 第三方登录和密码加密存储。</p>
+    </section>
+
+    <section class="features">
+        <div class="feature-card">
+            <div class="icon">🔒</div>
+            <h3>安全加密</h3>
+            <p>使用 bcrypt 进行密码加密，JWT 进行身份验证，确保您的账户安全。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🔑</div>
+            <h3>多种登录方式</h3>
+            <p>支持用户名密码登录、GitHub OAuth、Google OAuth 等多种登录方式。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">⚡</div>
+            <h3>高性能</h3>
+            <p>基于 Go 语言和 Gin 框架，提供高性能、低延迟的用户体验。</p>
+        </div>
+    </section>
+</body>
+</html>

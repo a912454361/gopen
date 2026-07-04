@@ -1,0 +1,82 @@
+<!--统计页面-->
+<view class="container">
+  
+  <!-- 标题 -->
+  <view class="header-section">
+    <text class="title-lg">📊 游戏统计</text>
+  </view>
+
+  <!-- 基本信息 -->
+  <view class="card">
+    <view class="stat-block">
+      <text class="stat-label">玩家ID</text>
+      <text class="stat-value-text">{{player.id}}</text>
+    </view>
+    <view class="stat-block">
+      <text class="stat-label">当前章节</text>
+      <text class="stat-value-text">第{{player.chapter}}章</text>
+    </view>
+    <view class="stat-block">
+      <text class="stat-label">游戏时长</text>
+      <text class="stat-value-text">{{playTimeText}}</text>
+    </view>
+  </view>
+
+  <!-- 角色属性 -->
+  <view class="card">
+    <text class="card-title">角色属性</text>
+    <view class="stat-block" wx:for="{{player.stats}}" wx:key="index">
+      <text class="stat-label">{{item.key}}</text>
+      <view class="stat-bar-container">
+        <view class="stat-bar">
+          <view class="stat-fill" style="width: {{item.value > 100 ? 100 : item.value}}%"></view>
+        </view>
+      </view>
+      <text class="stat-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <!-- 战斗统计 -->
+  <view class="card">
+    <text class="card-title">战斗统计</text>
+    <view class="battle-stats">
+      <view class="battle-stat-item">
+        <text class="battle-stat-value">{{player.battles.wins}}</text>
+        <text class="battle-stat-label">胜利</text>
+      </view>
+      <view class="battle-stat-item">
+        <text class="battle-stat-value danger">{{player.battles.losses}}</text>
+        <text class="battle-stat-label">失败</text>
+      </view>
+      <view class="battle-stat-item">
+        <text class="battle-stat-value">{{player.choices.length}}</text>
+        <text class="battle-stat-label">选择</text>
+      </view>
+      <view class="battle-stat-item">
+        <text class="battle-stat-value gold">{{player.achievements.length}}</text>
+        <text class="battle-stat-label">成就</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 结局收集 -->
+  <view class="card">
+    <text class="card-title">结局收集</text>
+    <view class="endings-list">
+      <view class="ending-item {{item.unlocked ? 'unlocked' : 'locked'}}" 
+            wx:for="{{[{id: 'good', name: '完美结局', unlocked: player.endings.includes('ending_hero')}, {id: 'bad', name: '悲剧结局', unlocked: player.endings.includes('ending_sacrifice')}, {id: 'dark', name: '黑暗结局', unlocked: player.endings.includes('ending_dark')}, {id: 'perfect', name: '隐藏结局', unlocked: player.endings.includes('ending_transcend')}]}}" 
+            wx:key="id">
+        <text class="ending-name">{{item.name}}</text>
+        <text class="ending-status">{{item.unlocked ? '✓' : '?'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 重置按钮 -->
+  <view class="reset-section">
+    <button class="btn btn-danger" bindtap="resetGame">
+      重置游戏
+    </button>
+  </view>
+
+</view>

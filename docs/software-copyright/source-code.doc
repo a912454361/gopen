@@ -1,0 +1,3018 @@
+====================================================================
+G open 智能创作助手系统 V1.0
+源程序代码文档
+====================================================================
+
+【前30页】
+
+
+======================================================================
+文件：client/app/_layout.tsx
+======================================================================
+
+import { Stack } from 'expo-router';
+import { MembershipProvider } from '@/contexts/MembershipContext';
+
+export default function RootLayout() {
+  return (
+    <MembershipProvider>
+      <Stack screenOptions={{
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        headerShown: false
+      }}>
+        <Stack.Screen name="(tabs)" options={{ title: "" }} />
+        <Stack.Screen name="workflow" options={{ title: "创作工作台" }} />
+        <Stack.Screen name="storage" options={{ title: "云端存储" }} />
+        <Stack.Screen name="payment" options={{ title: "支付中心" }} />
+        <Stack.Screen name="login" options={{ title: "账号登录" }} />
+        <Stack.Screen name="bill" options={{ title: "账单明细" }} />
+        <Stack.Screen name="cloud-storage" options={{ title: "云存储设置" }} />
+        <Stack.Screen name="wallet" options={{ title: "钱包" }} />
+        <Stack.Screen name="models" options={{ title: "模型市场" }} />
+        <Stack.Screen name="download" options={{ title: "下载应用" }} />
+        <Stack.Screen name="membership" options={{ title: "会员中心" }} />
+        <Stack.Screen name="payment-admin" options={{ title: "支付审核" }} />
+        <Stack.Screen name="admin" options={{ title: "管理后台" }} />
+        <Stack.Screen name="notification-settings" options={{ title: "通知设置" }} />
+        <Stack.Screen name="privacy" options={{ title: "隐私政策" }} />
+        <Stack.Screen name="terms" options={{ title: "用户协议" }} />
+        <Stack.Screen name="profit-panel" options={{ title: "利润统计" }} />
+        <Stack.Screen name="cloud-storage-setup" options={{ title: "云存储开通" }} />
+        <Stack.Screen name="privacy-settings" options={{ title: "隐私设置" }} />
+        <Stack.Screen name="privacy-policy" options={{ title: "隐私政策" }} />
+        <Stack.Screen name="terms-of-service" options={{ title: "服务条款" }} />
+        <Stack.Screen name="api-keys" options={{ title: "API密钥管理" }} />
+      </Stack>
+    </MembershipProvider>
+  );
+}
+
+
+
+
+======================================================================
+文件：client/app/(tabs)/_layout.tsx
+======================================================================
+
+import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useTheme } from '@/hooks/useTheme';
+
+export default function TabLayout() {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: theme.backgroundRoot,
+          borderTopWidth: 1,
+          borderTopColor: theme.border,
+          height: Platform.OS === 'web' ? 60 : 50 + insets.bottom,
+          paddingBottom: Platform.OS === 'web' ? 0 : insets.bottom,
+        },
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textMuted,
+        tabBarItemStyle: {
+          height: Platform.OS === 'web' ? 60 : undefined,
+        },
+        tabBarLabelStyle: {
+          fontSize: 9,
+          fontWeight: '700',
+          letterSpacing: 1.5,
+          textTransform: 'uppercase',
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: '创作',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="wand-magic-sparkles" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="projects"
+        options={{
+          title: '项目',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="layer-group" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="membership"
+        options={{
+          title: '会员',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="crown" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: '设置',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="gear" size={20} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
+  );
+}
+
+
+
+
+======================================================================
+文件：client/app/(tabs)/index.tsx
+======================================================================
+
+export { default } from "@/screens/chat";
+
+
+
+
+======================================================================
+文件：client/screens/models/index.tsx
+======================================================================
+
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useMembership } from '@/contexts/MembershipContext';
+import { Screen } from '@/components/Screen';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { createStyles } from './styles';
+import { Spacing, BorderRadius } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const EXPO_PUBLIC_BACKEND_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+interface Model {
+  id: string;
+  code: string;
+  name: string;
+  provider: string;
+  category: string;
+  inputPrice: string;
+  outputPrice: string;
+  gpuHourPrice: string | null;
+  is_free: boolean;
+  member_only: boolean;
+  super_member_only: boolean;
+  max_tokens: number;
+  description?: string;
+}
+
+// 预置模型数据（当API无数据时使用）
+const DEFAULT_MODELS: Model[] = [
+  // 对话模型
+  { id: '1', code: 'doubao-pro-32k', name: '豆包 Pro 32K', provider: 'doubao', category: 'chat', inputPrice: '0.80', outputPrice: '2.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: false, max_tokens: 32768, description: '高质量对话，支持长文本' },
+  { id: '2', code: 'doubao-lite-4k', name: '豆包 Lite 4K', provider: 'doubao', category: 'chat', inputPrice: '0.30', outputPrice: '0.60', gpuHourPrice: null, is_free: true, member_only: false, super_member_only: false, max_tokens: 4096, description: '轻量级模型，日常对话' },
+  { id: '3', code: 'gpt-4o', name: 'GPT-4o', provider: 'openai', category: 'chat', inputPrice: '35.00', outputPrice: '105.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 128000, description: 'OpenAI旗舰模型' },
+  { id: '4', code: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', category: 'chat', inputPrice: '1.75', outputPrice: '7.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 128000, description: '高性价比GPT模型' },
+  { id: '5', code: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic', category: 'chat', inputPrice: '105.00', outputPrice: '525.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 200000, description: '最强推理能力' },
+  { id: '6', code: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic', category: 'chat', inputPrice: '21.00', outputPrice: '105.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 200000, description: '平衡性能与成本' },
+  { id: '7', code: 'llama3-70b', name: 'Llama 3 70B', provider: 'ollama', category: 'chat', inputPrice: '0.00', outputPrice: '0.00', gpuHourPrice: '15.00', is_free: true, member_only: false, super_member_only: false, max_tokens: 8192, description: '开源大模型，本地部署' },
+  { id: '8', code: 'qwen-max', name: '通义千问 Max', provider: 'doubao', category: 'chat', inputPrice: '14.00', outputPrice: '56.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 32000, description: '阿里云大模型旗舰版' },
+  // 图像模型
+  { id: '9', code: 'dall-e-3', name: 'DALL-E 3', provider: 'openai', category: 'image', inputPrice: '280.00', outputPrice: '280.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 4096, description: '高质量图像生成' },
+  { id: '10', code: 'midjourney-v6', name: 'Midjourney V6', provider: 'openai', category: 'image', inputPrice: '350.00', outputPrice: '350.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 4096, description: '艺术级图像生成' },
+  { id: '11', code: 'stable-diffusion-xl', name: 'SD XL', provider: 'ollama', category: 'image', inputPrice: '0.00', outputPrice: '0.00', gpuHourPrice: '12.00', is_free: true, member_only: false, super_member_only: false, max_tokens: 2048, description: '开源图像生成' },
+  // 视频模型
+  { id: '12', code: 'sora', name: 'Sora', provider: 'openai', category: 'video', inputPrice: '500.00', outputPrice: '500.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 8192, description: 'OpenAI视频生成' },
+  { id: '13', code: 'runway-gen3', name: 'Runway Gen-3', provider: 'openai', category: 'video', inputPrice: '280.00', outputPrice: '280.00', gpuHourPrice: null, is_free: false, member_only: false, super_member_only: true, max_tokens: 4096, description: '专业视频创作' },
+  // 音频模型
+  { id: '14', code: 'whisper-large', name: 'Whisper Large', provider: 'openai', category: 'audio', inputPrice: '0.42', outputPrice: '0.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 4096, description: '语音识别转写' },
+  { id: '15', code: 'tts-1', name: 'TTS-1', provider: 'openai', category: 'audio', inputPrice: '105.00', outputPrice: '0.00', gpuHourPrice: null, is_free: false, member_only: true, super_member_only: false, max_tokens: 2048, description: '文本转语音' },
+];
+
+const PROVIDERS = [
+  { id: 'all', name: '全部' },
+  { id: 'doubao', name: '豆包' },
+  { id: 'openai', name: 'OpenAI' },
+  { id: 'ollama', name: 'Ollama' },
+  { id: 'anthropic', name: 'Claude' },
+];
+
+const CATEGORIES = [
+  { id: 'all', name: '全部' },
+  { id: 'chat', name: '对话' },
+  { id: 'image', name: '图像' },
+  { id: 'video', name: '视频' },
+  { id: 'audio', name: '音频' },
+];
+
+export default function ModelsScreen() {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
+  const { isMember, isSuperMember } = useMembership();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [tokenUsage, setTokenUsage] = useState({
+    today: { totalTokens: 0, calls: 0 },
+    month: { totalTokens: 0, calls: 0 },
+    balance: { available: 0 },
+  });
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/models`);
+      const data = await res.json();
+      
+      if (data.success && data.data && data.data.length > 0) {
+        setModels(data.data);
+      } else {
+        // 使用预置数据
+        setModels(DEFAULT_MODELS);
+      }
+    } catch (error) {
+      console.error('Fetch models error:', error);
+      // 网络错误时使用预置数据
+      setModels(DEFAULT_MODELS);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * 获取Token使用情况
+   * 服务端文件：server/src/routes/user.ts
+   * 接口：GET /api/v1/user/:userId/token-usage
+   */
+  const fetchTokenUsage = useCallback(async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) return;
+
+      const res = await fetch(`${EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/user/${userId}/token-usage`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setTokenUsage(data.data);
+      }
+    } catch (error) {
+      console.error('Fetch token usage error:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    fetchTokenUsage();
+  }, [fetchData, fetchTokenUsage]);
+
+  const filteredModels = useMemo(() => {
+    return models.filter((model) => {
+      if (selectedProvider !== 'all' && model.provider !== selectedProvider) return false;
+      if (selectedCategory !== 'all' && model.category !== selectedCategory) return false;
+      return true;
+    });
+  }, [models, selectedProvider, selectedCategory]);
+
+  const chatModels = filteredModels.filter((m) => m.category === 'chat');
+  const imageModels = filteredModels.filter((m) => m.category === 'image');
+  const videoModels = filteredModels.filter((m) => m.category === 'video');
+  const audioModels = filteredModels.filter((m) => m.category === 'audio');
+
+  const handleSelectModel = async (model: Model) => {
+    // 检查权限
+    if (model.super_member_only && !isSuperMember) {
+      showUpgradeAlert('超级会员', '该模型需要超级会员才能使用', 9900, 'super_member');
+      return;
+    }
+    if (model.member_only && !isMember) {
+      showUpgradeAlert('普通会员', '该模型需要普通会员才能使用', 2900, 'membership');
+      return;
+    }
+    
+    setSelectedModel(model.id);
+    await AsyncStorage.setItem('selectedModel', JSON.stringify(model));
+    
+    if (Platform.OS === 'web') {
+      window.alert(`已选择 ${model.name} 作为默认模型`);
+    } else {
+      Alert.alert('模型已选择', `已选择 ${model.name} 作为默认模型`);
+    }
+  };
+
+  const showUpgradeAlert = (title: string, message: string, amount: number, productType: string) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${message}\n\n是否立即开通${title}？`)) {
+        router.push('/payment', { amount, productType });
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '立即开通', onPress: () => router.push('/payment', { amount, productType }) },
+        ]
+      );
+    }
+  };
+
+  const getModelIcon = (category: string): keyof typeof FontAwesome6.glyphMap => {
+    if (category === 'image') return 'image';
+    if (category === 'video') return 'video';
+    if (category === 'audio') return 'music';
+    return 'brain';
+  };
+
+  const getProviderColor = (provider: string): string => {
+    const colors: Record<string, string> = {
+      openai: '#10A37F',
+      doubao: '#3370FF',
+      anthropic: '#D97706',
+      ollama: '#7C3AED',
+    };
+    return colors[provider] || theme.primary;
+  };
+
+  const renderModelCard = (model: Model) => {
+    const isLocked = (model.super_member_only && !isSuperMember) || (model.member_only && !isMember);
+    
+    return (
+      <TouchableOpacity
+        key={model.id}
+        style={[styles.modelCard, selectedModel === model.id && styles.selectedCard]}
+        onPress={() => handleSelectModel(model)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.modelHeader}>
+          <View style={[styles.modelIcon, { backgroundColor: getProviderColor(model.provider) + '20' }]}>
+            <FontAwesome6
+              name={getModelIcon(model.category)}
+              size={22}
+              color={getProviderColor(model.provider)}
+            />
+          </View>
+          <View style={styles.modelInfo}>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>
+              {model.name}
+            </ThemedText>
+            <View style={styles.modelMeta}>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {model.provider.toUpperCase()}
+              </ThemedText>
+              {model.is_free && (
+                <View style={[styles.modelBadge, { backgroundColor: theme.success + '20' }]}>
+                  <Text style={{ color: theme.success, fontSize: 10, fontWeight: '600' }}>免费</Text>
+                </View>
+              )}
+              {model.member_only && !model.is_free && (
+                <View style={[styles.modelBadge, { backgroundColor: '#D9770620' }]}>
+                  <Text style={{ color: '#D97706', fontSize: 10, fontWeight: '600' }}>会员</Text>
+                </View>
+              )}
+              {model.super_member_only && (
+                <View style={[styles.modelBadge, { backgroundColor: '#7C3AED20' }]}>
+                  <Text style={{ color: '#7C3AED', fontSize: 10, fontWeight: '600' }}>超级会员</Text>
+                </View>
+              )}
+            </View>
+          </View>
+          {isLocked && (
+            <FontAwesome6 name="lock" size={16} color={theme.textMuted} />
+          )}
+        </View>
+
+        {model.description && (
+          <ThemedText variant="small" color={theme.textSecondary} style={{ marginTop: Spacing.sm }}>
+            {model.description}
+          </ThemedText>
+        )}
+
+        <View style={styles.modelFooter}>
+          <View style={styles.priceGroup}>
+            <ThemedText variant="caption" color={theme.textMuted}>输入 ¥/百万</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.inputPrice}</ThemedText>
+          </View>
+          <View style={styles.priceGroup}>
+            <ThemedText variant="caption" color={theme.textMuted}>输出 ¥/百万</ThemedText>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>{model.outputPrice}</ThemedText>
+          </View>
+          <View style={[styles.selectButton, isLocked && { backgroundColor: theme.textMuted }]}>
+            <ThemedText variant="small" color={theme.backgroundRoot}>
+              {isLocked ? '解锁' : '选择'}
+            </ThemedText>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSection = (title: string, sectionModels: Model[]) => {
+    if (sectionModels.length === 0) return null;
+    
+    return (
+      <View style={{ marginBottom: Spacing.lg }}>
+        {selectedCategory === 'all' && (
+          <ThemedText variant="label" color={theme.textSecondary} style={{ marginBottom: Spacing.md }}>
+            {title}
+          </ThemedText>
+        )}
+        {sectionModels.map(renderModelCard)}
+      </View>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ padding: Spacing.sm }}
+          >
+            <FontAwesome6 name="arrow-left" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <ThemedText variant="h3" color={theme.textPrimary}>
+            模型市场
+          </ThemedText>
+          <View style={{ width: 36 }} />
+        </View>
+
+        {/* 会员快捷入口 */}
+        <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg }}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={() => router.push('/payment', { amount: 2900, productType: 'membership' })}
+          >
+            <LinearGradient
+              colors={['#00F0FF', '#BF00FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
+            >
+              <FontAwesome6 name="crown" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>普通会员 ¥29/月</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={() => router.push('/payment', { amount: 9900, productType: 'super_member' })}
+          >
+            <LinearGradient
+              colors={['#FFD700', '#FF6B00']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
+            >
+              <FontAwesome6 name="rocket" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', marginTop: 4 }}>超级会员 ¥99/月</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* Token使用情况卡片 */}
+        <View style={[styles.tokenUsageCard, { backgroundColor: theme.backgroundDefault }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+            <ThemedText variant="smallMedium" color={theme.textPrimary}>Token使用统计</ThemedText>
+            <TouchableOpacity onPress={fetchTokenUsage}>
+              <FontAwesome6 name="rotate" size={14} color={theme.textMuted} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>今日使用</ThemedText>
+              <ThemedText variant="h3" color={theme.primary}>
+                {tokenUsage.today.totalTokens.toLocaleString()}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {tokenUsage.today.calls} 次调用
+              </ThemedText>
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>本月使用</ThemedText>
+              <ThemedText variant="h3" color={theme.accent}>
+                {tokenUsage.month.totalTokens.toLocaleString()}
+              </ThemedText>
+              <ThemedText variant="caption" color={theme.textMuted}>
+                {tokenUsage.month.calls} 次调用
+              </ThemedText>
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="caption" color={theme.textMuted}>账户余额</ThemedText>
+              <ThemedText variant="h3" color={theme.success}>
+                ¥{tokenUsage.balance.available.toFixed(2)}
+              </ThemedText>
+              <TouchableOpacity onPress={() => router.push('/payment', { amount: 1000, productType: 'balance' })}>
+                <ThemedText variant="caption" color={theme.primary}>充值</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* 提供商筛选 */}
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
+            <View style={styles.filterRow}>
+              {PROVIDERS.map((provider) => (
+                <TouchableOpacity
+                  key={provider.id}
+                  style={[
+                    styles.filterChip,
+                    selectedProvider === provider.id && styles.filterChipActive,
+                  ]}
+                  onPress={() => setSelectedProvider(provider.id)}
+                >
+                  <Text style={[
+                    styles.filterChipText,
+                    { color: selectedProvider === provider.id ? theme.backgroundRoot : theme.textPrimary },
+                  ]}>
+                    {provider.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 分类筛选 */}
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
+            <View style={styles.filterRow}>
+              {CATEGORIES.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.filterChip,
+                    selectedCategory === category.id && styles.filterChipActive,
+                  ]}
+                  onPress={() => setSelectedCategory(category.id)}
+                >
+                  <Text style={[
+                    styles.filterChipText,
+                    { color: selectedCategory === category.id ? theme.backgroundRoot : theme.textPrimary },
+                  ]}>
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 模型列表 */}
+        {(selectedCategory === 'all' || selectedCategory === 'chat') && renderSection('对话模型', chatModels)}
+        {(selectedCategory === 'all' || selectedCategory === 'image') && renderSection('图像生成', imageModels)}
+        {(selectedCategory === 'all' || selectedCategory === 'video') && renderSection('视频生成', videoModels)}
+        {(selectedCategory === 'all' || selectedCategory === 'audio') && renderSection('音频处理', audioModels)}
+
+        {filteredModels.length === 0 && (
+          <View style={styles.emptyState}>
+            <FontAwesome6 name="box-open" size={48} color={theme.textMuted} />
+            <ThemedText variant="small" color={theme.textMuted} style={{ marginTop: Spacing.md }}>
+              暂无匹配的模型
+            </ThemedText>
+          </View>
+        )}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+
+
+
+======================================================================
+文件：client/screens/models/styles.ts
+======================================================================
+
+import { StyleSheet } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.backgroundRoot,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing['2xl'],
+      paddingBottom: Spacing['5xl'],
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: Spacing.xl,
+    },
+    filterRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    filterChip: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full,
+      backgroundColor: theme.backgroundDefault,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    filterChipActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    filterChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    modelCard: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
+    selectedCard: {
+      borderColor: theme.primary,
+      borderWidth: 2,
+    },
+    modelHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    modelIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: BorderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modelInfo: {
+      flex: 1,
+      marginLeft: Spacing.md,
+    },
+    modelMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      marginTop: Spacing.xs,
+    },
+    modelBadge: {
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.xs,
+    },
+    modelFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: Spacing.md,
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    priceGroup: {
+      alignItems: 'center',
+    },
+    selectButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.md,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: Spacing['5xl'],
+    },
+    tokenUsageCard: {
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+  });
+};
+
+
+
+
+======================================================================
+文件：client/screens/projects/index.tsx
+======================================================================
+
+import React, { useMemo } from 'react';
+import {
+  ScrollView,
+  View,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useTheme } from '@/hooks/useTheme';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { Screen } from '@/components/Screen';
+import { ThemedText } from '@/components/ThemedText';
+import { createStyles } from './styles';
+import { Spacing, BorderRadius } from '@/constants/theme';
+
+interface Project {
+  id: string;
+  title: string;
+  type: string;
+  status: 'active' | 'pending';
+  progress: number;
+  assets: number;
+  lastUpdated: string;
+  coverImage?: string;
+}
+
+const mockProjects: Project[] = [
+  {
+    id: '1',
+    title: '霓虹武士',
+    type: '游戏角色',
+    status: 'active',
+    progress: 75,
+    assets: 24,
+    lastUpdated: '2小时前',
+    coverImage: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=400',
+  },
+  {
+    id: '2',
+    title: '赛博城市',
+    type: '动漫场景',
+    status: 'active',
+    progress: 45,
+    assets: 12,
+    lastUpdated: '5小时前',
+    coverImage: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400',
+  },
+  {
+    id: '3',
+    title: '机甲战士',
+    type: '游戏角色',
+    status: 'pending',
+    progress: 20,
+    assets: 6,
+    lastUpdated: '1天前',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
+  },
+  {
+    id: '4',
+    title: '森林精灵',
+    type: '动漫场景',
+    status: 'pending',
+    progress: 10,
+    assets: 3,
+    lastUpdated: '2天前',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
+  },
+];
+
+export default function ProjectsScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
+
+  const activeProjects = mockProjects.filter(p => p.status === 'active');
+  const pendingProjects = mockProjects.filter(p => p.status === 'pending');
+  const totalAssets = mockProjects.reduce((acc, p) => acc + p.assets, 0);
+
+  const handleProjectPress = (project: Project) => {
+    router.push('/workflow', { projectId: project.id, title: project.title });
+  };
+
+  const handleCreateProject = () => {
+    if (Platform.OS === 'web') {
+      window.alert('新建项目功能即将上线');
+    } else {
+      Alert.alert('提示', '新建项目功能即将上线');
+    }
+  };
+
+  const handleViewAll = () => {
+    if (Platform.OS === 'web') {
+      window.alert('查看全部项目功能即将上线');
+    } else {
+      Alert.alert('提示', '查看全部项目功能即将上线');
+    }
+  };
+
+  const handleStatPress = (type: 'active' | 'pending' | 'assets') => {
+    if (type === 'active') {
+      // 滚动到进行中项目
+      if (Platform.OS === 'web') {
+        window.alert(`进行中的项目：${activeProjects.length} 个\n${activeProjects.map(p => p.title).join('\n')}`);
+      } else {
+        Alert.alert('进行中的项目', activeProjects.map(p => `${p.title} (${p.progress}%)`).join('\n'));
+      }
+    } else if (type === 'pending') {
+      // 显示待处理项目
+      if (Platform.OS === 'web') {
+        window.alert(`待处理项目：${pendingProjects.length} 个\n${pendingProjects.map(p => p.title).join('\n')}`);
+      } else {
+        Alert.alert('待处理项目', pendingProjects.map(p => `${p.title} (${p.progress}%)`).join('\n'));
+      }
+    } else if (type === 'assets') {
+      // 显示资源统计
+      const assetList = mockProjects.map(p => `${p.title}: ${p.assets} 个资源`);
+      if (Platform.OS === 'web') {
+        window.alert(`总资源数：${totalAssets} 个\n${assetList.join('\n')}`);
+      } else {
+        Alert.alert('资源统计', assetList.join('\n'));
+      }
+    }
+  };
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText variant="h4" color={theme.textPrimary}>
+            项目仪表盘
+          </ThemedText>
+          <ThemedText variant="label" color={theme.textMuted}>
+            创作工作空间
+          </ThemedText>
+          <LinearGradient
+            colors={[theme.primary, theme.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.neonLine}
+          />
+        </View>
+
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          <TouchableOpacity style={[styles.statCard, styles.statCardActive]} onPress={() => handleStatPress('active')}>
+            <FontAwesome6 name="circle-play" size={20} color={theme.primary} />
+            <ThemedText variant="labelSmall" color={theme.textMuted}>
+              进行中
+            </ThemedText>
+            <ThemedText variant="stat" color={theme.primary}>
+              {activeProjects.length}
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.statCard} onPress={() => handleStatPress('pending')}>
+            <FontAwesome6 name="clock" size={20} color={theme.accent} />
+            <ThemedText variant="labelSmall" color={theme.textMuted}>
+              待处理
+            </ThemedText>
+            <ThemedText variant="stat" color={theme.textPrimary}>
+              {pendingProjects.length}
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.statCard} onPress={() => handleStatPress('assets')}>
+            <FontAwesome6 name="cube" size={20} color={theme.textMuted} />
+            <ThemedText variant="labelSmall" color={theme.textMuted}>
+              总资源
+            </ThemedText>
+            <ThemedText variant="stat" color={theme.textPrimary}>
+              {totalAssets}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {/* Active Projects */}
+        <View style={styles.sectionHeader}>
+          <ThemedText variant="label" color={theme.textPrimary}>
+            进行中的项目
+          </ThemedText>
+          <TouchableOpacity onPress={handleViewAll}>
+            <ThemedText variant="captionMedium" color={theme.primary}>
+              查看全部
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.projectList}>
+          {activeProjects.map(project => (
+            <TouchableOpacity
+              key={project.id}
+              style={[styles.projectCard, styles.projectCardActive]}
+              activeOpacity={0.7}
+              onPress={() => handleProjectPress(project)}
+            >
+              {/* Project Header */}
+              <View style={styles.projectHeader}>
+                <View style={styles.projectIcon}>
+                  <FontAwesome6 
+                    name={project.type.includes('角色') ? 'user-astronaut' : 'city'} 
+                    size={20} 
+                    color={theme.primary} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="title" color={theme.textPrimary}>
+                    {project.title}
+                  </ThemedText>
+                  <ThemedText variant="labelSmall" color={theme.textMuted}>
+                    {project.type}
+                  </ThemedText>
+                </View>
+                <View style={styles.projectStatus}>
+                  <FontAwesome6 name="circle" size={6} color={theme.success} />
+                  <ThemedText variant="tiny" color={theme.success}>
+                    进行中
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.projectProgress}>
+                <View style={styles.progressBar}>
+                  <LinearGradient
+                    colors={[theme.primary, theme.accent]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.progressFill, { width: `${project.progress}%` }]}
+                  />
+                </View>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  已完成 {project.progress}%
+                </ThemedText>
+              </View>
+
+              {/* Meta Info */}
+              <View style={styles.projectMeta}>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="cube" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.assets} 资源
+                  </ThemedText>
+                </View>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="clock" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.lastUpdated}
+                  </ThemedText>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Pending Projects */}
+        <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
+          <ThemedText variant="label" color={theme.textPrimary}>
+            待处理项目
+          </ThemedText>
+        </View>
+        
+        <View style={styles.projectList}>
+          {pendingProjects.map(project => (
+            <TouchableOpacity
+              key={project.id}
+              style={styles.projectCard}
+              activeOpacity={0.7}
+              onPress={() => handleProjectPress(project)}
+            >
+              {/* Project Header */}
+              <View style={styles.projectHeader}>
+                <View style={[styles.projectIcon, { backgroundColor: theme.backgroundTertiary }]}>
+                  <FontAwesome6 
+                    name={project.type.includes('角色') ? 'user-astronaut' : 'city'} 
+                    size={20} 
+                    color={theme.textMuted} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="title" color={theme.textPrimary}>
+                    {project.title}
+                  </ThemedText>
+                  <ThemedText variant="labelSmall" color={theme.textMuted}>
+                    {project.type}
+                  </ThemedText>
+                </View>
+                <View style={[styles.projectStatus, { backgroundColor: 'rgba(191,0,255,0.1)' }]}>
+                  <FontAwesome6 name="clock" size={6} color={theme.accent} />
+                  <ThemedText variant="tiny" color={theme.accent}>
+                    待处理
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.projectProgress}>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFillPlain, { width: `${project.progress}%`, backgroundColor: theme.textMuted }]} />
+                </View>
+                <ThemedText variant="caption" color={theme.textMuted}>
+                  已完成 {project.progress}%
+                </ThemedText>
+              </View>
+
+              {/* Meta Info */}
+              <View style={styles.projectMeta}>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="cube" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.assets} 资源
+                  </ThemedText>
+                </View>
+                <View style={styles.metaItem}>
+                  <FontAwesome6 name="clock" size={12} color={theme.textMuted} />
+                  <ThemedText variant="caption" color={theme.textMuted}>
+                    {project.lastUpdated}
+                  </ThemedText>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Create New Button */}
+        <TouchableOpacity style={styles.createButton} activeOpacity={0.8} onPress={handleCreateProject}>
+          <LinearGradient
+            colors={[theme.primary, theme.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: Spacing.sm,
+              padding: Spacing.lg,
+              borderRadius: BorderRadius.md,
+            }}
+          >
+            <FontAwesome6 name="plus" size={16} color={theme.backgroundRoot} />
+            <ThemedText variant="labelTitle" color={theme.backgroundRoot}>
+              新建项目
+            </ThemedText>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+
+
+
+======================================================================
+文件：client/screens/projects/styles.ts
+======================================================================
+
+import { StyleSheet } from 'react-native';
+import { Spacing, BorderRadius, Theme } from '@/constants/theme';
+
+export const createStyles = (theme: Theme) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.backgroundRoot,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing['2xl'],
+      paddingBottom: Spacing['5xl'],
+    },
+    header: {
+      marginBottom: Spacing.xl,
+      alignItems: 'center',
+    },
+    neonLine: {
+      height: 2,
+      borderRadius: 1,
+      marginTop: Spacing.lg,
+      width: 120,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginBottom: Spacing.xl,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    statCardActive: {
+      borderColor: theme.primary,
+      backgroundColor: 'rgba(0,240,255,0.05)',
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    projectList: {
+      gap: Spacing.md,
+    },
+    projectCard: {
+      backgroundColor: theme.backgroundDefault,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.lg,
+    },
+    projectCardActive: {
+      borderColor: theme.primary,
+      shadowColor: theme.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+    },
+    projectHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    projectIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: BorderRadius.md,
+      backgroundColor: 'rgba(0,240,255,0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    projectStatus: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      backgroundColor: 'rgba(22,163,74,0.1)',
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.xs,
+    },
+    projectProgress: {
+      marginBottom: Spacing.md,
+    },
+    progressBar: {
+      height: 6,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: 3,
+      overflow: 'hidden',
+      marginBottom: Spacing.xs,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    progressFillPlain: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    projectMeta: {
+      flexDirection: 'row',
+      gap: Spacing.lg,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    createButton: {
+      marginTop: Spacing.xl,
+    },
+  });
+};
+
+
+
+
+======================================================================
+文件：client/screens/settings/index.tsx
+======================================================================
+
+import React, { useMemo, useState } from 'react';
+import {
+  ScrollView,
+  View,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useTheme } from '@/hooks/useTheme';
+import { useMembership } from '@/contexts/MembershipContext';
+import { Screen } from '@/components/Screen';
+import { ThemedText } from '@/components/ThemedText';
+import { Avatar } from '@/components/Avatar';
+import { createStyles } from './styles';
+
+interface MenuItem {
+  icon: string;
+  title: string;
+  subtitle?: string;
+  value?: string;
+  onPress?: () => void;
+  isMemberOnly?: boolean;
+}
+
+export default function SettingsScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const router = useSafeRouter();
+  const { isMember, expireDate } = useMembership();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userId] = useState('demo-user-001'); // 示例用户ID
+
+  const handleAvatarChange = (url: string) => {
+    setAvatarUrl(url);
+  };
+
+  const generalMenuItems: MenuItem[] = [
+    {
+      icon: 'palette',
+      title: '主题设置',
+      subtitle: '外观主题配置',
+      value: '暗黑',
+    },
+    {
+      icon: 'globe',
+      title: '语言',
+      subtitle: '界面语言设置',
+      value: '中文',
+    },
+    {
+      icon: 'bell',
+      title: '通知设置',
+      subtitle: '推送通知配置',
+      onPress: () => router.push('/notification-settings'),
+    },
+  ];
+
+  const aiMenuItems: MenuItem[] = [
+    {
+      icon: 'microchip',
+      title: 'AI 模型',
+      subtitle: isMember ? '选择偏好模型' : '会员专属',
+      value: isMember ? 'G open Pro' : '基础版',
+      isMemberOnly: true,
+    },
+    {
+      icon: 'sliders',
+      title: '生成质量',
+      subtitle: isMember ? '调整输出质量' : '会员专属',
+      value: isMember ? '高质量' : '标准',
+      isMemberOnly: true,
+    },
+    {
+      icon: 'bolt',
+      title: '性能模式',
+      subtitle: isMember ? '速度与质量平衡' : '会员专属',
+      value: isMember ? '均衡' : '基础',
+      isMemberOnly: true,
+    },
+  ];
+
+  const accountMenuItems: MenuItem[] = [
+    {
+      icon: 'wallet',
+      title: '钱包',
+      subtitle: '余额充值与消费记录',
+      onPress: () => router.push('/wallet'),
+    },
+    {
+      icon: 'microchip',
+      title: '模型市场',
+      subtitle: '选择AI模型和GPU算力',
+      onPress: () => router.push('/models'),
+    },
+    {
+      icon: 'right-to-bracket',
+      title: '账号登录',
+      subtitle: '第三方账号绑定',
+      onPress: () => router.push('/login'),
+    },
+    {
+      icon: 'receipt',
+      title: '账单明细',
+      subtitle: '交易记录与发票',
+      onPress: () => router.push('/bill'),
+    },
+    {
+      icon: 'cloud',
+      title: '云存储设置',
+      subtitle: '百度网盘/阿里云盘',
+      onPress: () => router.push('/cloud-storage'),
+      isMemberOnly: true,
+    },
+    {
+      icon: 'cloud-arrow-up',
+      title: '云存储开通',
+      subtitle: '连接百度网盘/阿里云盘/Google Drive',
+      onPress: () => router.push('/cloud-storage-setup'),
+    },
+    {
+      icon: 'user-shield',
+      title: '隐私设置',
+      subtitle: '数据与隐私管理',
+      onPress: () => router.push('/privacy-settings'),
+    },
+    {
+      icon: 'key',
+      title: 'API 密钥',
+      subtitle: '管理集成配置',
+      onPress: () => router.push('/api-keys'),
+      isMemberOnly: true,
+    },
+    {
+      icon: 'circle-question',
+      title: '帮助与支持',
+      subtitle: '获取使用帮助',
+    },
+    // Web端显示下载入口
+    ...(Platform.OS === 'web' ? [{
+      icon: 'download',
+      title: '下载应用',
+      subtitle: 'iOS / Android / macOS / Windows',
+      onPress: () => router.push('/download'),
+    } as MenuItem] : []),
+  ];
+
+  const renderMenuItem = (item: MenuItem, index: number, total: number) => {
+    const isLocked = !isMember && item.isMemberOnly;
+    
+    return (
+      <TouchableOpacity
+        key={item.title}
+        style={[styles.menuItem, index < total - 1 && styles.menuItemBorder]}
+        onPress={item.onPress}
+        disabled={isLocked}
+      >
+        <View style={[styles.menuIcon, isLocked && { opacity: 0.5 }]}>
+          <FontAwesome6 name={item.icon as any} size={16} color={isLocked ? theme.textMuted : theme.textPrimary} />
+        </View>
+        <View style={styles.menuContent}>
+          <ThemedText variant="smallMedium" color={isLocked ? theme.textMuted : theme.textPrimary}>
+            {item.title}
+          </ThemedText>
+          {item.subtitle && (
+            <ThemedText variant="caption" color={theme.textMuted}>
+              {item.subtitle}
+            </ThemedText>
+          )}
+        </View>
+        {item.value && (
+          <ThemedText variant="smallMedium" color={isLocked ? theme.textMuted : theme.primary}>
+            {item.value}
+          </ThemedText>
+        )}
+        {isLocked && (
+          <FontAwesome6 name="lock" size={12} color={theme.textMuted} />
+        )}
+        {!isLocked && (
+          <FontAwesome6 name="chevron-right" size={12} color={theme.textMuted} />
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Screen backgroundColor={theme.backgroundRoot} statusBarStyle="light">
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText variant="h4" color={theme.textPrimary}>
+            设置
+          </ThemedText>
+          <ThemedText variant="label" color={theme.textMuted}>
+            系统配置
+          </ThemedText>
+          <LinearGradient
+            colors={[theme.primary, theme.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.neonLine}
+          />
+        </View>
+
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <Avatar 
+            userId={userId}
+            size={56}
+            avatarUrl={avatarUrl}
+            editable={true}
+            onAvatarChange={handleAvatarChange}
+          />
+          <View style={styles.profileInfo}>
+            <ThemedText variant="title" color={theme.textPrimary}>
+              {isMember ? 'G open 会员' : '免费用户'}
+            </ThemedText>
+            <ThemedText variant="small" color={theme.textMuted}>
+              {isMember ? `到期：${expireDate}` : '升级解锁更多功能'}
+            </ThemedText>
+          </View>
+          <TouchableOpacity 
+            onPress={() => router.push('/membership')}
+            style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.primary, borderRadius: 6 }}
+          >
+            <ThemedText variant="captionMedium" color={theme.backgroundRoot}>
+              {isMember ? '续费' : '开通'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {/* General Settings */}
+        <View style={styles.section}>
+          <ThemedText variant="label" color={theme.textMuted}>
+            常规设置
+          </ThemedText>
+          <View style={styles.menuList}>
+            {generalMenuItems.map((item, index) =>
+              renderMenuItem(item, index, generalMenuItems.length)
+            )}
+          </View>
+        </View>
+
+        {/* AI Settings */}
+        <View style={styles.section}>
+          <ThemedText variant="label" color={theme.textMuted}>
+            AI 配置
+          </ThemedText>
+          <View style={styles.menuList}>
+            {aiMenuItems.map((item, index) =>
+              renderMenuItem(item, index, aiMenuItems.length)
+            )}
+          </View>
+        </View>
+
+        {/* Account Settings */}
+        <View style={styles.section}>
+          <ThemedText variant="label" color={theme.textMuted}>
+            账户管理
+          </ThemedText>
+          <View style={styles.menuList}>
+            {accountMenuItems.map((item, index) =>
+              renderMenuItem(item, index, accountMenuItems.length)
+            )}
+          </View>
+        </View>
+
+        {/* Version Info */}
+        <View style={styles.versionInfo}>
+          <ThemedText variant="caption" color={theme.textMuted}>
+            G open{' '}
+            <ThemedText variant="caption" color={theme.primary}>
+              v1.0.0
+            </ThemedText>
+          </ThemedText>
+        </View>
+
+
+====================================================================
+【后30页】
+
+
+/**
+ * 更新用户信息
+ * PUT /api/v1/user/:userId
+ */
+router.put('/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { nickname, avatarUrl } = req.body;
+    
+    const updateData: any = { updated_at: new Date().toISOString() };
+    if (nickname) updateData.nickname = nickname;
+    if (avatarUrl) updateData.avatar_url = avatarUrl;
+    
+    const { error } = await client
+      .from('users')
+      .update(updateData)
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Update user error:', error);
+      return res.status(500).json({ error: '更新用户信息失败' });
+    }
+    
+    res.json({
+      success: true,
+      message: '用户信息已更新',
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: '更新用户信息失败' });
+  }
+});
+
+export default router;
+
+
+
+
+======================================================================
+文件：server/src/routes/cloud-storage.ts
+======================================================================
+
+import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+
+const router = Router();
+const client = getSupabaseClient();
+
+// ==================== 云存储配置 ====================
+
+const BAIDU_CONFIG = {
+  authUrl: 'https://openapi.baidu.com/oauth/2.0/authorize',
+  tokenUrl: 'https://openapi.baidu.com/oauth/2.0/token',
+  apiUrl: 'https://pan.baidu.com/rest/2.0/xpan',
+  appId: process.env.BAIDU_APP_ID || 'YOUR_BAIDU_APP_ID',
+  appKey: process.env.BAIDU_APP_KEY || 'YOUR_BAIDU_APP_KEY',
+  secretKey: process.env.BAIDU_SECRET_KEY || 'YOUR_BAIDU_SECRET_KEY',
+};
+
+const ALIYUN_CONFIG = {
+  authUrl: 'https://openapi.alipan.com/oauth/authorize',
+  tokenUrl: 'https://openapi.alipan.com/oauth/access_token',
+  apiUrl: 'https://openapi.alipan.com',
+  appId: process.env.ALIYUN_APP_ID || 'YOUR_ALIYUN_APP_ID',
+  appKey: process.env.ALIYUN_APP_KEY || 'YOUR_ALIYUN_APP_KEY',
+};
+
+// ==================== 生成授权URL ====================
+
+const generateAuthUrlSchema = z.object({
+  userId: z.string(),
+  storage: z.enum(['baidu', 'aliyun']),
+  redirectUri: z.string().url(),
+});
+
+/**
+ * 生成云存储授权URL
+ * POST /api/v1/cloud/auth-url
+ */
+router.post('/auth-url', async (req: Request, res: Response) => {
+  try {
+    const body = generateAuthUrlSchema.parse(req.body);
+    
+    let authUrl = '';
+    const state = `${body.userId}_${Date.now()}`;
+    
+    if (body.storage === 'baidu') {
+      authUrl = `${BAIDU_CONFIG.authUrl}?response_type=code&client_id=${BAIDU_CONFIG.appKey}&redirect_uri=${encodeURIComponent(body.redirectUri)}&scope=basic,netdisk&display=mobile&state=${state}`;
+    } else {
+      authUrl = `${ALIYUN_CONFIG.authUrl}?client_id=${ALIYUN_CONFIG.appKey}&redirect_uri=${encodeURIComponent(body.redirectUri)}&scope=user:base,file:all:read,file:all:write&state=${state}`;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        state,
+        expiresIn: 600, // 10分钟有效期
+      },
+    });
+  } catch (error) {
+    console.error('Generate auth URL error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// ==================== OAuth回调处理 ====================
+
+const callbackSchema = z.object({
+  userId: z.string(),
+  storage: z.enum(['baidu', 'aliyun']),
+  code: z.string(),
+});
+
+/**
+ * 云存储OAuth回调
+ * POST /api/v1/cloud/callback
+ */
+router.post('/callback', async (req: Request, res: Response) => {
+  try {
+    const body = callbackSchema.parse(req.body);
+    
+    // 模拟获取token（实际应调用平台API）
+    const mockAccessToken = `access_${body.storage}_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+    const mockRefreshToken = `refresh_${body.storage}_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+    const expiresIn = 2592000; // 30天
+    
+    // 获取或创建配置
+    const { data: existingConfig } = await client
+      .from('cloud_storage_config')
+      .select('*')
+      .eq('user_id', body.userId)
+      .single();
+    
+    const updateData = body.storage === 'baidu' ? {
+      baidu_enabled: true,
+      baidu_access_token: mockAccessToken,
+      baidu_refresh_token: mockRefreshToken,
+      baidu_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
+    } : {
+      aliyun_enabled: true,
+      aliyun_access_token: mockAccessToken,
+      aliyun_refresh_token: mockRefreshToken,
+      aliyun_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
+    };
+    
+    if (existingConfig) {
+      await client
+        .from('cloud_storage_config')
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingConfig.id);
+    } else {
+      await client
+        .from('cloud_storage_config')
+        .insert([{
+          user_id: body.userId,
+          ...updateData,
+        }]);
+    }
+    
+    res.json({
+      success: true,
+      message: `${body.storage === 'baidu' ? '百度网盘' : '阿里云盘'}授权成功`,
+      data: {
+        storage: body.storage,
+        enabled: true,
+        expiresIn,
+      },
+    });
+  } catch (error) {
+    console.error('Cloud callback error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// ==================== 获取云存储配置 ====================
+
+/**
+ * 获取用户云存储配置
+ * GET /api/v1/cloud/config/:userId
+ */
+router.get('/config/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const { data: config, error } = await client
+      .from('cloud_storage_config')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      return res.status(500).json({ error: 'Failed to get config' });
+    }
+    
+    // 返回脱敏信息
+    const safeConfig = config ? {
+      baiduEnabled: config.baidu_enabled,
+      baiduSyncPath: config.baidu_sync_path,
+      baiduExpiresAt: config.baidu_expires_at,
+      aliyunEnabled: config.aliyun_enabled,
+      aliyunSyncPath: config.aliyun_sync_path,
+      aliyunExpiresAt: config.aliyun_expires_at,
+      autoSync: config.auto_sync,
+      syncInterval: config.sync_interval,
+      lastSyncAt: config.last_sync_at,
+    } : null;
+    
+    res.json({
+      success: true,
+      data: safeConfig,
+    });
+  } catch (error) {
+    console.error('Get config error:', error);
+    res.status(500).json({ error: 'Failed to get config' });
+  }
+});
+
+// ==================== 更新同步设置 ====================
+
+const updateSyncSettingsSchema = z.object({
+  userId: z.string(),
+  storage: z.enum(['baidu', 'aliyun']),
+  syncPath: z.string().optional(),
+  autoSync: z.boolean().optional(),
+  syncInterval: z.number().int().min(5).max(1440).optional(), // 5分钟-24小时
+});
+
+/**
+ * 更新同步设置
+ * POST /api/v1/cloud/settings
+ */
+router.post('/settings', async (req: Request, res: Response) => {
+  try {
+    const body = updateSyncSettingsSchema.parse(req.body);
+    
+    const updateData: any = { updated_at: new Date().toISOString() };
+    
+    if (body.storage === 'baidu') {
+      if (body.syncPath) updateData.baidu_sync_path = body.syncPath;
+    } else {
+      if (body.syncPath) updateData.aliyun_sync_path = body.syncPath;
+    }
+    
+    if (body.autoSync !== undefined) updateData.auto_sync = body.autoSync;
+    if (body.syncInterval !== undefined) updateData.sync_interval = body.syncInterval;
+    
+    const { error } = await client
+      .from('cloud_storage_config')
+      .upsert({
+        user_id: body.userId,
+        ...updateData,
+      }, { onConflict: 'user_id' });
+    
+    if (error) {
+      return res.status(500).json({ error: 'Failed to update settings' });
+    }
+    
+    res.json({
+      success: true,
+      message: '同步设置已更新',
+    });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// ==================== 上传文件 ====================
+
+const uploadFileSchema = z.object({
+  userId: z.string(),
+  storage: z.enum(['baidu', 'aliyun']),
+  fileName: z.string(),
+  fileType: z.enum(['project', 'model', 'asset', 'other']),
+  fileSize: z.number().int().positive(),
+  localPath: z.string().optional(),
+  md5: z.string().optional(),
+});
+
+/**
+ * 上传文件到云存储
+ * POST /api/v1/cloud/upload
+ */
+router.post('/upload', async (req: Request, res: Response) => {
+  try {
+    const body = uploadFileSchema.parse(req.body);
+    
+    // 检查配置
+    const { data: config, error: configError } = await client
+      .from('cloud_storage_config')
+      .select('*')
+      .eq('user_id', body.userId)
+      .single();
+    
+    if (configError || !config) {
+      return res.status(400).json({ error: 'Cloud storage not configured' });
+    }
+    
+    const isEnabled = body.storage === 'baidu' ? config.baidu_enabled : config.aliyun_enabled;
+    if (!isEnabled) {
+      return res.status(400).json({ error: `${body.storage === 'baidu' ? '百度网盘' : '阿里云盘'}未授权` });
+    }
+    
+    const syncPath = body.storage === 'baidu' ? config.baidu_sync_path : config.aliyun_sync_path;
+    const remotePath = `${syncPath}/${body.fileName}`;
+    
+    // 模拟上传（实际应调用平台API）
+    const mockRemoteId = `${body.storage}_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    
+    // 创建同步记录
+    const { data: syncFile, error } = await client
+      .from('sync_files')
+      .insert([{
+        user_id: body.userId,
+        file_name: body.fileName,
+        file_type: body.fileType,
+        file_size: body.fileSize,
+        local_path: body.localPath,
+        storage: body.storage,
+        remote_path: remotePath,
+        remote_id: mockRemoteId,
+        md5: body.md5,
+        status: 'uploaded',
+        last_modified: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ error: 'Failed to create sync record' });
+    }
+    
+    // 更新最后同步时间
+    await client
+      .from('cloud_storage_config')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('user_id', body.userId);
+    
+    res.json({
+      success: true,
+      message: '文件上传成功',
+      data: {
+        fileId: syncFile.id,
+        fileName: body.fileName,
+        remotePath,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Upload file error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// ==================== 下载文件 ====================
+
+/**
+ * 从云存储下载文件
+ * GET /api/v1/cloud/download/:fileId
+ */
+router.get('/download/:fileId', async (req: Request, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    
+    const { data: syncFile, error } = await client
+      .from('sync_files')
+      .select('*')
+      .eq('id', fileId)
+      .single();
+    
+    if (error || !syncFile) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // 模拟生成下载链接（实际应调用平台API）
+    const downloadUrl = `https://${syncFile.storage}.gopen.com/download/${syncFile.remote_id}`;
+    
+    res.json({
+      success: true,
+      data: {
+        fileName: syncFile.file_name,
+        fileSize: syncFile.file_size,
+        downloadUrl,
+        expiresIn: 3600, // 1小时有效
+      },
+    });
+  } catch (error) {
+    console.error('Download file error:', error);
+    res.status(500).json({ error: 'Failed to generate download link' });
+  }
+});
+
+// ==================== 获取同步文件列表 ====================
+
+/**
+ * 获取用户同步文件列表
+ * GET /api/v1/cloud/files/:userId
+ */
+router.get('/files/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const storage = req.query.storage as string | undefined;
+    const fileType = req.query.fileType as string | undefined;
+    const limit = parseInt(req.query.limit as string) || 50;
+    
+    let query = client
+      .from('sync_files')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+    
+    if (storage) {
+      query = query.eq('storage', storage);
+    }
+    if (fileType) {
+      query = query.eq('file_type', fileType);
+    }
+    
+    const { data: files, error } = await query;
+    
+    if (error) {
+      return res.status(500).json({ error: 'Failed to get files' });
+    }
+    
+    res.json({
+      success: true,
+      data: files || [],
+    });
+  } catch (error) {
+    console.error('Get files error:', error);
+    res.status(500).json({ error: 'Failed to get files' });
+  }
+});
+
+// ==================== 删除文件 ====================
+
+/**
+ * 删除云存储文件
+ * POST /api/v1/cloud/delete/:fileId
+ */
+router.post('/delete/:fileId', async (req: Request, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    
+    const { data: syncFile, error: findError } = await client
+      .from('sync_files')
+      .select('*')
+      .eq('id', fileId)
+      .single();
+    
+    if (findError || !syncFile) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // 模拟删除云端文件（实际应调用平台API）
+    
+    // 删除记录
+    await client
+      .from('sync_files')
+      .delete()
+      .eq('id', fileId);
+    
+    res.json({
+      success: true,
+      message: '文件已删除',
+    });
+  } catch (error) {
+    console.error('Delete file error:', error);
+    res.status(500).json({ error: 'Failed to delete file' });
+  }
+});
+
+// ==================== 取消授权 ====================
+
+const revokeAuthSchema = z.object({
+  userId: z.string(),
+  storage: z.enum(['baidu', 'aliyun']),
+});
+
+/**
+ * 取消云存储授权
+ * POST /api/v1/cloud/revoke
+ */
+router.post('/revoke', async (req: Request, res: Response) => {
+  try {
+    const body = revokeAuthSchema.parse(req.body);
+    
+    const updateData = body.storage === 'baidu' ? {
+      baidu_enabled: false,
+      baidu_access_token: null,
+      baidu_refresh_token: null,
+      baidu_expires_at: null,
+    } : {
+      aliyun_enabled: false,
+      aliyun_access_token: null,
+      aliyun_refresh_token: null,
+      aliyun_expires_at: null,
+    };
+    
+    await client
+      .from('cloud_storage_config')
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', body.userId);
+    
+    res.json({
+      success: true,
+      message: `${body.storage === 'baidu' ? '百度网盘' : '阿里云盘'}授权已取消`,
+    });
+  } catch (error) {
+    console.error('Revoke auth error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// ==================== 获取存储空间信息 ====================
+
+/**
+ * 获取云存储空间信息
+ * GET /api/v1/cloud/quota/:userId
+ */
+router.get('/quota/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const storage = req.query.storage as 'baidu' | 'aliyun';
+    
+    // 模拟获取存储空间信息（实际应调用平台API）
+    const quota = {
+      total: 2 * 1024 * 1024 * 1024 * 1024, // 2TB
+      used: 500 * 1024 * 1024 * 1024, // 500GB
+      free: 1.5 * 1024 * 1024 * 1024 * 1024, // 1.5TB
+    };
+    
+    res.json({
+      success: true,
+      data: {
+        storage,
+        total: quota.total,
+        used: quota.used,
+        free: quota.free,
+        usedPercent: (quota.used / quota.total * 100).toFixed(2),
+      },
+    });
+  } catch (error) {
+    console.error('Get quota error:', error);
+    res.status(500).json({ error: 'Failed to get quota' });
+  }
+});
+
+// ==================== 云存储账户管理 ====================
+
+/**
+ * 获取用户所有云存储账户
+ * GET /api/v1/cloud/accounts
+ */
+router.get('/accounts', async (req: Request, res: Response) => {
+  try {
+    const userId = req.query.userId as string;
+    
+    if (!userId) {
+      // 返回空数组
+      return res.json({ success: true, data: [] });
+    }
+    
+    const { data: accounts, error } = await client
+      .from('cloud_accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+    
+    if (error) {
+      console.error('Get accounts error:', error);
+      return res.json({ success: true, data: [] });
+    }
+    
+    // 返回脱敏信息
+    const safeAccounts = (accounts || []).map(account => ({
+      id: account.id,
+      provider: account.provider,
+      account_name: account.account_name,
+      storage_used: account.storage_used,
+      storage_total: account.storage_total,
+      status: account.status,
+      connected_at: account.connected_at,
+      last_sync_at: account.last_sync_at,
+    }));
+    
+    res.json({ success: true, data: safeAccounts });
+  } catch (error) {
+    console.error('Get accounts error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+/**
+ * 删除云存储账户
+ * DELETE /api/v1/cloud/accounts/:accountId
+ */
+router.delete('/accounts/:accountId', async (req: Request, res: Response) => {
+  try {
+    const { accountId } = req.params;
+    
+    const { error } = await client
+      .from('cloud_accounts')
+      .update({
+        status: 'disconnected',
+        access_token: null,
+        refresh_token: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', accountId);
+    
+    if (error) {
+      return res.status(500).json({ error: 'Failed to disconnect account' });
+    }
+    
+    res.json({ success: true, message: '账户已断开' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to disconnect account' });
+  }
+});
+
+// ==================== 各平台授权入口 ====================
+
+const PROVIDER_CONFIGS: Record<string, { name: string; authUrl: string; scope: string }> = {
+  baidu: {
+    name: '百度网盘',
+    authUrl: 'https://openapi.baidu.com/oauth/2.0/authorize',
+    scope: 'basic,netdisk',
+  },
+  aliyun: {
+    name: '阿里云盘',
+    authUrl: 'https://openapi.alipan.com/oauth/authorize',
+    scope: 'user:base,file:all:read,file:all:write',
+  },
+  google: {
+    name: 'Google Drive',
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    scope: 'https://www.googleapis.com/auth/drive',
+  },
+  onedrive: {
+    name: 'OneDrive',
+    authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    scope: 'files.readwrite.all',
+  },
+  dropbox: {
+    name: 'Dropbox',
+    authUrl: 'https://www.dropbox.com/oauth2/authorize',
+    scope: 'files.content.write files.content.read',
+  },
+  icloud: {
+    name: 'iCloud',
+    authUrl: 'https://idmsa.apple.com/appleauth/auth',
+    scope: 'cloudkit',
+  },
+};
+
+/**
+ * 获取云存储授权链接
+ * POST /api/v1/cloud/auth/:provider
+ */
+router.post('/auth/:provider', async (req: Request, res: Response) => {
+  try {
+    const provider = req.params.provider as string;
+    const config = PROVIDER_CONFIGS[provider];
+    
+    if (!config) {
+      return res.status(400).json({ error: 'Unknown provider' });
+    }
+    
+    // 检查是否已配置
+    const envKey = `${provider.toUpperCase()}_APP_KEY`;
+    const appKey = process.env[envKey];
+    
+    if (!appKey) {
+      // 返回模拟授权链接（用于演示）
+      const mockAuthUrl = `${config.authUrl}?client_id=demo&redirect_uri=${encodeURIComponent('gopen://cloud-callback')}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${provider}_${Date.now()}`;
+      
+      return res.json({
+        success: true,
+        data: {
+          authUrl: mockAuthUrl,
+          provider: config.name,
+          note: '服务暂未完全开放，敬请期待',
+        },
+      });
+    }
+    
+    // 生成真实授权链接
+    const redirectUri = `${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/cloud/callback`;
+    const state = `${provider}_${Date.now()}`;
+    const authUrl = `${config.authUrl}?client_id=${appKey}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(config.scope)}&state=${state}`;
+    
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        provider: config.name,
+        state,
+      },
+    });
+  } catch (error) {
+    console.error('Get auth URL error:', error);
+    res.status(500).json({ error: 'Failed to get auth URL' });
+  }
+});
+
+/**
+ * 云存储OAuth回调处理
+ * GET /api/v1/cloud/callback
+ */
+router.get('/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, state } = req.query;
+    
+    if (!code || !state) {
+      return res.status(400).send('缺少必要参数');
+    }
+    
+    const [provider] = (state as string).split('_');
+    
+    // 模拟创建账户（实际应获取token并保存）
+    const mockAccount = {
+      provider,
+      account_name: `${PROVIDER_CONFIGS[provider]?.name || provider}用户`,
+      storage_used: 500 * 1024 * 1024 * 1024, // 500GB
+      storage_total: 2 * 1024 * 1024 * 1024 * 1024, // 2TB
+    };
+    
+    // 返回成功页面
+    res.send(`
+      <html>
+        <head><title>授权成功</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui;">
+          <div style="text-align:center;">
+            <h1 style="color:#22C55E;">✓ 授权成功</h1>
+            <p>您已成功连接${PROVIDER_CONFIGS[provider]?.name || provider}</p>
+            <p style="color:#666;">您可以关闭此页面，返回应用继续操作</p>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Callback error:', error);
+    res.status(500).send('授权失败');
+  }
+});
+
+// ==================== API密钥管理 ====================
+
+/**
+ * 获取用户API密钥列表
+ * GET /api/v1/cloud/api-keys/:userId
+ */
+router.get('/api-keys/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const { data: apiKeys, error } = await client
+      .from('api_keys')
+      .select('id, provider, api_key_name, created_at, last_used_at, status')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+    
+    if (error) {
+      console.error('Get API keys error:', error);
+      return res.json({ success: true, data: [] });
+    }
+    
+    // 脱敏处理（只显示前4位和后4位）
+    const safeKeys = (apiKeys || []).map(key => ({
+      ...key,
+      api_key_masked: `${key.api_key_name?.substring(0, 4)}****${key.api_key_name?.substring(key.api_key_name?.length - 4)}`,
+    }));
+    
+    res.json({ success: true, data: safeKeys });
+  } catch (error) {
+    console.error('Get API keys error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+/**
+ * 添加API密钥
+ * POST /api/v1/cloud/api-keys
+ */
+router.post('/api-keys', async (req: Request, res: Response) => {
+  try {
+    const { userId, provider, apiKey, apiSecret } = req.body;
+    
+    if (!userId || !provider || !apiKey) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+    
+    // 检查是否已存在相同provider的key
+    const { data: existingKey } = await client
+      .from('api_keys')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider', provider)
+      .eq('status', 'active')
+      .single();
+    
+    if (existingKey) {
+      // 更新现有key
+      const { error } = await client
+        .from('api_keys')
+        .update({
+          api_key: apiKey,
+          api_secret: apiSecret,
+          api_key_name: apiKey,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingKey.id);
+      
+      if (error) {
+        return res.status(500).json({ error: '更新API密钥失败' });
+      }
+      
+      return res.json({
+        success: true,
+        message: 'API密钥已更新',
+      });
+    }
+    
+    // 创建新key
+    const { error } = await client
+      .from('api_keys')
+      .insert({
+        user_id: userId,
+        provider,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        api_key_name: apiKey,
+        status: 'active',
+        created_at: new Date().toISOString(),
+      });
+    
+    if (error) {
+      return res.status(500).json({ error: '添加API密钥失败' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'API密钥添加成功',
+    });
+  } catch (error) {
+    console.error('Add API key error:', error);
+    res.status(500).json({ error: '添加API密钥失败' });
+  }
+});
+
+/**
+ * 删除API密钥
+ * DELETE /api/v1/cloud/api-keys/:keyId
+ */
+router.delete('/api-keys/:keyId', async (req: Request, res: Response) => {
+  try {
+    const { keyId } = req.params;
+    
+    const { error } = await client
+      .from('api_keys')
+      .update({
+        status: 'deleted',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', keyId);
+    
+    if (error) {
+      return res.status(500).json({ error: '删除API密钥失败' });
+    }
+    
+    res.json({ success: true, message: 'API密钥已删除' });
+  } catch (error) {
+    console.error('Delete API key error:', error);
+    res.status(500).json({ error: '删除API密钥失败' });
+  }
+});
+
+/**
+ * 验证API密钥有效性
+ * POST /api/v1/cloud/api-keys/verify
+ */
+router.post('/api-keys/verify', async (req: Request, res: Response) => {
+  try {
+    const { userId, provider } = req.body;
+    
+    const { data: apiKey, error } = await client
+      .from('api_keys')
+      .select('api_key')
+      .eq('user_id', userId)
+      .eq('provider', provider)
+      .eq('status', 'active')
+      .single();
+    
+    if (error || !apiKey) {
+      return res.json({
+        success: true,
+        data: { valid: false, message: '未配置API密钥' },
+      });
+    }
+    
+    // 更新最后使用时间
+    await client
+      .from('api_keys')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('provider', provider);
+    
+    res.json({
+      success: true,
+      data: { valid: true, message: 'API密钥有效' },
+    });
+  } catch (error) {
+    console.error('Verify API key error:', error);
+    res.status(500).json({ error: '验证API密钥失败' });
+  }
+});
+
+export default router;
+
+
+
+
+======================================================================
+文件：server/src/routes/model-sync.ts
+======================================================================
+
+/**
+ * AI 模型自动同步服务
+ * 从各提供商 API 自动同步最新模型列表和定价
+ */
+
+import { Router, type Request, type Response } from 'express';
+import { getSupabaseClient } from '../storage/database/supabase-client.js';
+
+const router = Router();
+const client = getSupabaseClient();
+
+// ==================== 提供商配置 ====================
+
+interface ProviderConfig {
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  modelsEndpoint: string;
+  parseModels: (data: any) => Array<{
+    code: string;
+    name: string;
+    category: string;
+    inputPrice: number;
+    outputPrice: number;
+    contextWindow: number;
+    description: string;
+  }>;
+}
+
+const PROVIDERS: Record<string, ProviderConfig> = {
+  openai: {
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: process.env.OPENAI_API_KEY || '',
+    modelsEndpoint: '/models',
+    parseModels: (data: any) => {
+      // OpenAI 不返回定价，使用预设定价
+      const pricing: Record<string, { input: number; output: number }> = {
+        'gpt-4o': { input: 2500, output: 10000 },
+        'gpt-4o-mini': { input: 150, output: 600 },
+        'gpt-4-turbo': { input: 1000, output: 3000 },
+        'gpt-4': { input: 3000, output: 6000 },
+        'gpt-3.5-turbo': { input: 50, output: 150 },
+        'dall-e-3': { input: 4000, output: 0 },
+        'dall-e-2': { input: 2000, output: 0 },
+        'whisper-1': { input: 100, output: 0 },
+        'tts-1': { input: 150, output: 0 },
+        'tts-1-hd': { input: 300, output: 0 },
+      };
+
+      const contextWindows: Record<string, number> = {
+        'gpt-4o': 128000,
+        'gpt-4o-mini': 128000,
+        'gpt-4-turbo': 128000,
+        'gpt-4': 8192,
+        'gpt-3.5-turbo': 16385,
+      };
+
+      return (data.data || [])
+        .filter((model: any) => model.id.includes('gpt') || model.id.includes('dall') || model.id.includes('whisper') || model.id.includes('tts'))
+        .filter((model: any) => !model.id.includes('-instruct') && !model.id.includes('-preview') && !model.id.includes('-0301') && !model.id.includes('-0314'))
+        .map((model: any) => {
+          const price = pricing[model.id] || { input: 500, output: 500 };
+          return {
+            code: model.id,
+            name: model.id.toUpperCase().replace(/-/g, ' '),
+            category: model.id.includes('dall') ? 'image' : model.id.includes('whisper') ? 'audio' : model.id.includes('tts') ? 'audio' : 'chat',
+            inputPrice: price.input,
+            outputPrice: price.output,
+            contextWindow: contextWindows[model.id] || 4096,
+            description: `OpenAI ${model.id}`,
+          };
+        });
+    },
+  },
+
+  anthropic: {
+    name: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+    modelsEndpoint: '/models',
+    parseModels: (data: any) => {
+      const pricing: Record<string, { input: number; output: number }> = {
+        'claude-3-opus': { input: 1500, output: 7500 },
+        'claude-3-sonnet': { input: 300, output: 1500 },
+        'claude-3-haiku': { input: 25, output: 125 },
+        'claude-3-5-sonnet': { input: 300, output: 1500 },
+        'claude-3-5-haiku': { input: 100, output: 500 },
+      };
+
+      const contextWindows: Record<string, number> = {
+        'claude-3-opus': 200000,
+        'claude-3-sonnet': 200000,
+        'claude-3-haiku': 200000,
+        'claude-3-5-sonnet': 200000,
+        'claude-3-5-haiku': 200000,
+      };
+
+      return (data.data || [])
+        .map((model: any) => {
+          const price = pricing[model.id] || { input: 500, output: 500 };
+          return {
+            code: model.id,
+            name: model.display_name || model.id,
+            category: 'chat',
+            inputPrice: price.input,
+            outputPrice: price.output,
+            contextWindow: contextWindows[model.id] || 200000,
+            description: model.description || `Anthropic ${model.id}`,
+          };
+        });
+    },
+  },
+
+  doubao: {
+    name: '豆包',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    apiKey: process.env.DOUBAO_API_KEY || '',
+    modelsEndpoint: '/models',
+    parseModels: (data: any) => {
+      // 豆包定价（单位：分/百万token）
+      const pricing: Record<string, { input: number; output: number }> = {
+        'doubao-pro-32k': { input: 500, output: 1000 },
+        'doubao-lite-4k': { input: 50, output: 100 },
+        'doubao-pro-128k': { input: 500, output: 1000 },
+        'doubao-pro-256k': { input: 800, output: 1500 },
+      };
+
+      const contextWindows: Record<string, number> = {
+        'doubao-pro-32k': 32768,
+        'doubao-lite-4k': 4096,
+        'doubao-pro-128k': 131072,
+        'doubao-pro-256k': 262144,
+      };
+
+      return (data.data || [])
+        .filter((model: any) => model.id.includes('doubao'))
+        .map((model: any) => {
+          const price = pricing[model.id] || { input: 500, output: 500 };
+          return {
+            code: model.id,
+            name: model.name || model.id,
+            category: 'chat',
+            inputPrice: price.input,
+            outputPrice: price.output,
+            contextWindow: contextWindows[model.id] || 4096,
+            description: model.description || `豆包 ${model.id}`,
+          };
+        });
+    },
+  },
+};
+
+// ==================== 同步接口 ====================
+
+/**
+ * 同步单个提供商的模型
+ * POST /api/v1/model-sync/sync/:provider
+ */
+router.post('/sync/:provider', async (req: Request, res: Response) => {
+  try {
+    const provider = req.params.provider as string;
+    const config = PROVIDERS[provider];
+
+    if (!config) {
+      return res.status(400).json({ error: `Unknown provider: ${provider}` });
+    }
+
+    if (!config.apiKey) {
+      return res.status(400).json({ error: `API key not configured for ${config.name}` });
+    }
+
+    // 调用提供商 API
+    const response = await fetch(`${config.baseUrl}${config.modelsEndpoint}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${config.name}] API error:`, errorText);
+      return res.status(response.status).json({ 
+        error: `Failed to fetch models from ${config.name}`,
+        details: errorText,
+      });
+    }
+
+    const data = await response.json();
+    const models = config.parseModels(data);
+
+    // 更新数据库
+    let added = 0;
+    let updated = 0;
+
+    for (const model of models) {
+      // 检查模型是否存在
+      const { data: existing } = await client
+        .from('ai_models')
+        .select('id')
+        .eq('code', model.code)
+        .single();
+
+      if (existing) {
+        // 更新现有模型
+        const { error } = await client
+          .from('ai_models')
+          .update({
+            name: model.name,
+            cost_input_price: model.inputPrice,
+            cost_output_price: model.outputPrice,
+            max_context_tokens: model.contextWindow,
+            description: model.description,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('code', model.code);
+
+        if (!error) updated++;
+      } else {
+        // 插入新模型
+        const { error } = await client
+          .from('ai_models')
+          .insert([{
+            code: model.code,
+            name: model.name,
+            provider: provider,
+            category: model.category,
+            cost_input_price: model.inputPrice,
+            cost_output_price: model.outputPrice,
+            sell_input_price: Math.ceil(model.inputPrice * 1.5), // 默认加价50%
+            sell_output_price: Math.ceil(model.outputPrice * 1.5),
+            max_context_tokens: model.contextWindow,
+            description: model.description,
+            status: 'active',
+            is_public: true,
+          }]);
+
+        if (!error) added++;
+      }
+    }
+
+    // 记录同步日志
+    await client.from('model_sync_logs').insert([{
+      provider: provider,
+      models_found: models.length,
+      models_added: added,
+      models_updated: updated,
+      status: 'success',
+      details: JSON.stringify({ models: models.map((m: any) => m.code) }),
+    }]);
+
+    res.json({
+      success: true,
+      data: {
+        provider: config.name,
+        total: models.length,
+        added,
+        updated,
+        models: models.map((m: any) => m.code),
+      },
+    });
+  } catch (error) {
+    console.error('Model sync error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 同步所有提供商的模型
+ * POST /api/v1/model-sync/sync-all
+ */
+router.post('/sync-all', async (req: Request, res: Response) => {
+  try {
+    const results: Record<string, any> = {};
+    const errors: string[] = [];
+
+    for (const [provider, config] of Object.entries(PROVIDERS)) {
+      if (!config.apiKey) {
+        results[provider] = { skipped: true, reason: 'API key not configured' };
+        continue;
+      }
+
+      try {
+        const response = await fetch(`${config.baseUrl}${config.modelsEndpoint}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          results[provider] = { error: `HTTP ${response.status}` };
+          errors.push(`${config.name}: HTTP ${response.status}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const models = config.parseModels(data);
+
+        let added = 0;
+        let updated = 0;
+
+        for (const model of models) {
+          const { data: existing } = await client
+            .from('ai_models')
+            .select('id')
+            .eq('code', model.code)
+            .single();
+
+          if (existing) {
+            await client
+              .from('ai_models')
+              .update({
+                name: model.name,
+                cost_input_price: model.inputPrice,
+                cost_output_price: model.outputPrice,
+                max_context_tokens: model.contextWindow,
+                description: model.description,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('code', model.code);
+            updated++;
+          } else {
+            await client
+              .from('ai_models')
+              .insert([{
+                code: model.code,
+                name: model.name,
+                provider: provider,
+                category: model.category,
+                cost_input_price: model.inputPrice,
+                cost_output_price: model.outputPrice,
+                sell_input_price: Math.ceil(model.inputPrice * 1.5),
+                sell_output_price: Math.ceil(model.outputPrice * 1.5),
+                max_context_tokens: model.contextWindow,
+                description: model.description,
+                status: 'active',
+                is_public: true,
+              }]);
+            added++;
+          }
+        }
+
+        results[provider] = {
+          total: models.length,
+          added,
+          updated,
+          models: models.map((m: any) => m.code),
+        };
+
+        // 记录同步日志
+        await client.from('model_sync_logs').insert([{
+          provider: provider,
+          models_found: models.length,
+          models_added: added,
+          models_updated: updated,
+          status: 'success',
+        }]);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        results[provider] = { error: errorMsg };
+        errors.push(`${config.name}: ${errorMsg}`);
+
+        await client.from('model_sync_logs').insert([{
+          provider: provider,
+          status: 'failed',
+          error_message: errorMsg,
+        }]);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Sync all models error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * 获取同步日志
+ * GET /api/v1/model-sync/logs
+ */
+router.get('/logs', async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await client
+      .from('model_sync_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      // 表可能不存在
+      return res.json({ success: true, data: [] });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Get sync logs error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+/**
+ * 获取提供商配置状态
+ * GET /api/v1/model-sync/status
+ */
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    const status = Object.entries(PROVIDERS).map(([key, config]) => ({
+      provider: key,
+      name: config.name,
+      configured: !!config.apiKey,
+      apiKeyPreview: config.apiKey ? `${config.apiKey.slice(0, 8)}...` : null,
+    }));
+
+    res.json({ success: true, data: status });
+  } catch (error) {
+    console.error('Get status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
+
+
+
+
+======================================================================
+文件：server/src/storage/database/supabase-client.ts
+======================================================================
+
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { execSync } from 'child_process';
+
+let envLoaded = false;
+
+interface SupabaseCredentials {
+  url: string;
+  anonKey: string;
+}
+
+function loadEnv(): void {
+  if (envLoaded || (process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY)) {
+    return;
+  }
+
+  try {
+    try {
+      require('dotenv').config();
+      if (process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY) {
+        envLoaded = true;
+        return;
+      }
+    } catch {
+      // dotenv not available
+    }
+
+    const pythonCode = `
+import os
+import sys
+try:
+    from coze_workload_identity import Client
+    client = Client()
+    env_vars = client.get_project_env_vars()
+    client.close()
+    for env_var in env_vars:
+        print(f"{env_var.key}={env_var.value}")
+except Exception as e:
+    print(f"# Error: {e}", file=sys.stderr)
+`;
+
+    const output = execSync(`python3 -c '${pythonCode.replace(/'/g, "'\"'\"'")}'`, {
+      encoding: 'utf-8',
+      timeout: 10000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    const lines = output.trim().split('\n');
+    for (const line of lines) {
+      if (line.startsWith('#')) continue;
+      const eqIndex = line.indexOf('=');
+      if (eqIndex > 0) {
+        const key = line.substring(0, eqIndex);
+        let value = line.substring(eqIndex + 1);
+        if ((value.startsWith("'") && value.endsWith("'")) ||
+            (value.startsWith('"') && value.endsWith('"'))) {
+          value = value.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+
+    envLoaded = true;
+  } catch {
+    // Silently fail
+  }
+}
+
+function getSupabaseCredentials(): SupabaseCredentials {
+  loadEnv();
+
+  const url = process.env.COZE_SUPABASE_URL;
+  const anonKey = process.env.COZE_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    // 不抛出错误，返回空值让调用者处理
+    return { url: '', anonKey: '' };
+  }
+
+  return { url, anonKey };
+}
+
+function getSupabaseClient(token?: string): SupabaseClient {
+  const { url, anonKey } = getSupabaseCredentials();
+  
+  if (!url || !anonKey) {
+    // 返回一个空的客户端对象，避免null检查
+    return null as any;
+  }
+
+  if (token) {
+    return createClient(url, anonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      db: {
+        timeout: 60000,
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
+  return createClient(url, anonKey, {
+    db: {
+      timeout: 60000,
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+export { loadEnv, getSupabaseCredentials, getSupabaseClient };
+
+
+
+
+
+====================================================================
+文档生成时间：2026年03月21日 01:53:20
+总代码行数：9264 行
+====================================================================

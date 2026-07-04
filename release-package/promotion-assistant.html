@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G open 推广执行助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0A0A0F 0%, #1A1A2E 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #94A3B8;
+            font-size: 16px;
+        }
+        
+        .platform-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .platform-tab {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #94A3B8;
+        }
+        
+        .platform-tab:hover {
+            background: rgba(79, 70, 229, 0.2);
+            border-color: #4F46E5;
+            color: #fff;
+        }
+        
+        .platform-tab.active {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            border-color: #4F46E5;
+            color: #fff;
+        }
+        
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-section {
+            display: none;
+        }
+        
+        .platform-section.active {
+            display: block;
+        }
+        
+        .content-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .content-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .content-type {
+            font-size: 12px;
+            padding: 4px 12px;
+            background: rgba(79, 70, 229, 0.2);
+            border-radius: 20px;
+            color: #A78BFA;
+        }
+        
+        .content-body {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            color: #E2E8F0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #94A3B8;
+            font-size: 14px;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .quick-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .quick-action:hover {
+            background: rgba(79, 70, 229, 0.2);
+            border-color: #4F46E5;
+            transform: translateY(-2px);
+        }
+        
+        .quick-action-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .quick-action-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .quick-action-desc {
+            color: #94A3B8;
+            font-size: 14px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10B981;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+            display: none;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .instructions {
+            background: rgba(79, 70, 229, 0.1);
+            border-left: 4px solid #4F46E5;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .instructions-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            color: #CBD5E1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">G</div>
+            <h1>G open 推广执行助手</h1>
+            <p class="subtitle">一键复制推广文案，快速发布到各平台</p>
+        </div>
+        
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">60+</div>
+                <div class="stat-label">推广文案</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">5</div>
+                <div class="stat-label">推广平台</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">7</div>
+                <div class="stat-label">天执行计划</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">1000+</div>
+                <div class="stat-label">目标用户</div>
+            </div>
+        </div>
+        
+        <!-- 使用说明 -->
+        <div class="instructions">
+            <div class="instructions-title">📖 使用说明</div>
+            <ol>
+                <li>选择要发布的平台（小红书/抖音/微博等）</li>
+                <li>点击"一键复制"按钮复制文案</li>
+                <li>点击"打开平台"按钮跳转到对应网站</li>
+                <li>粘贴文案并发布</li>
+                <li>继续下一条，直到完成当天任务</li>
+            </ol>
+        </div>
+        
+        <!-- 平台选择 -->
+        <div class="platform-tabs">
+            <div class="platform-tab active" onclick="switchPlatform('xiaohongshu')">📱 小红书</div>
+            <div class="platform-tab" onclick="switchPlatform('douyin')">🎬 抖音</div>
+            <div class="platform-tab" onclick="switchPlatform('weibo')">📢 微博</div>
+            <div class="platform-tab" onclick="switchPlatform('zhihu')">❓ 知乎</div>
+            <div class="platform-tab" onclick="switchPlatform('bilibili')">📺 B站</div>
+        </div>
+        
+        <!-- 小红书内容 -->
+        <div id="xiaohongshu" class="platform-section active">
+            <div class="content-card">
+                <h3 style="margin-bottom: 20px;">小红书推广文案（20篇）</h3>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">文案1：产品介绍</div>
+                        <div class="content-type">产品推荐</div>
+                    </div>
+                    <div class="content-body">姐妹们！这个AI工具太好用了😭
+
+作为一个自媒体博主，每天要写3篇文章+5条微博
+还要发小红书和抖音，真的累死了😭
+
+直到我发现了G open！
+
+✨ 它集成了GPT-4o、Claude 3、豆包等多个顶级AI
+💰 按Token计费，比订阅便宜太多了
+📊 还有项目管理功能，所有创作一目了然
+
+最让我惊喜的是：
+🎨 它还能生成图片！封面图再也不用找设计师了
+
+用了2周，我的创作效率提升了200%✨
+强烈推荐给所有内容创作者！
+
+#AI工具 #写作神器 #自媒体必备 #效率提升 #Gopen</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.xiaohongshu.com')">打开小红书</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">文案2：功能介绍</div>
+                        <div class="content-type">功能展示</div>
+                    </div>
+                    <div class="content-body">一个APP集齐所有顶级AI模型！这是什么神仙体验？
+
+✨ GPT-4o：最强的语言理解能力
+✨ Claude 3：最擅长写作和推理
+✨ 豆包：中文能力最强
+
+关键是💰按需付费！
+不像其他AI工具动不动就几十块一个月
+这里用多少付多少，学生党也能轻松负担
+
+还有超贴心的项目管理功能📊
+所有创作历史一目了然
+再也不用翻聊天记录找了
+
+赶紧去试试！新手注册还送2000 Token免费额度🎁
+
+#AI工具 #Gopen #效率神器 #自媒体工具</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.xiaohongshu.com')">打开小红书</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">文案3：价格对比</div>
+                        <div class="content-type">性价比</div>
+                    </div>
+                    <div class="content-body">算了一笔账，我一年省了1200块！💰
+
+之前订阅ChatGPT Plus：20美元/月 = 145元/月
+订阅Claude Pro：20美元/月 = 145元/月
+合计：290元/月 = 3480元/年
+
+现在用G open：
+按Token计费，用多少付多少
+平均每月只需要50块
+一年只要600块！
+
+省下来的钱可以吃好几顿火锅了🍲
+
+关键是功能一点没少：
+✅ 多个顶级AI模型
+✅ 图像生成功能
+✅ 项目管理
+✅ 云存储同步
+
+性价比之王，不接受反驳！👑
+
+#省钱攻略 #AI工具 #Gopen #性价比</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.xiaohongshu.com')">打开小红书</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">文案4：自媒体创作场景</div>
+                        <div class="content-type">场景应用</div>
+                    </div>
+                    <div class="content-body">自媒体博主的一天是怎么过的？
+
+7:00 起床，刷手机找灵感
+9:00 开始写公众号文章，憋了2小时才写完
+12:00 吃饭，顺便写小红书文案
+14:00 拍摄视频素材
+16:00 写微博，发抖音
+18:00 终于忙完了...
+
+一天都在写写写，累得不行😭
+
+直到我发现了G open这个神器：
+✨ 早上输入主题，10分钟生成公众号文章框架
+✨ 中午一键改写成小红书风格
+✨ 下午再生成微博和抖音文案
+
+一天的工作，半天就搞定了！
+而且质量比我写的还好😂
+
+终于有时间好好休息了～
+强烈推荐给所有自媒体博主！💪
+
+#自媒体 #效率工具 #Gopen #写作神器</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.xiaohongshu.com')">打开小红书</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">文案5：学生党场景</div>
+                        <div class="content-type">场景应用</div>
+                    </div>
+                    <div class="content-body">考研党的福音来了！📚
+
+英语作文不会写？
+专业课笔记懒得整理？
+论文框架不知道怎么搭建？
+翻译软件翻译得不地道？
+
+一个G open全搞定！
+
+✨ 英语作文：输入中文，自动生成地道英文
+✨ 专业课笔记：拍照识别，自动整理成思维导图
+✨ 论文框架：输入主题，自动生成大纲和参考文献
+✨ 翻译：多个模型对比，选择最准确的翻译
+
+关键是💰学生认证还半价！
+一杯奶茶钱就能用一个月
+
+考研上岸的神器，冲！🎓
+
+#考研 #学习神器 #Gopen #学生必备</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.xiaohongshu.com')">打开小红书</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 抖音内容 -->
+        <div id="douyin" class="platform-section">
+            <div class="content-card">
+                <h3 style="margin-bottom: 20px;">抖音视频文案（20条）</h3>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">视频脚本1：开场白</div>
+                        <div class="content-type">15秒视频</div>
+                    </div>
+                    <div class="content-body">【钩子】一个APP，集齐所有顶级AI模型！
+
+【正文】
+G open，你的AI创作工作室
+GPT-4o、Claude 3、豆包全都有
+按需付费，比订阅便宜
+还能生成图片、管理项目
+
+【行动】赶紧点击下方链接下载！</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.douyin.com')">打开抖音</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">视频脚本2：效率提升</div>
+                        <div class="content-type">15秒视频</div>
+                    </div>
+                    <div class="content-body">【钩子】创作效率提升200%的秘密武器！
+
+【正文】
+以前写一篇文章要3小时
+现在用G open，半小时搞定
+还能生成封面图、管理项目
+自媒体博主必备神器
+
+【行动】评论区回复"666"，送你新手礼包！</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.douyin.com')">打开抖音</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">视频脚本3：省钱攻略</div>
+                        <div class="content-type">15秒视频</div>
+                    </div>
+                    <div class="content-body">【钩子】算了一笔账，我省了1200块！
+
+【正文】
+以前订阅各种AI工具，一年3000多
+现在用G open，一年只要600
+关键是功能一点没少
+性价比之王，不接受反驳
+
+【行动】点击链接，你也试试！</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.douyin.com')">打开抖音</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 微博内容 -->
+        <div id="weibo" class="platform-section">
+            <div class="content-card">
+                <h3 style="margin-bottom: 20px;">微博文案（20条）</h3>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">微博1：话题营销</div>
+                        <div class="content-type">话题营销</div>
+                    </div>
+                    <div class="content-body">#AI创作工具# 发现一个神仙APP！
+
+一个APP集齐GPT-4o、Claude 3、豆包等顶级AI
+关键是按Token计费，用多少付多少
+比订阅便宜太多了！
+
+还能生成图片、管理项目、云存储同步
+自媒体博主、程序员、学生党必备神器
+
+注册还送2000 Token，赶紧去试试！
+👇
+
+#Gopen #效率工具 #AI</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://weibo.com')">打开微博</button>
+                    </div>
+                </div>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">微博2：自媒体场景</div>
+                        <div class="content-type">场景应用</div>
+                    </div>
+                    <div class="content-body">#自媒体运营# 效率提升200%的秘密武器！
+
+以前写一篇公众号文章要3小时
+现在用G open，半小时搞定
+还能一键改写成小红书、微博风格
+30秒生成封面图
+
+再也不用找设计师了
+一个月省好几百
+
+强烈推荐给所有自媒体博主！
+
+#Gopen #写作神器</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://weibo.com')">打开微博</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 知乎内容 -->
+        <div id="zhihu" class="platform-section">
+            <div class="content-card">
+                <h3 style="margin-bottom: 20px;">知乎回答模板</h3>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">问题：有哪些好用的AI写作工具？</div>
+                        <div class="content-type">回答模板</div>
+                    </div>
+                    <div class="content-body">推荐一个我最近在用的AI工具：G open
+
+作为一个自媒体博主，我每天都在用它来辅助创作。
+
+【核心优势】
+1. 集成多个顶级AI模型：GPT-4o、Claude 3、豆包
+2. 按Token计费，比订阅便宜很多
+3. 还能生成图片、管理项目
+
+【使用场景】
+- 写公众号文章：10分钟搞定框架
+- 生成封面图：30秒出图
+- 改写不同平台风格：一键搞定
+
+用了2周，创作效率提升了200%
+
+新手注册还送2000 Token，可以试试看！
+
+#AI工具 #写作工具</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.zhihu.com')">打开知乎</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- B站内容 -->
+        <div id="bilibili" class="platform-section">
+            <div class="content-card">
+                <h3 style="margin-bottom: 20px;">B站视频脚本</h3>
+                
+                <div class="content-item">
+                    <div class="content-header">
+                        <div class="content-title">视频脚本：G open深度测评</div>
+                        <div class="content-type">10-15分钟视频</div>
+                    </div>
+                    <div class="content-body">【开场】（30秒）
+大家好，我是XXX
+今天给大家测评一款新上线的AI工具：G open
+号称"一个APP集齐所有顶级AI模型"
+到底是不是智商税？
+我们一起来测测看
+
+【第一部分：产品介绍】（2分钟）
+G open是一款AI创作助手
+集成多个顶级AI模型
+包括GPT-4o、Claude 3、豆包等
+支持对话、图像生成、项目管理等功能
+
+【第二部分：核心功能测试】（5分钟）
+1. 对话功能测试
+   - 测试不同模型的回答质量
+   - 测试上下文记忆能力
+   
+2. 图像生成测试
+   - 文生图效果
+   - 风格定制能力
+   
+3. 项目管理测试
+   - 项目创建和管理
+   - 数据统计功能
+
+【第三部分：性价比分析】（3分钟）
+对比其他AI工具的定价
+分析G open的优势和劣势
+
+【第四部分：使用建议】（3分钟）
+适合什么人群？
+怎么用最划算？
+有哪些使用技巧？
+
+【结尾】（1分钟）
+总体来说，G open是一款性价比很高的AI工具
+特别适合自媒体博主、程序员、学生党
+如果你也想提升创作效率
+不妨试试看
+
+链接在评论区，欢迎留言讨论！</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="copyContent(this)">一键复制</button>
+                        <button class="btn btn-secondary" onclick="openPlatform('https://www.bilibili.com')">打开B站</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快捷操作 -->
+        <div class="quick-actions">
+            <div class="quick-action" onclick="openPlatform('https://www.xiaohongshu.com')">
+                <div class="quick-action-icon">📱</div>
+                <div class="quick-action-title">打开小红书</div>
+                <div class="quick-action-desc">立即发布推广内容</div>
+            </div>
+            <div class="quick-action" onclick="openPlatform('https://www.douyin.com')">
+                <div class="quick-action-icon">🎬</div>
+                <div class="quick-action-title">打开抖音</div>
+                <div class="quick-action-desc">发布推广视频</div>
+            </div>
+            <div class="quick-action" onclick="openPlatform('https://weibo.com')">
+                <div class="quick-action-icon">📢</div>
+                <div class="quick-action-title">打开微博</div>
+                <div class="quick-action-desc">发布微博内容</div>
+            </div>
+            <div class="quick-action" onclick="openPlatform('https://www.zhihu.com')">
+                <div class="quick-action-icon">❓</div>
+                <div class="quick-action-title">打开知乎</div>
+                <div class="quick-action-desc">回答相关问题</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast提示 -->
+    <div id="toast" class="toast">✓ 已复制到剪贴板</div>
+    
+    <script>
+        // 切换平台
+        function switchPlatform(platform) {
+            // 移除所有active
+            document.querySelectorAll('.platform-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.platform-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // 添加active
+            event.target.classList.add('active');
+            document.getElementById(platform).classList.add('active');
+        }
+        
+        // 复制内容
+        function copyContent(button) {
+            const contentBody = button.closest('.content-item').querySelector('.content-body');
+            const text = contentBody.innerText;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('✓ 已复制到剪贴板');
+            }).catch(err => {
+                // 降级方案
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('✓ 已复制到剪贴板');
+            });
+        }
+        
+        // 打开平台
+        function openPlatform(url) {
+            window.open(url, '_blank');
+        }
+        
+        // 显示Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+<!--游戏 WebView 页面-->
+<web-view src="{{gameUrl}}" bindmessage="onMessage" binderror="onError"></web-view>

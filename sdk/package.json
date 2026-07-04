@@ -1,0 +1,51 @@
+{
+  "name": "@gopen/sdk",
+  "version": "1.0.3",
+  "description": "G open 智能创作助手 SDK - AI驱动的游戏与动漫内容创作平台",
+  "main": "dist/gopen-sdk.js",
+  "module": "dist/gopen-sdk.esm.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "gopen",
+    "ai",
+    "creative",
+    "anime",
+    "game",
+    "video-generation",
+    "particle-effects"
+  ],
+  "author": "G open Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/a912454361/gopen.git"
+  },
+  "homepage": "https://woshiguotao.cn",
+  "bugs": {
+    "url": "https://github.com/a912454361/gopen/issues"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "rollup": "^4.0.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "rollup-plugin-dts": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,237 @@
+<!--动漫创作页面 - 横屏布局-->
+<view class="create-container">
+  
+  <!-- 左侧创作面板 -->
+  <view class="create-panel">
+    <!-- 标题 -->
+    <view class="panel-header">
+      <text class="title">AI 动漫创作</text>
+      <text class="subtitle">输入你的创意，AI帮你生成完整动漫</text>
+    </view>
+
+    <!-- 创作表单 -->
+    <view class="create-form">
+      <!-- 主题输入 -->
+      <view class="form-item">
+        <text class="label">故事主题</text>
+        <textarea 
+          class="input-textarea"
+          placeholder="例如：一个少年穿越到异世界，与精灵伙伴一起冒险的故事..."
+          value="{{prompt}}"
+          bindinput="onPromptInput"
+          maxlength="500"
+        />
+      </view>
+
+      <!-- 风格选择 -->
+      <view class="form-item">
+        <text class="label">动漫风格</text>
+        <view class="style-options">
+          <view 
+            class="style-option {{selectedStyle === 'japanese' ? 'active' : ''}}"
+            data-style="japanese"
+            bindtap="selectStyle"
+          >
+            <text class="style-icon">🎌</text>
+            <text class="style-name">日式</text>
+          </view>
+          <view 
+            class="style-option {{selectedStyle === 'chinese' ? 'active' : ''}}"
+            data-style="chinese"
+            bindtap="selectStyle"
+          >
+            <text class="style-icon">🎨</text>
+            <text class="style-name">国风</text>
+          </view>
+          <view 
+            class="style-option {{selectedStyle === 'korean' ? 'active' : ''}}"
+            data-style="korean"
+            bindtap="selectStyle"
+          >
+            <text class="style-icon">🌸</text>
+            <text class="style-name">韩式</text>
+          </view>
+          <view 
+            class="style-option {{selectedStyle === 'western' ? 'active' : ''}}"
+            data-style="western"
+            bindtap="selectStyle"
+          >
+            <text class="style-icon">🎭</text>
+            <text class="style-name">西式</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 高级选项 -->
+      <view class="form-item">
+        <text class="label" bindtap="toggleAdvanced">高级选项 {{showAdvanced ? '▼' : '▶'}}</text>
+        <view class="advanced-options" wx:if="{{showAdvanced}}">
+          <view class="option-row">
+            <text class="option-label">剧集数</text>
+            <slider 
+              min="1" max="5" value="{{episodeCount}}" 
+              bindchange="onEpisodeChange"
+              show-value
+            />
+          </view>
+          <view class="option-row">
+            <checkbox-group bindchange="onOptionChange">
+              <label class="checkbox-item">
+                <checkbox value="images" checked="{{generateImages}}" />
+                <text>生成场景图</text>
+              </label>
+              <label class="checkbox-item">
+                <checkbox value="videos" checked="{{generateVideos}}" />
+                <text>生成视频</text>
+              </label>
+              <label class="checkbox-item">
+                <checkbox value="audio" checked="{{generateAudio}}" />
+                <text>生成配音</text>
+              </label>
+            </checkbox-group>
+          </view>
+        </view>
+      </view>
+
+      <!-- 操作按钮 -->
+      <view class="action-buttons">
+        <button class="btn-primary" bindtap="quickConcept" disabled="{{isGenerating}}">
+          <text class="btn-icon">💡</text>
+          <text>快速构思</text>
+        </button>
+        <button class="btn-secondary" bindtap="streamStory" disabled="{{isGenerating}}">
+          <text class="btn-icon">📖</text>
+          <text>生成故事</text>
+        </button>
+        <button class="btn-accent" bindtap="createFull" disabled="{{isGenerating}}">
+          <text class="btn-icon">🎬</text>
+          <text>完整创作</text>
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 右侧预览面板 -->
+  <view class="preview-panel">
+    <!-- 标签页 -->
+    <view class="tabs">
+      <view 
+        class="tab {{activeTab === 'concept' ? 'active' : ''}}"
+        data-tab="concept"
+        bindtap="switchTab"
+      >
+        构思
+      </view>
+      <view 
+        class="tab {{activeTab === 'story' ? 'active' : ''}}"
+        data-tab="story"
+        bindtap="switchTab"
+      >
+        故事
+      </view>
+      <view 
+        class="tab {{activeTab === 'characters' ? 'active' : ''}}"
+        data-tab="characters"
+        bindtap="switchTab"
+      >
+        角色
+      </view>
+      <view 
+        class="tab {{activeTab === 'media' ? 'active' : ''}}"
+        data-tab="media"
+        bindtap="switchTab"
+      >
+        媒体
+      </view>
+    </view>
+
+    <!-- 内容区 -->
+    <scroll-view class="preview-content" scroll-y>
+      <!-- 加载状态 -->
+      <view class="loading-state" wx:if="{{isGenerating}}">
+        <view class="spinner"></view>
+        <text class="loading-text">{{loadingText}}</text>
+      </view>
+
+      <!-- 构思标签页 -->
+      <view class="tab-content" wx:if="{{activeTab === 'concept' && !isGenerating}}">
+        <view class="concept-card" wx:if="{{concept.title}}">
+          <text class="concept-title">{{concept.title}}</text>
+          <text class="concept-synopsis">{{concept.synopsis}}</text>
+          
+          <view class="concept-section">
+            <text class="section-title">主要角色</text>
+            <view class="character-list">
+              <text class="character-tag" wx:for="{{concept.mainCharacters}}" wx:key="*this">
+                {{item}}
+              </text>
+            </view>
+          </view>
+
+          <view class="concept-section">
+            <text class="section-title">关键场景</text>
+            <view class="scene-list">
+              <text class="scene-item" wx:for="{{concept.keyScenes}}" wx:key="*this">
+                {{index + 1}}. {{item}}
+              </text>
+            </view>
+          </view>
+        </view>
+
+        <view class="empty-state" wx:else>
+          <text class="empty-icon">✨</text>
+          <text class="empty-text">点击"快速构思"开始创作</text>
+        </view>
+      </view>
+
+      <!-- 故事标签页 -->
+      <view class="tab-content" wx:if="{{activeTab === 'story' && !isGenerating}}">
+        <view class="story-content" wx:if="{{storyText}}">
+          <text class="story-text">{{storyText}}</text>
+        </view>
+        <view class="empty-state" wx:else>
+          <text class="empty-icon">📖</text>
+          <text class="empty-text">点击"生成故事"查看完整剧情</text>
+        </view>
+      </view>
+
+      <!-- 角色标签页 -->
+      <view class="tab-content" wx:if="{{activeTab === 'characters' && !isGenerating}}">
+        <view class="character-grid" wx:if="{{characters.length > 0}}">
+          <view class="character-card" wx:for="{{characters}}" wx:key="name">
+            <image class="character-image" src="{{item.portrait}}" mode="aspectFill" wx:if="{{item.portrait}}" />
+            <view class="character-placeholder" wx:else>
+              <text>{{item.name[0]}}</text>
+            </view>
+            <view class="character-info">
+              <text class="character-name">{{item.name}}</text>
+              <text class="character-role">{{item.role}}</text>
+              <text class="character-desc">{{item.appearance}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="empty-state" wx:else>
+          <text class="empty-icon">👥</text>
+          <text class="empty-text">完整创作后查看角色设计</text>
+        </view>
+      </view>
+
+      <!-- 媒体标签页 -->
+      <view class="tab-content" wx:if="{{activeTab === 'media' && !isGenerating}}">
+        <view class="media-grid" wx:if="{{mediaList.length > 0}}">
+          <view class="media-item" wx:for="{{mediaList}}" wx:key="url">
+            <image class="media-image" src="{{item.url}}" mode="aspectFill" wx:if="{{item.type === 'image'}}" />
+            <video class="media-video" src="{{item.url}}" wx:if="{{item.type === 'video'}}" controls />
+            <audio class="media-audio" src="{{item.url}}" wx:if="{{item.type === 'audio'}}" controls />
+            <text class="media-label">{{item.label}}</text>
+          </view>
+        </view>
+        <view class="empty-state" wx:else>
+          <text class="empty-icon">🎬</text>
+          <text class="empty-text">勾选高级选项生成媒体内容</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+</view>

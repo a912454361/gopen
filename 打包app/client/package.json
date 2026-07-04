@@ -1,0 +1,42 @@
+{
+  "name": "wangu-game-3d",
+  "version": "1.0.0",
+  "description": "万古长夜 - 3D粒子卡牌游戏",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "web:port": "expo start --web --port 5000",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "build:web": "expo export:web"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
+    "expo": "~55.0.8",
+    "expo-gl": "~15.1.6",
+    "expo-linear-gradient": "~14.1.4",
+    "expo-router": "~55.0.7",
+    "expo-status-bar": "~2.2.3",
+    "expo-three": "~8.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.2",
+    "react-native-gesture-handler": "~2.25.0",
+    "react-native-reanimated": "~4.1.6",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.10.0",
+    "react-native-web": "~0.21.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.6",
+    "@types/react": "~19.2.10",
+    "@types/three": "^0.170.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

@@ -1,0 +1,107 @@
+<!--横屏竞技场页面-->
+<view class="arena-landscape">
+  
+  <!-- 左侧竞技场信息 -->
+  <view class="arena-info-area">
+    <view class="season-badge">
+      <text>第{{arenaInfo?.season || 1}}赛季</text>
+    </view>
+    
+    <view class="rank-display">
+      <text class="rank-value">{{arenaInfo?.rank || 1000}}</text>
+      <text class="rank-label">当前积分</text>
+    </view>
+    
+    <view class="stats-row">
+      <view class="stat">
+        <text class="num">{{arenaInfo?.wins || 0}}</text>
+        <text class="text">胜利</text>
+      </view>
+      <view class="stat">
+        <text class="num">{{arenaInfo?.losses || 0}}</text>
+        <text class="text">失败</text>
+      </view>
+      <view class="stat">
+        <text class="num">{{arenaInfo?.streak || 0}}</text>
+        <text class="text">连胜</text>
+      </view>
+    </view>
+    
+    <view class="best-rank">
+      <text class="label">最高积分</text>
+      <text class="value">{{arenaInfo?.best_rank || 1000}}</text>
+    </view>
+  </view>
+
+  <!-- 中间对手列表 -->
+  <view class="opponents-area">
+    <view class="area-header">
+      <text class="title">匹配对手</text>
+      <text class="refresh" bindtap="refreshOpponents">刷新</text>
+    </view>
+    
+    <view class="opponents-list">
+      <view 
+        wx:for="{{opponents}}" 
+        wx:key="uid"
+        class="opponent-card"
+        data-uid="{{item.uid}}"
+        bindtap="startBattle"
+      >
+        <image class="avatar" src="{{item.avatar || '/images/default-avatar.png'}}" mode="aspectFill" />
+        <view class="info">
+          <text class="name">{{item.nickname || '剑客'}}</text>
+          <text class="level">Lv.{{item.level}}</text>
+        </view>
+        <view class="power-info">
+          <text class="power">{{item.power}}</text>
+          <text class="label">战力</text>
+        </view>
+        <view class="rank-info">
+          <text class="rank">{{item.game_arena?.[0]?.rank || 1000}}</text>
+          <text class="label">积分</text>
+        </view>
+        <button class="challenge-btn">挑战</button>
+      </view>
+      
+      <view wx:if="{{opponents.length === 0}}" class="empty">
+        <text>暂无匹配对手</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 右侧赛季奖励 -->
+  <view class="rewards-area">
+    <text class="area-title">赛季奖励</text>
+    
+    <view class="rewards-list">
+      <view class="reward-item top">
+        <text class="rank">前10名</text>
+        <text class="prize">传说称号 + 10000金币</text>
+      </view>
+      <view class="reward-item">
+        <text class="rank">前100名</text>
+        <text class="prize">史诗称号 + 5000金币</text>
+      </view>
+      <view class="reward-item">
+        <text class="rank">前500名</text>
+        <text class="prize">稀有称号 + 2000金币</text>
+      </view>
+      <view class="reward-item">
+        <text class="rank">参与奖</text>
+        <text class="prize">500金币</text>
+      </view>
+    </view>
+    
+    <button class="claim-btn" bindtap="claimRewards">领取奖励</button>
+  </view>
+
+  <!-- 战斗遮罩 -->
+  <view wx:if="{{battling}}" class="battle-mask">
+    <view class="battle-animation">
+      <text class="sword-icon">⚔️</text>
+      <text class="battle-text">战斗中...</text>
+    </view>
+  </view>
+  
+</view>

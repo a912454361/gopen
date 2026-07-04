@@ -1,0 +1,50 @@
+{
+  "app": {
+    "appTitle": "万古长夜",
+    "pages": [
+      "pages/index/index",
+      "pages/game/game",
+      "pages/cards/cards",
+      "pages/battle/battle",
+      "pages/user/user"
+    ],
+    "window": {
+      "navigationBarBackgroundColor": "#0A0A0F",
+      "navigationBarTitleText": "万古长夜",
+      "navigationBarTextStyle": "white",
+      "backgroundColor": "#0A0A0F"
+    },
+    "tabBar": {
+      "color": "#6B7280",
+      "selectedColor": "#D4AF37",
+      "borderStyle": "black",
+      "backgroundColor": "#0A0A0F",
+      "list": [
+        {
+          "pagePath": "pages/index/index",
+          "iconPath": "assets/icons/home.png",
+          "selectedIconPath": "assets/icons/home-active.png",
+          "text": "首页"
+        },
+        {
+          "pagePath": "pages/cards/cards",
+          "iconPath": "assets/icons/cards.png",
+          "selectedIconPath": "assets/icons/cards-active.png",
+          "text": "卡牌"
+        },
+        {
+          "pagePath": "pages/battle/battle",
+          "iconPath": "assets/icons/battle.png",
+          "selectedIconPath": "assets/icons/battle-active.png",
+          "text": "对战"
+        },
+        {
+          "pagePath": "pages/user/user",
+          "iconPath": "assets/icons/user.png",
+          "selectedIconPath": "assets/icons/user-active.png",
+          "text": "我的"
+        }
+      ]
+    }
+  }
+}

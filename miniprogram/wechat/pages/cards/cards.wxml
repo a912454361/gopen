@@ -1,0 +1,49 @@
+<!--卡牌收藏页面-->
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="filter-item {{activeFaction === '' ? 'active' : ''}}" bindtap="filterFaction" data-faction="">
+      全部
+    </view>
+    <view class="filter-item {{activeFaction === '幽冥' ? 'active' : ''}} faction-youming" bindtap="filterFaction" data-faction="幽冥">
+      幽冥
+    </view>
+    <view class="filter-item {{activeFaction === '昆仑' ? 'active' : ''}} faction-kunlun" bindtap="filterFaction" data-faction="昆仑">
+      昆仑
+    </view>
+    <view class="filter-item {{activeFaction === '蓬莱' ? 'active' : ''}} faction-penglai" bindtap="filterFaction" data-faction="蓬莱">
+      蓬莱
+    </view>
+    <view class="filter-item {{activeFaction === '蛮荒' ? 'active' : ''}} faction-manhuang" bindtap="filterFaction" data-faction="蛮荒">
+      蛮荒
+    </view>
+  </view>
+
+  <!-- 卡牌列表 -->
+  <scroll-view scroll-y class="cards-scroll">
+    <view class="cards-grid">
+      <view class="card-item" wx:for="{{cards}}" wx:key="id" bindtap="viewCard" data-card="{{item}}">
+        <view class="card-image" style="background-color: {{item.factionColor}}20;">
+          <image src="{{item.image_url}}" mode="aspectFill" lazy-load></image>
+        </view>
+        <view class="card-info">
+          <text class="card-name">{{item.name}}</text>
+          <view class="card-tags">
+            <text class="tag tag-{{item.rarityClass}}">{{item.rarity}}</text>
+          </view>
+          <view class="card-stats">
+            <text class="stat">攻{{item.attack}}</text>
+            <text class="stat">防{{item.defense}}</text>
+            <text class="stat">命{{item.hp}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{cards.length === 0}}">
+      <text class="empty-icon">🃏</text>
+      <text>暂无卡牌</text>
+    </view>
+  </scroll-view>
+</view>

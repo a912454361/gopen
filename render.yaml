@@ -1,0 +1,47 @@
+# Render 部署配置 - 免费后端托管
+# 文档: https://render.com/docs/blueprint-spec
+
+services:
+  # ==================== 后端 API 服务 ====================
+  - type: web
+    name: gopen-api
+    runtime: node
+    region: singapore  # 新加坡区域，国内访问较稳定
+    plan: free  # 免费计划
+    branch: main
+    buildCommand: cd server && pnpm install && pnpm run build
+    startCommand: cd server && node dist/index.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000  # Render 自动分配
+      - key: SUPABASE_URL
+        sync: false  # 需要在 Dashboard 手动设置
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OSS_ACCESS_KEY_ID
+        sync: false
+      - key: OSS_ACCESS_KEY_SECRET
+        sync: false
+      - key: OSS_REGION
+        value: oss-cn-beijing
+      - key: OSS_ENDPOINT
+        value: https://oss-cn-beijing.aliyuncs.com
+      - key: OSS_BUCKET_PRIMARY
+        sync: false
+      - key: STORAGE_ENCRYPTION_KEY
+        generateValue: true  # 自动生成
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET_KEY
+        generateValue: true
+
+# ==================== 数据库说明 ====================
+# Supabase 已提供免费 PostgreSQL 数据库
+# 无需在 Render 创建新数据库

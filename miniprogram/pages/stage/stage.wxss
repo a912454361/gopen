@@ -1,0 +1,287 @@
+/* 横屏关卡选择页面样式 */
+
+.stage-landscape {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: linear-gradient(135deg, #0a0f1a 0%, #1a1a2e 100%);
+}
+
+/* 左侧关卡列表 */
+.stage-list-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20rpx;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.area-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.chapter-nav {
+  width: 50rpx;
+  height: 50rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-icon {
+  font-size: 32rpx;
+  color: #fff;
+}
+
+.chapter-info {
+  text-align: center;
+}
+
+.chapter-title {
+  font-size: 32rpx;
+  color: #ffd700;
+  font-weight: bold;
+  display: block;
+}
+
+.chapter-name {
+  font-size: 22rpx;
+  color: #888;
+}
+
+/* 关卡网格 */
+.stages-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 16rpx;
+  padding: 10rpx;
+}
+
+.stage-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.stage-node.cleared {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.stage-node.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 20rpx rgba(255, 215, 0, 0.3);
+}
+
+.stage-num {
+  font-size: 36rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.stars {
+  margin-top: 8rpx;
+}
+
+.star {
+  font-size: 16rpx;
+  color: #333;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.power-req {
+  font-size: 18rpx;
+  color: #888;
+  margin-top: 6rpx;
+}
+
+/* 右侧信息面板 */
+.info-panel {
+  width: 280rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+/* 玩家状态 */
+.player-status {
+  display: flex;
+  justify-content: space-around;
+  padding: 16rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12rpx;
+}
+
+.status-item {
+  text-align: center;
+}
+
+.status-item .label {
+  font-size: 20rpx;
+  color: #888;
+  display: block;
+}
+
+.status-item .value {
+  font-size: 28rpx;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+/* 关卡详情 */
+.stage-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12rpx;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-title {
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 16rpx;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row .label {
+  font-size: 22rpx;
+  color: #888;
+}
+
+.detail-row .value {
+  font-size: 22rpx;
+  color: #fff;
+}
+
+/* 奖励预览 */
+.rewards-preview {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rewards-title {
+  font-size: 22rpx;
+  color: #888;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.rewards-items {
+  display: flex;
+  gap: 16rpx;
+}
+
+.reward-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.reward-item .icon {
+  font-size: 20rpx;
+}
+
+.reward-item .amount {
+  font-size: 20rpx;
+  color: #fff;
+}
+
+/* 战力碾压提示 */
+.power-crush {
+  margin-top: 16rpx;
+  padding: 12rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
+  border-radius: 8rpx;
+  text-align: center;
+}
+
+.power-crush text {
+  font-size: 22rpx;
+  color: #ffd700;
+}
+
+/* 操作按钮 */
+.action-btns {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.btn {
+  padding: 20rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  font-weight: bold;
+}
+
+.btn.battle {
+  background: linear-gradient(135deg, #e91e63, #ff5722);
+  color: #fff;
+}
+
+.btn.sweep {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+}
+
+/* 未选中提示 */
+.no-selection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+}
+
+.hint {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.batch-btn {
+  padding: 16rpx 30rpx;
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #4caf50;
+}

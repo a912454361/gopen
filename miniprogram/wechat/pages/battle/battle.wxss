@@ -1,0 +1,132 @@
+/* 对战页面样式 */
+
+.container {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  padding: 24rpx;
+}
+
+.battle-header {
+  background-color: var(--color-bg-card);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.hp-bar {
+  margin-bottom: 24rpx;
+}
+
+.hp-label {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.hp-value {
+  font-size: 24rpx;
+  color: var(--color-text);
+  display: block;
+  text-align: right;
+  margin-top: 8rpx;
+}
+
+.turn-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 28rpx;
+  color: var(--color-text);
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+
+.mana {
+  color: #3B82F6;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.hand-cards {
+  margin-bottom: 24rpx;
+}
+
+.cards-scroll {
+  white-space: nowrap;
+}
+
+.card-item {
+  display: inline-block;
+  width: 160rpx;
+  height: 220rpx;
+  background: linear-gradient(135deg, var(--color-bg-card), #2D2D44);
+  border-radius: 16rpx;
+  margin-right: 16rpx;
+  padding: 16rpx;
+  position: relative;
+  border: 2rpx solid var(--color-border);
+}
+
+.card-cost {
+  position: absolute;
+  top: 8rpx;
+  left: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background-color: #3B82F6;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.card-name {
+  display: block;
+  font-size: 22rpx;
+  color: var(--color-text);
+  margin-top: 48rpx;
+  text-align: center;
+}
+
+.card-attack {
+  display: block;
+  font-size: 24rpx;
+  color: var(--color-primary);
+  text-align: center;
+  margin-top: 16rpx;
+}
+
+.actions {
+  display: flex;
+  gap: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.actions button {
+  flex: 1;
+}
+
+.battle-log {
+  background-color: var(--color-bg-card);
+  border-radius: 24rpx;
+  padding: 24rpx;
+}
+
+.log-item {
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.log-text {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}

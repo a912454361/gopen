@@ -1,0 +1,35 @@
+<!--成就页面-->
+<view class="container">
+  
+  <!-- 标题 -->
+  <view class="header-section">
+    <text class="title-lg">🏆 成就</text>
+    <text class="text-muted">已解锁 {{unlockedCount}}/{{totalCount}}</text>
+  </view>
+
+  <!-- 进度条 -->
+  <view class="progress-section card">
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{unlockedCount / totalCount * 100}}%"></view>
+    </view>
+  </view>
+
+  <!-- 成就列表 -->
+  <view class="achievements-list">
+    <view class="achievement-item {{!item.unlocked ? 'achievement-locked' : ''}}" 
+          wx:for="{{achievements}}" 
+          wx:key="id">
+      <view class="achievement-icon">
+        <text>{{item.icon}}</text>
+      </view>
+      <view class="achievement-info">
+        <text class="achievement-name">{{item.name}}</text>
+        <text class="achievement-desc">{{item.desc}}</text>
+      </view>
+      <view class="achievement-status" wx:if="{{item.unlocked}}">
+        <text class="status-icon">✓</text>
+      </view>
+    </view>
+  </view>
+
+</view>

@@ -1,0 +1,121 @@
+/* 结局页面样式 */
+
+.ending-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40rpx;
+  text-align: center;
+}
+
+.ending-badge {
+  padding: 24rpx 64rpx;
+  border-radius: 48rpx;
+  margin-bottom: 48rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
+}
+
+.ending-badge.good {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+.ending-badge.normal {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+}
+
+.ending-badge.bad {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+}
+
+.ending-badge.perfect {
+  background: linear-gradient(135deg, #ffd700, #c9a96e);
+}
+
+.badge-text {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.ending-title {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 32rpx;
+  text-shadow: 0 0 20rpx rgba(255, 215, 0, 0.3);
+}
+
+.ending-description {
+  max-width: 600rpx;
+  margin-bottom: 48rpx;
+}
+
+.ending-description text {
+  font-size: 28rpx;
+  line-height: 48rpx;
+  color: #aaaaaa;
+}
+
+.final-stats {
+  width: 100%;
+  max-width: 600rpx;
+  margin-bottom: 48rpx;
+}
+
+.stats-title {
+  display: block;
+  font-size: 28rpx;
+  color: #aaaaaa;
+  margin-bottom: 24rpx;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+}
+
+.stat-name {
+  width: 120rpx;
+  font-size: 26rpx;
+  color: #aaaaaa;
+}
+
+.stat-bar-final {
+  flex: 1;
+  height: 16rpx;
+  background: #252540;
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin: 0 16rpx;
+}
+
+.stat-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd700, #c9a96e);
+  border-radius: 8rpx;
+}
+
+.stat-val {
+  width: 60rpx;
+  text-align: right;
+  font-size: 26rpx;
+  color: #ffd700;
+}
+
+.button-area {
+  width: 100%;
+  max-width: 600rpx;
+}
+
+.button-area button {
+  width: 100%;
+  margin-bottom: 20rpx;
+}

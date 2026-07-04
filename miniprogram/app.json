@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/main/main",
+    "pages/create/create",
+    "pages/shop/shop"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#1a1a2e",
+    "navigationBarTitleText": "剑破苍穹",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0f0f1a",
+    "navigationStyle": "custom",
+    "pageOrientation": "landscape"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

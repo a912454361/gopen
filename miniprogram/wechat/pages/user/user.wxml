@@ -1,0 +1,74 @@
+<!--用户页面-->
+<view class="container">
+  <!-- 用户信息 -->
+  <view class="user-header">
+    <view class="avatar">
+      <text class="avatar-text">{{player.nickname[0] || '修'}}</text>
+    </view>
+    <text class="nickname">{{player.nickname || '修士'}}</text>
+    <text class="level">Lv.{{player.level || 1}}</text>
+  </view>
+
+  <!-- 资产 -->
+  <view class="assets card">
+    <view class="asset-item" bindtap="recharge">
+      <text class="asset-icon">🪙</text>
+      <view class="asset-info">
+        <text class="asset-value">{{player.gold || 0}}</text>
+        <text class="asset-label">金币</text>
+      </view>
+    </view>
+    <view class="asset-item" bindtap="recharge">
+      <text class="asset-icon">💎</text>
+      <view class="asset-info">
+        <text class="asset-value">{{player.gems || 0}}</text>
+        <text class="asset-label">宝石</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 战绩 -->
+  <view class="stats card">
+    <view class="stat-item">
+      <text class="stat-value">{{player.wins || 0}}</text>
+      <text class="stat-label">胜场</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value">{{player.losses || 0}}</text>
+      <text class="stat-label">负场</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value">{{winRate}}%</text>
+      <text class="stat-label">胜率</text>
+    </view>
+  </view>
+
+  <!-- 菜单 -->
+  <view class="menu card">
+    <view class="menu-item" bindtap="goToCards">
+      <text class="menu-icon">🃏</text>
+      <text class="menu-title">我的卡牌</text>
+      <text class="menu-arrow">→</text>
+    </view>
+    <view class="menu-item" bindtap="goToHistory">
+      <text class="menu-icon">📜</text>
+      <text class="menu-title">对战记录</text>
+      <text class="menu-arrow">→</text>
+    </view>
+    <view class="menu-item" bindtap="goToRank">
+      <text class="menu-icon">🏆</text>
+      <text class="menu-title">排行榜</text>
+      <text class="menu-arrow">→</text>
+    </view>
+    <view class="menu-item" bindtap="openWebView">
+      <text class="menu-icon">🎮</text>
+      <text class="menu-title">完整游戏</text>
+      <text class="menu-arrow">→</text>
+    </view>
+  </view>
+
+  <!-- 充值按钮 -->
+  <button class="btn-primary recharge-btn" bindtap="recharge">
+    充值中心
+  </button>
+</view>

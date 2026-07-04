@@ -1,0 +1,101 @@
+<!--宠物页面-->
+<view class="pet-page">
+  <!-- 宠物展示 -->
+  <view class="pet-display">
+    <view class="pet-avatar">
+      <image class="avatar" src="{{currentPet.avatar || '/images/pet-dragon.png'}}" mode="aspectFit" />
+      <view class="level-badge">Lv.{{currentPet.level}}</view>
+    </view>
+    
+    <text class="pet-name">{{currentPet.name}}</text>
+    <text class="pet-power">战力 +{{currentPet.power}}</text>
+    
+    <!-- 状态条 -->
+    <view class="status-bars">
+      <view class="status-item">
+        <text class="label">饱食度</text>
+        <view class="bar">
+          <view class="fill hunger" style="width: {{currentPet.hunger / 2}}%"></view>
+        </view>
+        <text class="value">{{currentPet.hunger}}/200</text>
+      </view>
+      <view class="status-item">
+        <text class="label">心情</text>
+        <view class="bar">
+          <view class="fill mood" style="width: {{currentPet.mood / 2}}%"></view>
+        </view>
+        <text class="value">{{currentPet.mood}}/200</text>
+      </view>
+      <view class="status-item">
+        <text class="label">经验</text>
+        <view class="bar">
+          <view class="fill exp" style="width: {{currentPet.exp / currentPet.level}}%"></view>
+        </view>
+        <text class="value">{{currentPet.exp}}/{{currentPet.level * 100}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 技能 -->
+  <view class="skills-section">
+    <text class="section-title">技能</text>
+    <view class="skills-list">
+      <view 
+        wx:for="{{currentPet.skills}}" 
+        wx:key="*this"
+        class="skill-item"
+        data-skill="{{item}}"
+        bindtap="showSkill"
+      >
+        <text class="skill-name">{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="actions">
+    <button class="action-btn primary" bindtap="showFeedModal">🍖 喂养</button>
+    <button class="action-btn" bindtap="bath">🛁 洗澡</button>
+    <button class="action-btn" bindtap="setAsMain">⚔️ 出战</button>
+    <button class="action-btn special" bindtap="evolve">✨ 进化</button>
+  </view>
+
+  <!-- 宠物列表 -->
+  <view class="pet-list-section">
+    <text class="section-title">我的宠物 ({{pets.length}})</text>
+    <scroll-view class="pet-list" scroll-x>
+      <view 
+        wx:for="{{pets}}" 
+        wx:key="pet_id"
+        class="pet-item {{currentPet.pet_id === item.pet_id ? 'active' : ''}}"
+        data-id="{{item.pet_id}}"
+        bindtap="selectPet"
+      >
+        <image class="mini-avatar" src="{{item.avatar || '/images/pet-dragon.png'}}" mode="aspectFit" />
+        <text class="mini-name">{{item.name}}</text>
+        <text class="mini-level">Lv.{{item.level}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 喂养弹窗 -->
+  <view wx:if="{{showFeed}}" class="modal">
+    <view class="modal-content">
+      <text class="modal-title">选择饲料</text>
+      <view class="food-list">
+        <view 
+          wx:for="{{foodTypes}}" 
+          wx:key="type"
+          class="food-item {{item.type}}"
+          data-type="{{item.type}}"
+          bindtap="feedPet"
+        >
+          <text class="food-name">{{item.name}}</text>
+          <text class="food-effect">饱食度+{{item.hunger}} 心情+{{item.mood}}</text>
+          <text class="food-cost">{{item.cost}}💰</text>
+        </view>
+      </view>
+      <button class="cancel-btn" bindtap="hideFeedModal">取消</button>
+    </view>
+  </view>
+</view>

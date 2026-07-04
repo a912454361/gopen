@@ -1,0 +1,46 @@
+<!--充值商店页面-->
+<view class="shop-page">
+  <!-- 用户余额 -->
+  <view class="balance-section">
+    <view class="balance">
+      <text class="icon">💎</text>
+      <text class="amount">{{balance}}</text>
+    </view>
+    <view class="vip" bindtap="showVipPrivilege">
+      <text class="vip-badge">VIP {{vipLevel}}</text>
+      <text class="vip-text">特权详情 ></text>
+    </view>
+  </view>
+
+  <!-- 商品列表 -->
+  <view class="products-grid">
+    <view 
+      wx:for="{{products}}" 
+      wx:key="id"
+      class="product-card {{item.hot ? 'hot' : ''}} {{item.best ? 'best' : ''}}"
+      data-product="{{item}}"
+      bindtap="buyProduct"
+    >
+      <view wx:if="{{item.hot}}" class="hot-tag">热门</view>
+      <view wx:if="{{item.best}}" class="best-tag">超值</view>
+      
+      <view class="product-icon">💎</view>
+      <view class="product-amount">{{item.total}}</view>
+      <view class="product-bonus" wx:if="{{item.bonus > 0}}">
+        赠送{{item.bonus}}
+      </view>
+      <view class="product-price">
+        <text class="currency">¥</text>
+        <text class="value">{{item.price}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 温馨提示 -->
+  <view class="tips">
+    <text class="title">温馨提示</text>
+    <text class="content">1. 钻石为虚拟货币，充值后不可退款</text>
+    <text class="content">2. 赠送钻石在充值后立即到账</text>
+    <text class="content">3. 如有问题请联系客服</text>
+  </view>
+</view>

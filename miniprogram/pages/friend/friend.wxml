@@ -1,0 +1,94 @@
+<!--好友页面-->
+<view class="friend-page">
+  <!-- Tab切换 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{currentTab === 'friends' ? 'active' : ''}}"
+      data-tab="friends"
+      bindtap="switchTab"
+    >
+      好友列表
+    </view>
+    <view 
+      class="tab-item {{currentTab === 'requests' ? 'active' : ''}}"
+      data-tab="requests"
+      bindtap="switchTab"
+    >
+      好友申请
+    </view>
+  </view>
+
+  <!-- 好友列表 -->
+  <view wx:if="{{currentTab === 'friends'}}" class="friends-content">
+    <!-- 添加好友按钮 -->
+    <view class="add-btn" bindtap="showAddModal">
+      <text>+ 添加好友</text>
+    </view>
+
+    <!-- 在线好友数 -->
+    <view class="online-count">
+      <text>在线: {{friends.filter(f => f.is_online).length}} / {{friends.length}}</text>
+    </view>
+
+    <!-- 好友列表 -->
+    <view class="friends-list">
+      <view wx:for="{{friends}}" wx:key="friend_uid" class="friend-item">
+        <view class="avatar-section">
+          <image class="avatar" src="/images/default-avatar.png" mode="aspectFill" />
+          <view class="online-dot {{item.is_online ? 'online' : ''}}"></view>
+        </view>
+        
+        <view class="info-section">
+          <text class="name">{{item.nickname}}</text>
+          <text class="level">Lv.{{item.level}} | 战力 {{item.power}}</text>
+          <view class="intimacy">
+            <text>亲密度: {{item.intimacy}}</text>
+          </view>
+        </view>
+        
+        <view class="action-section">
+          <button class="action-btn" data-uid="{{item.friend_uid}}" bindtap="giftEnergy">赠送</button>
+          <button class="action-btn" data-uid="{{item.friend_uid}}" bindtap="chat">聊天</button>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:if="{{friends.length === 0}}" class="empty">
+        <text>暂无好友，快去添加吧！</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 好友申请 -->
+  <view wx:else class="requests-content">
+    <view wx:if="{{requests.length > 0}}" class="requests-list">
+      <view wx:for="{{requests}}" wx:key="uid" class="request-item">
+        <image class="avatar" src="/images/default-avatar.png" />
+        <text class="name">{{item.nickname}}</text>
+        <button class="accept-btn">接受</button>
+        <button class="reject-btn">拒绝</button>
+      </view>
+    </view>
+    <view wx:else class="empty">
+      <text>暂无好友申请</text>
+    </view>
+  </view>
+
+  <!-- 添加好友弹窗 -->
+  <view wx:if="{{showAdd}}" class="modal">
+    <view class="modal-content">
+      <text class="modal-title">添加好友</text>
+      <input 
+        class="input" 
+        placeholder="请输入好友UID"
+        type="number"
+        value="{{searchUid}}"
+        bindinput="onUidInput"
+      />
+      <view class="modal-btns">
+        <button class="cancel" bindtap="hideAddModal">取消</button>
+        <button class="confirm" bindtap="addFriend">添加</button>
+      </view>
+    </view>
+  </view>
+</view>

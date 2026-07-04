@@ -1,0 +1,156 @@
+/* 充值商店页面样式 */
+.shop-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  padding: 20rpx;
+}
+
+/* 余额区域 */
+.balance-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(75, 0, 130, 0.2));
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+}
+
+.balance {
+  display: flex;
+  align-items: center;
+}
+
+.balance .icon {
+  font-size: 40rpx;
+  margin-right: 16rpx;
+}
+
+.balance .amount {
+  font-size: 48rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.vip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.vip-badge {
+  font-size: 28rpx;
+  color: #ffd700;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  padding: 6rpx 20rpx;
+  border-radius: 20rpx;
+  color: #000;
+  font-weight: bold;
+}
+
+.vip-text {
+  font-size: 22rpx;
+  color: #888;
+  margin-top: 8rpx;
+}
+
+/* 商品网格 */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.product-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  text-align: center;
+  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.product-card.hot {
+  border-color: rgba(255, 152, 0, 0.5);
+}
+
+.product-card.best {
+  border-color: rgba(255, 215, 0, 0.5);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 140, 0, 0.05));
+}
+
+.hot-tag, .best-tag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 20rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 0 18rpx 0 16rpx;
+}
+
+.hot-tag {
+  background: #ff9800;
+  color: #fff;
+}
+
+.best-tag {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+}
+
+.product-icon {
+  font-size: 48rpx;
+  margin-bottom: 10rpx;
+}
+
+.product-amount {
+  font-size: 40rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.product-bonus {
+  font-size: 24rpx;
+  color: #ffd700;
+  margin-top: 8rpx;
+}
+
+.product-price {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.product-price .currency {
+  font-size: 24rpx;
+  color: #ffd700;
+}
+
+.product-price .value {
+  font-size: 36rpx;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+/* 温馨提示 */
+.tips {
+  margin-top: 40rpx;
+  padding: 20rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+}
+
+.tips .title {
+  font-size: 26rpx;
+  color: #888;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.tips .content {
+  font-size: 24rpx;
+  color: #666;
+  display: block;
+  line-height: 1.8;
+}

@@ -9,11 +9,13 @@
 
 # 依赖目录
 vendor/
+node_modules/
 
 # 环境变量文件 - 重要：永远不要提交！
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # 数据文件
 data/
@@ -23,6 +25,7 @@ data/
 
 # 日志文件
 *.log
+logs/
 
 # IDE
 .idea/
@@ -42,3 +45,34 @@ coverage.out
 *.tmp
 *.temp
 .cache/
+*.tsbuildinfo
+.eslintcache
+
+# 构建输出
+dist/
+build/
+.expo/
+.expo-shared/
+expo/expo-env.d.ts
+expo-env.d.ts
+
+# Keystore 文件（安全敏感）
+android/app/*.keystore
+*.jks
+*.p12
+
+# 安全文件
+.security/
+*.encrypted
+.security_key
+
+# 加密配置
+.env.encrypted
+.env.production.encrypted
+
+# 发布二进制文件（使用 GitHub Releases）
+release/
+*.dmg
+*.apk
+*.ipa
+*.aab
